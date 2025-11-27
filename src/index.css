@@ -1,0 +1,111 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #1a472a;
+  --color-primary-light: #2d5e40;
+  --color-secondary: #c5a059;
+  --color-accent: #1e3a8a;
+  --color-dark: #2d2d2d;
+  --color-light: #f8f5f2;
+  --color-surface: #ffffff;
+  --color-muted: #8c8c8c;
+
+  --font-sans: 'Outfit', 'Inter', sans-serif;
+
+  --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+  --shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.08);
+  --shadow-floating: 0 20px 40px -10px rgba(0, 0, 0, 0.15);
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-light text-dark antialiased font-sans;
+  }
+
+  h1 {
+    @apply text-3xl font-bold tracking-tight text-primary;
+  }
+
+  h2 {
+    @apply text-2xl font-semibold tracking-tight text-primary;
+  }
+
+  h3 {
+    @apply text-xl font-medium text-dark;
+  }
+
+  /* Custom Scrollbar for Webkit */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-white font-semibold py-3 px-6 rounded-xl shadow-soft hover:shadow-card active:scale-95 transition-all duration-200;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-white font-semibold py-3 px-6 rounded-xl shadow-soft hover:shadow-card active:scale-95 transition-all duration-200;
+  }
+
+  .card {
+    @apply bg-surface rounded-2xl shadow-soft border border-stone-100 p-5;
+  }
+
+  .input-field {
+    @apply w-full p-3 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out forwards;
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

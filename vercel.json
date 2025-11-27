@@ -1,0 +1,28 @@
+{
+    "rewrites": [
+        {
+            "source": "/api/(.*)",
+            "destination": "/api/index.js"
+        },
+        {
+            "source": "/auth/(.*)",
+            "destination": "/api/index.js"
+        },
+        {
+            "source": "/sync",
+            "destination": "/api/index.js"
+        },
+        {
+            "source": "/users",
+            "destination": "/api/index.js"
+        },
+        {
+            "source": "/leaderboard/(.*)",
+            "destination": "/api/index.js"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
+}
