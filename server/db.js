@@ -9,6 +9,9 @@ const authToken = process.env.TURSO_AUTH_TOKEN;
 const db = createClient({
   url,
   authToken,
+  // Force HTTP strategy to avoid native binding issues on Vercel
+  // unless we are using a local file
+  ...(url.startsWith('file:') ? {} : { strategy: 'http' })
 });
 
 // Initialize Database
