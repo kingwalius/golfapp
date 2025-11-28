@@ -250,6 +250,19 @@ app.post('/courses', async (req, res) => {
     }
 });
 
+app.put('/courses/:id', async (req, res) => {
+    const { name, holes, rating, slope, par } = req.body;
+    try {
+        await db.execute({
+            sql: 'UPDATE courses SET name = ?, holes = ?, rating = ?, slope = ?, par = ? WHERE id = ?',
+            args: [name, JSON.stringify(holes), rating, slope, par, req.params.id]
+        });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.delete('/courses', async (req, res) => {
     try {
         await db.execute('DELETE FROM courses');
