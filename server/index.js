@@ -137,6 +137,20 @@ app.post('/auth/login', async (req, res) => {
     }
 });
 
+// TEMPORARY: Reset password for GeilerPachler
+app.get('/api/reset-password-temp', async (req, res) => {
+    try {
+        const hashedPassword = hashPassword('1234');
+        await db.execute({
+            sql: 'UPDATE users SET password = ? WHERE username = ?',
+            args: [hashedPassword, 'GeilerPachler']
+        });
+        res.send('Password for GeilerPachler reset to 1234');
+    } catch (e) {
+        res.status(500).send(e.message);
+    }
+});
+
 // Get all users (for challenging)
 app.get('/users', async (req, res) => {
     try {
