@@ -123,9 +123,18 @@ export const UserProvider = ({ children }) => {
         return null;
     };
 
-    const logout = () => {
+    const logout = async () => {
         setUser(null);
         localStorage.removeItem('golf_user');
+        if (db) {
+            try {
+                await db.clear('rounds');
+                await db.clear('matches');
+                console.log("Local database cleared on logout.");
+            } catch (e) {
+                console.error("Failed to clear local database on logout", e);
+            }
+        }
     };
 
     useEffect(() => {

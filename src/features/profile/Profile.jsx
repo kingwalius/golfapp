@@ -198,12 +198,14 @@ export default function Profile() {
 
                     <button
                         onClick={() => {
-                            logout();
-                            navigate('/');
+                            if (confirm('This will clear all local data and log you out. Are you sure?')) {
+                                logout();
+                                navigate('/');
+                            }
                         }}
                         className="w-full py-3 rounded-xl font-bold text-red-500 bg-red-50 hover:bg-red-100 transition-colors mt-2"
                     >
-                        Log Out
+                        Clear Data & Log Out
                     </button>
                 </div>
             </div>
