@@ -320,10 +320,32 @@ app.post('/sync', async (req, res) => {
                 const scoresJson = JSON.stringify(match.scores || {});
 
                 // Check if match exists (Upsert Logic)
-                const existing = await db.execute({
+                // 1. Try exact match
+                let existing = await db.execute({
                     sql: 'SELECT id FROM matches WHERE player1Id = ? AND player2Id = ? AND courseId = ? AND date = ?',
                     args: [match.player1Id, p2Id, match.courseId, match.date]
                 });
+
+                // 2. If not found, and we have a Real ID (not Guest), try to find a Guest match to claim
+                if (existing.rows.length === 0 && p2Id !== guestId) {
+                    const guestMatch = await db.execute({
+                        sql: 'SELECT id FROM matches WHERE player1Id = ? AND player2Id = ? AND courseId = ? AND date = ?',
+                        args: [match.player1Id, guestId, match.courseId, match.date]
+                    });
+
+                    if (guestMatch.rows.length > 0) {
+                        console.log(`Linking Guest match ${guestMatch.rows[0].id} to Real User ${p2Id}`);
+                        // Update the Guest match to be the Real User match
+                        // We will update it in the next step (UPDATE block)
+                        existing = guestMatch;
+
+                        // Explicitly update player2Id now
+                        await db.execute({
+                            sql: 'UPDATE matches SET player2Id = ? WHERE id = ?',
+                            args: [p2Id, existing.rows[0].id]
+                        });
+                    }
+                }
 
                 if (existing.rows.length > 0) {
                     // Update existing match
