@@ -182,174 +182,176 @@ app.post('/api/user/update', async (req, res) => {
         console.error('Error updating profile:', error);
         res.status(500).json({ success: false, error: error.message });
     }
-    // --- User Activity Route ---
-    app.get('/api/user/:id/activity', async (req, res) => {
-        const userId = req.params.id;
-        try {
-            // Fetch Rounds
-            const roundsResult = await db.execute({
-                sql: 'SELECT * FROM rounds WHERE userId = ?',
-                args: [userId]
-            });
+});
 
-            // Fetch Matches (as player1 or player2)
-            const matchesResult = await db.execute({
-                sql: 'SELECT * FROM matches WHERE player1Id = ? OR player2Id = ?',
-                args: [userId, userId]
-            });
+// --- User Activity Route ---
+app.get('/api/user/:id/activity', async (req, res) => {
+    const userId = req.params.id;
+    try {
+        // Fetch Rounds
+        const roundsResult = await db.execute({
+            sql: 'SELECT * FROM rounds WHERE userId = ?',
+            args: [userId]
+        });
 
-            // Parse JSON fields if necessary (LibSQL might return strings for JSON columns)
-            // Matches don't have JSON columns in the schema I recall, but let's check.
-            // Rounds don't have JSON columns.
-            // Actually, matches might have 'scores' as JSON if we stored it? 
-            // Wait, the schema for matches is:
-            // CREATE TABLE matches (
-            //   id INTEGER PRIMARY KEY AUTOINCREMENT,
-            //   player1Id INTEGER,
-            //   player2Id INTEGER,
-            //   courseId INTEGER,
-            //   date TEXT,
-            //   winnerId INTEGER,
-            //   status TEXT
-            // );
-            // It seems we are NOT storing scores in the DB for matches in the sync logic?
-            // Let's check the sync logic in server/index.js again.
-            // It inserts: player1Id, player2Id, courseId, date, winnerId, status.
-            // It does NOT insert scores.
-            // This means the "Scorecard" details won't be fully available on the other device if we don't store them.
-            // BUT, for "Recent Activity" list, we just need the summary.
-            // However, if the user clicks on it, they might expect to see the scorecard.
-            // The current `matches` table definition in `db.js` (which I should check) might be missing `scores`.
-            // If so, that's a separate issue, but for now let's just sync what we have.
+        // Fetch Matches (as player1 or player2)
+        const matchesResult = await db.execute({
+            sql: 'SELECT * FROM matches WHERE player1Id = ? OR player2Id = ?',
+            args: [userId, userId]
+        });
 
-            // Wait, if I look at `MatchplayScorecard.jsx`, it uses `match.scores`.
-            // If the server doesn't store `scores`, then syncing back will result in a match without scores.
-            // Let's check `db.js` to see the schema. 
-            // I'll proceed with adding the endpoint first, but I should verify the schema.
+        // Parse JSON fields if necessary (LibSQL might return strings for JSON columns)
+        // Matches don't have JSON columns in the schema I recall, but let's check.
+        // Rounds don't have JSON columns.
+        // Actually, matches might have 'scores' as JSON if we stored it? 
+        // Wait, the schema for matches is:
+        // CREATE TABLE matches (
+        //   id INTEGER PRIMARY KEY AUTOINCREMENT,
+        //   player1Id INTEGER,
+        //   player2Id INTEGER,
+        //   courseId INTEGER,
+        //   date TEXT,
+        //   winnerId INTEGER,
+        //   status TEXT
+        // );
+        // It seems we are NOT storing scores in the DB for matches in the sync logic?
+        // Let's check the sync logic in server/index.js again.
+        // It inserts: player1Id, player2Id, courseId, date, winnerId, status.
+        // It does NOT insert scores.
+        // This means the "Scorecard" details won't be fully available on the other device if we don't store them.
+        // BUT, for "Recent Activity" list, we just need the summary.
+        // However, if the user clicks on it, they might expect to see the scorecard.
+        // The current `matches` table definition in `db.js` (which I should check) might be missing `scores`.
+        // If so, that's a separate issue, but for now let's just sync what we have.
 
-            res.json({
-                rounds: roundsResult.rows,
-                matches: matchesResult.rows
-            });
-        } catch (error) {
-            res.status(500).json({ error: error.message });
-        }
-    });
+        // Wait, if I look at `MatchplayScorecard.jsx`, it uses `match.scores`.
+        // If the server doesn't store `scores`, then syncing back will result in a match without scores.
+        // Let's check `db.js` to see the schema. 
+        // I'll proceed with adding the endpoint first, but I should verify the schema.
 
-    // --- Sync Routes ---
-    app.post('/sync', async (req, res) => {
-        const { userId, rounds, matches } = req.body;
-        if (!userId) return res.status(400).json({ error: 'User ID required' });
+        res.json({
+            rounds: roundsResult.rows,
+            matches: matchesResult.rows
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
-        try {
-            // LibSQL doesn't support better-sqlite3 style transactions directly in the same way,
-            // but supports batch execution. However, for simplicity/compatibility with this logic,
-            // we will execute sequentially or use `batch` if possible.
-            // For now, sequential await is safest migration.
+// --- Sync Routes ---
+app.post('/sync', async (req, res) => {
+    const { userId, rounds, matches } = req.body;
+    if (!userId) return res.status(400).json({ error: 'User ID required' });
 
-            if (rounds && rounds.length) {
-                for (const round of rounds) {
-                    await db.execute({
-                        sql: `INSERT OR IGNORE INTO rounds (userId, courseId, date, score, stableford, hcpIndex)
-                          VALUES (?, ?, ?, ?, ?, ?)`,
-                        args: [userId, round.courseId, round.date, round.score, round.stableford, round.hcpIndex]
-                    });
-                }
-            }
+    try {
+        // LibSQL doesn't support better-sqlite3 style transactions directly in the same way,
+        // but supports batch execution. However, for simplicity/compatibility with this logic,
+        // we will execute sequentially or use `batch` if possible.
+        // For now, sequential await is safest migration.
 
-            if (matches && matches.length) {
-                for (const match of matches) {
-                    await db.execute({
-                        sql: `INSERT OR IGNORE INTO matches (player1Id, player2Id, courseId, date, winnerId, status)
-                          VALUES (?, ?, ?, ?, ?, ?)`,
-                        args: [match.player1Id, match.player2Id, match.courseId, match.date, match.winnerId, match.status]
-                    });
-                }
-            }
-
-            res.json({ success: true, message: 'Synced successfully' });
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ error: error.message });
-        }
-    });
-
-    // --- Course Routes ---
-
-    app.get('/courses', async (req, res) => {
-        try {
-            const result = await db.execute('SELECT * FROM courses');
-            const courses = result.rows.map(c => ({
-                ...c,
-                holes: JSON.parse(c.holes)
-            }));
-            res.json(courses);
-        } catch (error) {
-            res.status(500).json({ error: error.message });
-        }
-    });
-
-    app.post('/courses', async (req, res) => {
-        const { name, holes, rating, slope, par } = req.body;
-        try {
-            const result = await db.execute({
-                sql: 'INSERT INTO courses (name, holes, rating, slope, par) VALUES (?, ?, ?, ?, ?)',
-                args: [name, JSON.stringify(holes), rating, slope, par]
-            });
-            res.json({ id: result.lastInsertRowid.toString(), success: true });
-        } catch (error) {
-            res.status(500).json({ error: error.message });
-        }
-    });
-
-    app.put('/courses/:id', async (req, res) => {
-        const { name, holes, rating, slope, par } = req.body;
-        const id = req.params.id;
-        try {
-            const result = await db.execute({
-                sql: 'UPDATE courses SET name = ?, holes = ?, rating = ?, slope = ?, par = ? WHERE id = ?',
-                args: [name, JSON.stringify(holes), rating, slope, par, id]
-            });
-
-            if (result.rowsAffected === 0) {
-                // Course didn't exist (e.g. wiped DB), so insert it with the specific ID
+        if (rounds && rounds.length) {
+            for (const round of rounds) {
                 await db.execute({
-                    sql: 'INSERT INTO courses (id, name, holes, rating, slope, par) VALUES (?, ?, ?, ?, ?, ?)',
-                    args: [id, name, JSON.stringify(holes), rating, slope, par]
+                    sql: `INSERT OR IGNORE INTO rounds (userId, courseId, date, score, stableford, hcpIndex)
+                          VALUES (?, ?, ?, ?, ?, ?)`,
+                    args: [userId, round.courseId, round.date, round.score, round.stableford, round.hcpIndex]
                 });
             }
-
-            res.json({ success: true });
-        } catch (error) {
-            res.status(500).json({ error: error.message });
         }
-    });
 
-    app.delete('/courses', async (req, res) => {
-        try {
-            await db.execute('DELETE FROM courses');
-            res.json({ success: true, message: 'All courses deleted' });
-        } catch (error) {
-            res.status(500).json({ error: error.message });
+        if (matches && matches.length) {
+            for (const match of matches) {
+                await db.execute({
+                    sql: `INSERT OR IGNORE INTO matches (player1Id, player2Id, courseId, date, winnerId, status)
+                          VALUES (?, ?, ?, ?, ?, ?)`,
+                    args: [match.player1Id, match.player2Id, match.courseId, match.date, match.winnerId, match.status]
+                });
+            }
         }
-    });
 
-    // --- Leaderboard Routes ---
-
-    app.get('/leaderboard/solo', async (req, res) => {
-        try {
-            const result = await db.execute('SELECT id, username, handicap FROM users ORDER BY handicap ASC LIMIT 10');
-            res.json(result.rows);
-        } catch (error) {
-            res.status(500).json({ error: error.message });
-        }
-    });
-
-    // Export app for Vercel
-    export default app;
-
-    if (process.env.NODE_ENV !== 'production') {
-        app.listen(PORT, () => {
-            console.log(`Server running on http://localhost:${PORT}`);
-        });
+        res.json({ success: true, message: 'Synced successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
     }
+});
+
+// --- Course Routes ---
+
+app.get('/courses', async (req, res) => {
+    try {
+        const result = await db.execute('SELECT * FROM courses');
+        const courses = result.rows.map(c => ({
+            ...c,
+            holes: JSON.parse(c.holes)
+        }));
+        res.json(courses);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/courses', async (req, res) => {
+    const { name, holes, rating, slope, par } = req.body;
+    try {
+        const result = await db.execute({
+            sql: 'INSERT INTO courses (name, holes, rating, slope, par) VALUES (?, ?, ?, ?, ?)',
+            args: [name, JSON.stringify(holes), rating, slope, par]
+        });
+        res.json({ id: result.lastInsertRowid.toString(), success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.put('/courses/:id', async (req, res) => {
+    const { name, holes, rating, slope, par } = req.body;
+    const id = req.params.id;
+    try {
+        const result = await db.execute({
+            sql: 'UPDATE courses SET name = ?, holes = ?, rating = ?, slope = ?, par = ? WHERE id = ?',
+            args: [name, JSON.stringify(holes), rating, slope, par, id]
+        });
+
+        if (result.rowsAffected === 0) {
+            // Course didn't exist (e.g. wiped DB), so insert it with the specific ID
+            await db.execute({
+                sql: 'INSERT INTO courses (id, name, holes, rating, slope, par) VALUES (?, ?, ?, ?, ?, ?)',
+                args: [id, name, JSON.stringify(holes), rating, slope, par]
+            });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/courses', async (req, res) => {
+    try {
+        await db.execute('DELETE FROM courses');
+        res.json({ success: true, message: 'All courses deleted' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- Leaderboard Routes ---
+
+app.get('/leaderboard/solo', async (req, res) => {
+    try {
+        const result = await db.execute('SELECT id, username, handicap FROM users ORDER BY handicap ASC LIMIT 10');
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Export app for Vercel
+export default app;
+
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+    });
+}
