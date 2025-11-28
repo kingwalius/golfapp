@@ -250,6 +250,15 @@ app.post('/courses', async (req, res) => {
     }
 });
 
+app.delete('/courses', async (req, res) => {
+    try {
+        await db.execute('DELETE FROM courses');
+        res.json({ success: true, message: 'All courses deleted' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- Leaderboard Routes ---
 
 app.get('/leaderboard/solo', async (req, res) => {
