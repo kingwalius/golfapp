@@ -104,6 +104,22 @@ export const Play = () => {
                                 const course = courses.find(c => c.id === item.courseId);
                                 const isMatch = item.type === 'match';
 
+                                // Determine opponent name
+                                let opponentName = 'Opponent';
+                                if (isMatch) {
+                                    const userId = user?.id?.toString();
+                                    const p1Id = item.player1?.id?.toString();
+                                    const p2Id = item.player2?.id?.toString();
+
+                                    if (userId === p1Id) {
+                                        opponentName = item.player2?.name || 'Opponent';
+                                    } else if (userId === p2Id) {
+                                        opponentName = item.player1?.name || 'Opponent';
+                                    } else {
+                                        opponentName = item.player2?.name || 'Opponent';
+                                    }
+                                }
+
                                 return (
                                     <SwipeableItem
                                         key={`${item.type}-${item.id}`}
@@ -128,7 +144,7 @@ export const Play = () => {
                                                     <span>•</span>
                                                     {isMatch ? (
                                                         <span className="font-medium text-secondary">
-                                                            vs {item.player2?.name || 'Opponent'} ({item.status})
+                                                            vs {opponentName} ({item.status})
                                                         </span>
                                                     ) : (
                                                         <span>{item.totalStableford || 0} pts</span>

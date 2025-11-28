@@ -194,9 +194,15 @@ app.get('/api/user/:id/activity', async (req, res) => {
             args: [userId]
         });
 
-        // Fetch Matches (as player1 or player2)
+        // Fetch Matches (as player1 or player2) with player names
         const matchesResult = await db.execute({
-            sql: 'SELECT * FROM matches WHERE player1Id = ? OR player2Id = ?',
+            sql: `
+                    SELECT m.*, u1.username as p1Name, u2.username as p2Name 
+                    FROM matches m
+                    LEFT JOIN users u1 ON m.player1Id = u1.id
+                    LEFT JOIN users u2 ON m.player2Id = u2.id
+                    WHERE m.player1Id = ? OR m.player2Id = ?
+                `,
             args: [userId, userId]
         });
 

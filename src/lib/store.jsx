@@ -214,8 +214,10 @@ export const UserProvider = ({ children }) => {
                             const existing = allRounds.find(r => r.date === serverRound.date && r.courseId === serverRound.courseId);
                             if (!existing) {
                                 console.log("Down-syncing round:", serverRound);
+                                // Remove ID to avoid collision
+                                const { id, ...roundData } = serverRound;
                                 await tx.objectStore('rounds').add({
-                                    ...serverRound,
+                                    ...roundData,
                                     synced: true
                                 });
                             }
@@ -229,40 +231,14 @@ export const UserProvider = ({ children }) => {
                             const existing = allMatches.find(m => m.date === serverMatch.date && m.courseId === serverMatch.courseId);
                             if (!existing) {
                                 console.log("Down-syncing match:", serverMatch);
-                                // We need to reconstruct the match object slightly to match local format if needed
-                                // Local format: { player1: {...}, player2: {...}, scores: {...} }
-                                // Server format: { player1Id, player2Id, ... }
-                                // We need to fetch player details?
-                                // The UI expects `player1` and `player2` objects with names.
-                                // We can fetch them or just store IDs and let UI handle it?
-                                // `MatchplayScorecard` expects `match.player1.name`.
-                                // We should probably fetch the user details if we can, or just store minimal info.
-                                // For now, let's store what we have. The UI might break if `player1` is missing.
-                                // Let's try to reconstruct basic player info if possible, or just IDs.
-                                // Actually, `MatchplaySetup` creates `player1: { name, hcp }`.
-                                // If we down-sync, we only have IDs.
-                                // We might need to fetch user info for these IDs.
-                                // Let's do a quick fetch for users if we don't have them?
-                                // Or just insert and let the UI handle "Loading..." or fetch on demand?
-                                // `MatchplayScorecard` fetches `db.get('matches', id)`.
-                                // If we insert, we need to make sure it has the structure the UI expects.
-                                // UI expects: player1: { name, playingHcp }, player2: { name, playingHcp }
-                                // Server has: player1Id, player2Id.
-                                // We can't easily reconstruct the full object without fetching users.
-                                // BUT, for "Recent Activity" list, we just need `player2.name` (optional) and status.
-                                // `Home.jsx` uses `item.player2?.name`.
-                                // We can try to fetch the usernames from the `users` table if we have them locally?
-                                // Or just fetch them from server?
-                                // Let's try to fetch all users first? No, too heavy.
-                                // Let's just insert with IDs and maybe the UI can handle it?
-                                // `Home.jsx` renders `item.player2?.name || 'Opponent'`.
-                                // So it won't crash, just show "Opponent".
-                                // That's acceptable for MVP.
+
+                                // Destructure to remove ID (let local DB assign it) and get names
+                                const { id, p1Name, p2Name, ...matchData } = serverMatch;
 
                                 await tx.objectStore('matches').add({
-                                    ...serverMatch,
-                                    player1: { id: serverMatch.player1Id }, // Minimal info
-                                    player2: { id: serverMatch.player2Id }, // Minimal info
+                                    ...matchData,
+                                    player1: { id: serverMatch.player1Id, name: p1Name || 'Player 1' },
+                                    player2: { id: serverMatch.player2Id, name: p2Name || 'Player 2' },
                                     synced: true
                                 });
                             }
