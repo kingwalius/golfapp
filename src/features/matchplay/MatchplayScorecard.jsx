@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDB } from '../../lib/store';
+import { useDB, useUser } from '../../lib/store';
 import clsx from 'clsx';
 
 export const MatchplayScorecard = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const db = useDB();
+    const { sync } = useUser();
     const [match, setMatch] = useState(null);
     const [course, setCourse] = useState(null);
 
@@ -146,7 +147,10 @@ export const MatchplayScorecard = () => {
             {/* Finish Match Button */}
             <div className="mt-8 pb-8">
                 <button
-                    onClick={() => navigate('/')}
+                    onClick={async () => {
+                        await sync();
+                        navigate('/');
+                    }}
                     className="w-full bg-primary text-white py-4 rounded-xl font-bold shadow-lg hover:bg-primaryLight transition active:scale-95 flex items-center justify-center gap-2"
                 >
                     <span>🏁</span> Finish Match
