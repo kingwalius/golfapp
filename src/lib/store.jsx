@@ -277,7 +277,8 @@ export const UserProvider = ({ children }) => {
                         courseId: m.courseId,
                         date: m.date,
                         winnerId: null,
-                        status: m.status
+                        status: m.status,
+                        scores: m.scores || {}
                     }))
                 })
             });

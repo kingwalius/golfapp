@@ -57,6 +57,7 @@ export const initDB = async () => {
       date TEXT NOT NULL,
       winnerId INTEGER,
       status TEXT,
+      scores TEXT,
       FOREIGN KEY (player1Id) REFERENCES users(id),
       FOREIGN KEY (player2Id) REFERENCES users(id)
     )
@@ -80,7 +81,8 @@ export const initDB = async () => {
     "ALTER TABLE users ADD COLUMN avatar TEXT",
     "ALTER TABLE users ADD COLUMN handicapMode TEXT DEFAULT 'AUTO'",
     "ALTER TABLE users ADD COLUMN manualHandicap REAL",
-    "ALTER TABLE users ADD COLUMN password TEXT"
+    "ALTER TABLE users ADD COLUMN password TEXT",
+    "ALTER TABLE matches ADD COLUMN scores TEXT"
   ];
 
   for (const query of migrations) {

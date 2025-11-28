@@ -15,6 +15,8 @@ export const MatchplayScorecard = () => {
         const load = async () => {
             const m = await db.get('matches', parseInt(id));
             if (m) {
+                // Ensure scores object exists
+                if (!m.scores) m.scores = {};
                 setMatch(m);
                 const c = await db.get('courses', m.courseId);
                 setCourse(c);

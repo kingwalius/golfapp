@@ -235,9 +235,15 @@ app.get('/api/user/:id/activity', async (req, res) => {
         // Let's check `db.js` to see the schema. 
         // I'll proceed with adding the endpoint first, but I should verify the schema.
 
+        // Parse scores from JSON string
+        const matches = matchesResult.rows.map(m => ({
+            ...m,
+            scores: m.scores ? JSON.parse(m.scores) : {}
+        }));
+
         res.json({
             rounds: roundsResult.rows,
-            matches: matchesResult.rows
+            matches: matches
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -268,9 +274,9 @@ app.post('/sync', async (req, res) => {
         if (matches && matches.length) {
             for (const match of matches) {
                 await db.execute({
-                    sql: `INSERT OR IGNORE INTO matches (player1Id, player2Id, courseId, date, winnerId, status)
-                          VALUES (?, ?, ?, ?, ?, ?)`,
-                    args: [match.player1Id, match.player2Id, match.courseId, match.date, match.winnerId, match.status]
+                    sql: `INSERT OR IGNORE INTO matches (player1Id, player2Id, courseId, date, winnerId, status, scores)
+                          VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                    args: [match.player1Id, match.player2Id, match.courseId, match.date, match.winnerId, match.status, JSON.stringify(match.scores || {})]
                 });
             }
         }
