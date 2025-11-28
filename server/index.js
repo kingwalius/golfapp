@@ -275,12 +275,28 @@ app.post('/sync', async (req, res) => {
             for (const match of matches) {
                 // Use Guest ID (9999) if player2Id is missing/null
                 const p2Id = match.player2Id || 9999;
+                const scoresJson = JSON.stringify(match.scores || {});
 
-                await db.execute({
-                    sql: `INSERT OR IGNORE INTO matches (player1Id, player2Id, courseId, date, winnerId, status, scores)
-                          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                    args: [match.player1Id, p2Id, match.courseId, match.date, match.winnerId, match.status, JSON.stringify(match.scores || {})]
+                // Check if match exists (Upsert Logic)
+                const existing = await db.execute({
+                    sql: 'SELECT id FROM matches WHERE player1Id = ? AND player2Id = ? AND courseId = ? AND date = ?',
+                    args: [match.player1Id, p2Id, match.courseId, match.date]
                 });
+
+                if (existing.rows.length > 0) {
+                    // Update existing match
+                    await db.execute({
+                        sql: 'UPDATE matches SET winnerId = ?, status = ?, scores = ? WHERE id = ?',
+                        args: [match.winnerId, match.status, scoresJson, existing.rows[0].id]
+                    });
+                } else {
+                    // Insert new match
+                    await db.execute({
+                        sql: `INSERT INTO matches (player1Id, player2Id, courseId, date, winnerId, status, scores)
+                              VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                        args: [match.player1Id, p2Id, match.courseId, match.date, match.winnerId, match.status, scoresJson]
+                    });
+                }
             }
         }
 

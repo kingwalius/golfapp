@@ -229,18 +229,26 @@ export const UserProvider = ({ children }) => {
                         for (const serverMatch of activityData.matches) {
                             // Dedup matches by date and courseId
                             const existing = allMatches.find(m => m.date === serverMatch.date && m.courseId === serverMatch.courseId);
+
+                            // Destructure to remove ID (let local DB assign it) and get names
+                            const { id, p1Name, p2Name, ...matchData } = serverMatch;
+                            const matchToSave = {
+                                ...matchData,
+                                player1: { id: serverMatch.player1Id, name: p1Name || 'Player 1' },
+                                player2: { id: serverMatch.player2Id, name: p2Name || 'Player 2' },
+                                synced: true
+                            };
+
                             if (!existing) {
-                                console.log("Down-syncing match:", serverMatch);
-
-                                // Destructure to remove ID (let local DB assign it) and get names
-                                const { id, p1Name, p2Name, ...matchData } = serverMatch;
-
-                                await tx.objectStore('matches').add({
-                                    ...matchData,
-                                    player1: { id: serverMatch.player1Id, name: p1Name || 'Player 1' },
-                                    player2: { id: serverMatch.player2Id, name: p2Name || 'Player 2' },
-                                    synced: true
-                                });
+                                console.log("Down-syncing new match:", serverMatch);
+                                await tx.objectStore('matches').add(matchToSave);
+                            } else if (existing.synced) {
+                                // Update existing match ONLY if we don't have local unsynced changes
+                                // This allows us to pull updates from the other player
+                                console.log("Updating existing match from server:", serverMatch);
+                                // Preserve local ID
+                                matchToSave.id = existing.id;
+                                await tx.objectStore('matches').put(matchToSave);
                             }
                         }
                     }
