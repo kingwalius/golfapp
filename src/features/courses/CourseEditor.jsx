@@ -34,8 +34,12 @@ export const CourseEditor = () => {
 
         // Save to server
         try {
-            const res = await fetch('/courses', {
-                method: 'POST',
+            const isNew = id === 'new';
+            const endpoint = isNew ? '/courses' : `/courses/${id}`;
+            const method = isNew ? 'POST' : 'PUT';
+
+            const res = await fetch(endpoint, {
+                method: method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(course)
             });
