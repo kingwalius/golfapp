@@ -31,6 +31,27 @@ export const CourseEditor = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Save to server
+        try {
+            const res = await fetch('/courses', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(course)
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                // If server returns ID, use it (though we might want to keep local ID logic separate or synced)
+                // For now, let's just save locally too to be safe/offline-first
+                // Ideally, we should use the server ID if we want global sync.
+                // But local DB uses auto-increment. 
+                // Let's just save locally as before, but maybe we should re-fetch from server?
+            }
+        } catch (err) {
+            console.error("Failed to save course to server", err);
+        }
+
         await db.put('courses', course);
         navigate('/courses');
     };
