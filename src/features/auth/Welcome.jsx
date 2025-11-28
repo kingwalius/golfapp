@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../lib/store';
 
 export const Welcome = () => {
+    const navigate = useNavigate();
     const { login } = useUser();
     const [isRegistering, setIsRegistering] = useState(false);
     const [username, setUsername] = useState('');
@@ -76,7 +78,8 @@ export const Welcome = () => {
                     </button>
                     <div className="text-center pt-2">
                         <button
-                            onClick={() => { /* TODO: Implement forgot password logic or navigation */ }}
+                            type="button"
+                            onClick={() => navigate('/reset-password')}
                             className="text-white/70 text-sm font-medium hover:text-white transition-colors"
                         >
                             Forgot Password?
