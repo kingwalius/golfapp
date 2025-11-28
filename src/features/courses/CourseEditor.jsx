@@ -38,10 +38,13 @@ export const CourseEditor = () => {
             const endpoint = isNew ? '/courses' : `/courses/${id}`;
             const method = isNew ? 'POST' : 'PUT';
 
+            const totalPar = course.holes.reduce((sum, hole) => sum + (parseInt(hole.par) || 0), 0);
+            const payload = { ...course, par: totalPar };
+
             const res = await fetch(endpoint, {
                 method: method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(course)
+                body: JSON.stringify(payload)
             });
 
             if (res.ok) {
