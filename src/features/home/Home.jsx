@@ -18,8 +18,8 @@ export const Home = () => {
 
         // Combine and sort by date (newest first)
         const combined = [
-            ...r.map(item => ({ ...item, type: 'round' })),
-            ...m.map(item => ({ ...item, type: 'match' }))
+            ...r.filter(item => item.userId == user?.id).map(item => ({ ...item, type: 'round' })),
+            ...m.filter(item => item.player1?.id == user?.id || item.player2?.id == user?.id).map(item => ({ ...item, type: 'match' }))
         ].sort((a, b) => new Date(b.date) - new Date(a.date))
             .slice(0, 3); // Top 3 only
 

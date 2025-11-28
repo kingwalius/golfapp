@@ -33,7 +33,8 @@ export const MatchplaySetup = () => {
                 ...prev,
                 player1: {
                     name: user.username || 'Me',
-                    hcp: hcp
+                    hcp: hcp,
+                    id: user.id
                 }
             }));
         }

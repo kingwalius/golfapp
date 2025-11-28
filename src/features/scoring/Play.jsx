@@ -23,9 +23,10 @@ export const Play = () => {
         const c = await db.getAll('courses');
 
         // Combine and sort by date (newest first)
+        // Combine and sort by date (newest first)
         const combined = [
-            ...r.map(item => ({ ...item, type: 'round' })),
-            ...m.map(item => ({ ...item, type: 'match' }))
+            ...r.filter(item => item.userId == user?.id).map(item => ({ ...item, type: 'round' })),
+            ...m.filter(item => item.player1?.id == user?.id || item.player2?.id == user?.id).map(item => ({ ...item, type: 'match' }))
         ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
         setActivities(combined);
@@ -57,7 +58,8 @@ export const Play = () => {
             hcpIndex: parseFloat(hcpIndex),
             scores: {},
             completed: false,
-            synced: false
+            synced: false,
+            userId: user.id
         };
 
         const id = await db.add('rounds', newRound);
