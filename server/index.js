@@ -24,6 +24,15 @@ app.get('/api/debug', (req, res) => {
     });
 });
 
+app.get('/api/init', async (req, res) => {
+    try {
+        await initDB();
+        res.json({ status: 'Database initialized successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- Auth Routes ---
 
 import crypto from 'crypto';
