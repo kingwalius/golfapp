@@ -28,8 +28,10 @@ export const Home = () => {
     };
 
     useEffect(() => {
-        loadData();
-    }, [db]);
+        if (user && db) {
+            loadData();
+        }
+    }, [db, user]);
 
     const handleDelete = async (id, type) => {
         if (confirm('Are you sure you want to delete this?')) {
