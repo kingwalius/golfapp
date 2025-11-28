@@ -271,10 +271,30 @@ app.post('/sync', async (req, res) => {
             }
         }
 
+        // Helper to get or create Guest ID
+        const getGuestId = async () => {
+            try {
+                const result = await db.execute("SELECT id FROM users WHERE username = 'Guest'");
+                if (result.rows.length > 0) {
+                    return result.rows[0].id;
+                }
+                const create = await db.execute({
+                    sql: "INSERT INTO users (username, handicap, handicapMode) VALUES (?, ?, ?)",
+                    args: ['Guest', 18.0, 'MANUAL']
+                });
+                return create.lastInsertRowid.toString();
+            } catch (e) {
+                console.error("Error getting guest ID:", e);
+                return 9999; // Fallback
+            }
+        };
+
+        const guestId = await getGuestId();
+
         if (matches && matches.length) {
             for (const match of matches) {
-                // Use Guest ID (9999) if player2Id is missing/null
-                const p2Id = match.player2Id || 9999;
+                // Use Guest ID if player2Id is missing/null
+                const p2Id = match.player2Id || guestId;
                 const scoresJson = JSON.stringify(match.scores || {});
 
                 // Check if match exists (Upsert Logic)
