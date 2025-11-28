@@ -29,4 +29,13 @@ export default defineConfig({
       }
     })
   ],
+  server: {
+    proxy: {
+      '/auth': 'http://localhost:3000',
+      '/api': 'http://localhost:3000',
+      '/sync': 'http://localhost:3000',
+      '/users': 'http://localhost:3000',
+      '/leaderboard': 'http://localhost:3000'
+    }
+  }
 })

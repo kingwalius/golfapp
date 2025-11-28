@@ -78,7 +78,7 @@ export const UserProvider = ({ children }) => {
     const login = async (username, password, isRegistering = false) => {
         try {
             const endpoint = isRegistering ? '/auth/register' : '/auth/login';
-            const res = await fetch(`http://localhost:3000${endpoint}`, {
+            const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
@@ -154,7 +154,7 @@ export const UserProvider = ({ children }) => {
 
             console.log(`Syncing ${unsyncedRounds.length} rounds and ${validMatches.length} matches...`);
 
-            const res = await fetch('http://localhost:3000/sync', {
+            const res = await fetch('/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -210,7 +210,7 @@ export const UserProvider = ({ children }) => {
 
                     // Verify with server to get latest data
                     try {
-                        const res = await fetch(`http://localhost:3000/api/user/${parsed.id}`);
+                        const res = await fetch(`/api/user/${parsed.id}`);
                         if (res.ok) {
                             const latest = await res.json();
                             setUser(latest);
@@ -250,7 +250,7 @@ export const UserProvider = ({ children }) => {
 
         // Sync to backend
         try {
-            await fetch('http://localhost:3000/api/user/update', {
+            await fetch('/api/user/update', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: updatedUser.id, ...updates })
