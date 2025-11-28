@@ -11,7 +11,11 @@ const db = createClient({
   authToken,
   // Force HTTP strategy to avoid native binding issues on Vercel
   // unless we are using a local file
-  ...(url.startsWith('file:') ? {} : { strategy: 'http' })
+  ...(url.startsWith('file:') ? {} : {
+    strategy: 'http',
+    // LibSQL http strategy requires https:// protocol
+    url: url.replace('libsql://', 'https://')
+  })
 });
 
 // Initialize Database

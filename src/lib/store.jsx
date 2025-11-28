@@ -226,6 +226,7 @@ export const UserProvider = ({ children }) => {
             }
         };
         initUser();
+        console.log("Golf App Frontend v1.1 (HTTP Strategy Fix)");
     }, []);
 
     const updateProfile = async (updates) => {
