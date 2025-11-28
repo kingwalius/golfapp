@@ -296,11 +296,11 @@ export const UserProvider = ({ children }) => {
                         hcpIndex: r.hcpIndex
                     })),
                     matches: validMatches.map(m => ({
-                        player1Id: user.id,
+                        player1Id: m.player1?.id || user.id,
                         player2Id: m.player2?.id || null,
                         courseId: m.courseId,
                         date: m.date,
-                        winnerId: null,
+                        winnerId: m.winnerId,
                         status: m.status,
                         scores: m.scores || {}
                     }))
