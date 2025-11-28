@@ -137,17 +137,25 @@ app.post('/auth/login', async (req, res) => {
     }
 });
 
-// TEMPORARY: Reset password for GeilerPachler
-app.get('/api/reset-password-temp', async (req, res) => {
+// Reset Password (Unsecured for MVP)
+app.post('/auth/reset-password', async (req, res) => {
+    const { username, newPassword } = req.body;
+    if (!username || !newPassword) return res.status(400).json({ error: 'Username and new password required' });
+
     try {
-        const hashedPassword = hashPassword('1234');
-        await db.execute({
+        const hashedPassword = hashPassword(newPassword);
+        const result = await db.execute({
             sql: 'UPDATE users SET password = ? WHERE username = ?',
-            args: [hashedPassword, 'GeilerPachler']
+            args: [hashedPassword, username]
         });
-        res.send('Password for GeilerPachler reset to 1234');
-    } catch (e) {
-        res.status(500).send(e.message);
+
+        if (result.rowsAffected === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        res.json({ success: true, message: 'Password reset successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 

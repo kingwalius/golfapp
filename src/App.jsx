@@ -15,6 +15,8 @@ import { LeagueDashboard } from './features/league/LeagueDashboard';
 // Placeholder components
 // Home component moved to features/home/Home.jsx
 
+import { ResetPassword } from './features/auth/ResetPassword';
+
 function App() {
   return (
     <DBProvider>

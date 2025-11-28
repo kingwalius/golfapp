@@ -74,6 +74,14 @@ export const Welcome = () => {
                     >
                         {loading ? 'Processing...' : (isRegistering ? 'Create Account' : 'Log In')}
                     </button>
+                    <div className="text-center pt-2">
+                        <button
+                            onClick={() => { /* TODO: Implement forgot password logic or navigation */ }}
+                            className="text-white/70 text-sm font-medium hover:text-white transition-colors"
+                        >
+                            Forgot Password?
+                        </button>
+                    </div>
                 </form>
 
                 <div className="mt-6">
