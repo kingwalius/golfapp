@@ -252,11 +252,21 @@ app.post('/courses', async (req, res) => {
 
 app.put('/courses/:id', async (req, res) => {
     const { name, holes, rating, slope, par } = req.body;
+    const id = req.params.id;
     try {
-        await db.execute({
+        const result = await db.execute({
             sql: 'UPDATE courses SET name = ?, holes = ?, rating = ?, slope = ?, par = ? WHERE id = ?',
-            args: [name, JSON.stringify(holes), rating, slope, par, req.params.id]
+            args: [name, JSON.stringify(holes), rating, slope, par, id]
         });
+
+        if (result.rowsAffected === 0) {
+            // Course didn't exist (e.g. wiped DB), so insert it with the specific ID
+            await db.execute({
+                sql: 'INSERT INTO courses (id, name, holes, rating, slope, par) VALUES (?, ?, ?, ?, ?, ?)',
+                args: [id, name, JSON.stringify(holes), rating, slope, par]
+            });
+        }
+
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
