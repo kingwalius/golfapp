@@ -23,6 +23,7 @@ function App() {
       <UserProvider>
         <BrowserRouter>
           <Routes>
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/" element={<Layout />}>
               <Route index element={<Home />} />
               <Route path="courses" element={<CourseList />} />
