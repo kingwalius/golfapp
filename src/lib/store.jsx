@@ -84,12 +84,12 @@ export const UserProvider = ({ children }) => {
                 body: JSON.stringify({ username, password })
             });
             let data;
+            const text = await res.text();
             try {
-                data = await res.json();
+                data = JSON.parse(text);
             } catch (jsonError) {
-                const text = await res.text();
                 console.error("Failed to parse JSON response:", text);
-                throw new Error(`Server error: ${res.status} ${res.statusText}`);
+                throw new Error(`Server error: ${res.status} ${res.statusText} - ${text.substring(0, 100)}`);
             }
 
             if (!res.ok) {
