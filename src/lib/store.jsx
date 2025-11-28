@@ -159,11 +159,24 @@ export const UserProvider = ({ children }) => {
             const validMatches = unsyncedMatches.filter(m => m.player2 && m.player2.id);
             const skippedMatches = unsyncedMatches.length - validMatches.length;
 
+            console.log("Sync Check:", {
+                userId: user.id,
+                online: navigator.onLine,
+                unsyncedRounds: unsyncedRounds.length,
+                unsyncedMatches: unsyncedMatches.length,
+                validMatches: validMatches.length
+            });
+
+            if (unsyncedMatches.length > 0) {
+                console.log("Unsynced Matches Details:", unsyncedMatches);
+            }
+
             if (skippedMatches > 0) {
                 console.warn(`Skipping ${skippedMatches} matches due to missing opponent ID (cannot sync to server).`);
             }
 
             if (unsyncedRounds.length === 0 && validMatches.length === 0) {
+                console.log("Nothing to sync.");
                 return;
             }
 
