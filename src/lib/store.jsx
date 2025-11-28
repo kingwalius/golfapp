@@ -188,7 +188,100 @@ export const UserProvider = ({ children }) => {
                 return;
             }
 
-            console.log(`Syncing ${unsyncedRounds.length} rounds and ${validMatches.length} matches...`);
+            // --- DOWN-SYNC: Fetch latest activity from server ---
+            try {
+                const activityRes = await fetch(`/api/user/${user.id}/activity`);
+                if (activityRes.ok) {
+                    const activityData = await activityRes.json();
+                    const tx = db.transaction(['rounds', 'matches'], 'readwrite');
+
+                    // Process Rounds
+                    if (activityData.rounds && Array.isArray(activityData.rounds)) {
+                        for (const serverRound of activityData.rounds) {
+                            // Check if exists locally (by date/course/score match? or just trust server ID if we had one?)
+                            // Server rounds don't have the same ID as local rounds necessarily if created elsewhere.
+                            // But if we just insert, we might duplicate if we don't have a unique ID strategy.
+                            // For now, let's check if we have a round with same date and courseId.
+                            // Ideally, we should use a UUID or server ID.
+                            // Current schema has auto-inc ID.
+                            // Let's just check if we have it by "synced" status? No.
+                            // Simple dedup: Check if we have a round with same date and courseId.
+                            // Better: The server round has an ID. We can store it? 
+                            // Local DB uses auto-inc ID.
+                            // We can't easily map server ID to local ID without a new column.
+                            // For MVP: Check if a round exists with same date (string match) and courseId.
+
+                            const existing = allRounds.find(r => r.date === serverRound.date && r.courseId === serverRound.courseId);
+                            if (!existing) {
+                                console.log("Down-syncing round:", serverRound);
+                                await tx.objectStore('rounds').add({
+                                    ...serverRound,
+                                    synced: true
+                                });
+                            }
+                        }
+                    }
+
+                    // Process Matches
+                    if (activityData.matches && Array.isArray(activityData.matches)) {
+                        for (const serverMatch of activityData.matches) {
+                            // Dedup matches by date and courseId
+                            const existing = allMatches.find(m => m.date === serverMatch.date && m.courseId === serverMatch.courseId);
+                            if (!existing) {
+                                console.log("Down-syncing match:", serverMatch);
+                                // We need to reconstruct the match object slightly to match local format if needed
+                                // Local format: { player1: {...}, player2: {...}, scores: {...} }
+                                // Server format: { player1Id, player2Id, ... }
+                                // We need to fetch player details?
+                                // The UI expects `player1` and `player2` objects with names.
+                                // We can fetch them or just store IDs and let UI handle it?
+                                // `MatchplayScorecard` expects `match.player1.name`.
+                                // We should probably fetch the user details if we can, or just store minimal info.
+                                // For now, let's store what we have. The UI might break if `player1` is missing.
+                                // Let's try to reconstruct basic player info if possible, or just IDs.
+                                // Actually, `MatchplaySetup` creates `player1: { name, hcp }`.
+                                // If we down-sync, we only have IDs.
+                                // We might need to fetch user info for these IDs.
+                                // Let's do a quick fetch for users if we don't have them?
+                                // Or just insert and let the UI handle "Loading..." or fetch on demand?
+                                // `MatchplayScorecard` fetches `db.get('matches', id)`.
+                                // If we insert, we need to make sure it has the structure the UI expects.
+                                // UI expects: player1: { name, playingHcp }, player2: { name, playingHcp }
+                                // Server has: player1Id, player2Id.
+                                // We can't easily reconstruct the full object without fetching users.
+                                // BUT, for "Recent Activity" list, we just need `player2.name` (optional) and status.
+                                // `Home.jsx` uses `item.player2?.name`.
+                                // We can try to fetch the usernames from the `users` table if we have them locally?
+                                // Or just fetch them from server?
+                                // Let's try to fetch all users first? No, too heavy.
+                                // Let's just insert with IDs and maybe the UI can handle it?
+                                // `Home.jsx` renders `item.player2?.name || 'Opponent'`.
+                                // So it won't crash, just show "Opponent".
+                                // That's acceptable for MVP.
+
+                                await tx.objectStore('matches').add({
+                                    ...serverMatch,
+                                    player1: { id: serverMatch.player1Id }, // Minimal info
+                                    player2: { id: serverMatch.player2Id }, // Minimal info
+                                    synced: true
+                                });
+                            }
+                        }
+                    }
+
+                    await tx.done;
+                }
+            } catch (e) {
+                console.error("Down-sync failed", e);
+            }
+
+            // --- UP-SYNC (Existing Logic) ---
+            if (unsyncedRounds.length === 0 && validMatches.length === 0) {
+                console.log("Nothing to up-sync.");
+                return;
+            }
+
+            console.log(`Up-syncing ${unsyncedRounds.length} rounds and ${validMatches.length} matches...`);
 
             const res = await fetch('/sync', {
                 method: 'POST',
@@ -214,7 +307,7 @@ export const UserProvider = ({ children }) => {
             });
 
             if (res.ok) {
-                console.log("Sync completed successfully");
+                console.log("Up-sync completed successfully");
 
                 // Mark items as synced in local DB
                 const tx = db.transaction(['rounds', 'matches'], 'readwrite');
@@ -229,7 +322,7 @@ export const UserProvider = ({ children }) => {
 
                 await tx.done;
             } else {
-                console.error("Sync failed with status:", res.status);
+                console.error("Up-sync failed with status:", res.status);
             }
         } catch (e) {
             console.error("Sync failed", e);
