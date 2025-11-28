@@ -145,7 +145,17 @@ export const UserProvider = ({ children }) => {
     }, [user, db]);
 
     const sync = async () => {
-        if (!user || !db || !navigator.onLine) return;
+        console.log("Sync Called. State:", {
+            hasUser: !!user,
+            hasDb: !!db,
+            isOnline: navigator.onLine,
+            userId: user?.id
+        });
+
+        if (!user || !db || !navigator.onLine) {
+            console.log("Sync aborting: Missing prerequisites.");
+            return;
+        }
 
         try {
             const allRounds = await db.getAll('rounds');
@@ -159,9 +169,7 @@ export const UserProvider = ({ children }) => {
             const validMatches = unsyncedMatches.filter(m => m.player2 && m.player2.id);
             const skippedMatches = unsyncedMatches.length - validMatches.length;
 
-            console.log("Sync Check:", {
-                userId: user.id,
-                online: navigator.onLine,
+            console.log("Sync Processing:", {
                 unsyncedRounds: unsyncedRounds.length,
                 unsyncedMatches: unsyncedMatches.length,
                 validMatches: validMatches.length
