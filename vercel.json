@@ -25,6 +25,10 @@
             "destination": "/api/index.js"
         },
         {
+            "source": "/courses/(.*)",
+            "destination": "/api/index.js"
+        },
+        {
             "source": "/(.*)",
             "destination": "/index.html"
         }
