@@ -273,7 +273,7 @@ export const UserProvider = ({ children }) => {
                     })),
                     matches: validMatches.map(m => ({
                         player1Id: user.id,
-                        player2Id: m.player2.id,
+                        player2Id: m.player2?.id || null,
                         courseId: m.courseId,
                         date: m.date,
                         winnerId: null,

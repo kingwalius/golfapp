@@ -273,10 +273,13 @@ app.post('/sync', async (req, res) => {
 
         if (matches && matches.length) {
             for (const match of matches) {
+                // Use Guest ID (9999) if player2Id is missing/null
+                const p2Id = match.player2Id || 9999;
+
                 await db.execute({
                     sql: `INSERT OR IGNORE INTO matches (player1Id, player2Id, courseId, date, winnerId, status, scores)
                           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                    args: [match.player1Id, match.player2Id, match.courseId, match.date, match.winnerId, match.status, JSON.stringify(match.scores || {})]
+                    args: [match.player1Id, p2Id, match.courseId, match.date, match.winnerId, match.status, JSON.stringify(match.scores || {})]
                 });
             }
         }
