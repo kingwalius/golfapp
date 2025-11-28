@@ -188,10 +188,10 @@ export const UserProvider = ({ children }) => {
                 console.warn(`Skipping ${skippedMatches} matches due to missing opponent ID (cannot sync to server).`);
             }
 
-            if (unsyncedRounds.length === 0 && validMatches.length === 0) {
-                console.log("Nothing to sync.");
-                return;
-            }
+            // if (unsyncedRounds.length === 0 && validMatches.length === 0) {
+            //     console.log("Nothing to sync.");
+            //     return;
+            // }
 
             // --- DOWN-SYNC: Fetch latest activity from server ---
             try {
