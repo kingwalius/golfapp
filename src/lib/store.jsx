@@ -37,13 +37,28 @@ export const useCourses = () => {
 
     const refresh = async () => {
         setLoading(true);
+        // Try to fetch from server first to get latest
+        try {
+            const res = await fetch('/courses');
+            if (res.ok) {
+                const serverCourses = await res.json();
+                const tx = db.transaction('courses', 'readwrite');
+                for (const course of serverCourses) {
+                    await tx.store.put(course);
+                }
+                await tx.done;
+            }
+        } catch (e) {
+            console.warn("Failed to fetch courses from server", e);
+        }
+
         const all = await db.getAll('courses');
         setCourses(all);
         setLoading(false);
     };
 
     useEffect(() => {
-        refresh();
+        if (db) refresh();
     }, [db]);
 
     return { courses, loading, refresh };

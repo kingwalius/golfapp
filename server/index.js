@@ -222,6 +222,34 @@ app.post('/sync', async (req, res) => {
     }
 });
 
+// --- Course Routes ---
+
+app.get('/courses', async (req, res) => {
+    try {
+        const result = await db.execute('SELECT * FROM courses');
+        const courses = result.rows.map(c => ({
+            ...c,
+            holes: JSON.parse(c.holes)
+        }));
+        res.json(courses);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/courses', async (req, res) => {
+    const { name, holes, rating, slope, par } = req.body;
+    try {
+        const result = await db.execute({
+            sql: 'INSERT INTO courses (name, holes, rating, slope, par) VALUES (?, ?, ?, ?, ?)',
+            args: [name, JSON.stringify(holes), rating, slope, par]
+        });
+        res.json({ id: result.lastInsertRowid.toString(), success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- Leaderboard Routes ---
 
 app.get('/leaderboard/solo', async (req, res) => {

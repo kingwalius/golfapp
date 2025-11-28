@@ -43,7 +43,7 @@ export const MatchplaySetup = () => {
         db.getAll('courses').then(setCourses);
 
         // Fetch online users
-        fetch('http://localhost:3000/users')
+        fetch('/users')
             .then(res => res.json())
             .then(users => {
                 if (Array.isArray(users)) {

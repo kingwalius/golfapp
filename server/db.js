@@ -62,6 +62,17 @@ export const initDB = async () => {
     )
   `);
 
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS courses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      holes TEXT NOT NULL, -- JSON string of holes
+      rating REAL,
+      slope INTEGER,
+      par INTEGER
+    )
+  `);
+
   // Migrations: Attempt to add columns if they don't exist
   // LibSQL doesn't support easy "try/catch" for column existence in the same way, 
   // but we can try adding them and ignore errors if they exist.
