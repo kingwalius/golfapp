@@ -6,6 +6,8 @@ dotenv.config();
 const url = process.env.TURSO_DATABASE_URL || 'file:golf.db';
 const authToken = process.env.TURSO_AUTH_TOKEN;
 
+console.log(`Initializing DB with URL: ${url.startsWith('file:') ? 'Local File' : 'Turso Cloud'} (${url.substring(0, 15)}...)`);
+
 const db = createClient({
   url,
   authToken,

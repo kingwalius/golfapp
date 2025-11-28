@@ -10,7 +10,19 @@ app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 
 // Initialize DB
+// Initialize DB
 initDB();
+
+app.get('/api/debug', (req, res) => {
+    res.json({
+        env: {
+            TURSO_DATABASE_URL: process.env.TURSO_DATABASE_URL ? 'Set' : 'Missing',
+            TURSO_AUTH_TOKEN: process.env.TURSO_AUTH_TOKEN ? 'Set' : 'Missing',
+            NODE_ENV: process.env.NODE_ENV
+        },
+        dbUrlPrefix: process.env.TURSO_DATABASE_URL ? process.env.TURSO_DATABASE_URL.substring(0, 10) : 'N/A'
+    });
+});
 
 // --- Auth Routes ---
 
