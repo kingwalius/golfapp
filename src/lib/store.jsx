@@ -138,6 +138,11 @@ export const UserProvider = ({ children }) => {
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
 
+        // Trigger sync immediately if user and db are ready
+        if (user && db && navigator.onLine) {
+            sync();
+        }
+
         return () => {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
