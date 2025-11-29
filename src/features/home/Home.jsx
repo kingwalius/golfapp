@@ -151,9 +151,6 @@ export const Home = () => {
                                 >
                                     <div className="p-4 flex justify-between items-center">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                                                <Star size={20} fill="currentColor" className="text-emerald-500" />
-                                            </div>
                                             <div>
                                                 <p className="font-bold text-dark">{course?.name || 'Unknown Course'}</p>
                                                 <div className="text-xs text-muted flex items-center gap-1">

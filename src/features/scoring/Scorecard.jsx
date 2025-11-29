@@ -231,7 +231,7 @@ export const Scorecard = () => {
                     onClick={handleFinish}
                     className="w-full bg-primary text-white py-4 rounded-xl font-bold shadow-lg hover:bg-primaryLight transition active:scale-95 flex items-center justify-center gap-2"
                 >
-                    <span>🏁</span> Finish Round
+                    Finish Round
                 </button>
             </div>
         </div>
