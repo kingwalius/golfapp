@@ -27,34 +27,32 @@ export const Welcome = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden bg-[#F5F5F0]">
             {/* Background Image */}
             <div
-                className="absolute inset-0 z-0"
+                className="absolute inset-0 z-0 opacity-15"
                 style={{
                     backgroundImage: "url('/social-greens-bg.png')",
-                    backgroundSize: 'cover',
+                    backgroundSize: '400px', // Smaller pattern size for the sketches
+                    backgroundRepeat: 'repeat',
                     backgroundPosition: 'center',
                 }}
-            >
-                {/* Overlay for readability */}
-                <div className="absolute inset-0 bg-primary/80 backdrop-blur-[2px]"></div>
-            </div>
+            ></div>
 
             <div className="relative z-10 w-full max-w-md">
                 <div className="mb-12 text-center">
                     <img
-                        src="/social-greens-logo.png"
+                        src="/social-greens-logo-transparent.png"
                         alt="Social Greens"
-                        className="w-64 mx-auto drop-shadow-lg"
+                        className="w-72 mx-auto"
                     />
-                    <p className="text-bone-white/90 mt-4 text-lg font-medium tracking-wide">Track your game, challenge friends.</p>
+                    <p className="text-primary/80 mt-2 text-lg font-medium tracking-wide">Track your game, challenge friends.</p>
                 </div>
 
-                <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-8 rounded-[2rem] shadow-2xl">
-                    <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="p-4">
+                    <form onSubmit={handleSubmit} className="space-y-6">
                         {error && (
-                            <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-2xl text-white text-sm font-medium text-center backdrop-blur-sm">
+                            <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-sm font-medium text-center">
                                 {error}
                             </div>
                         )}
@@ -63,7 +61,7 @@ export const Welcome = () => {
                             <input
                                 type="text"
                                 placeholder="Username"
-                                className="w-full p-4 rounded-2xl bg-white/90 border-0 text-lg font-medium text-primary placeholder-primary/40 focus:ring-4 focus:ring-secondary/50 transition-all shadow-inner"
+                                className="w-full p-4 rounded-2xl bg-white border-2 border-stone-200 text-lg font-medium text-primary placeholder-stone-400 focus:ring-0 focus:border-primary transition-all shadow-sm"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 autoFocus
@@ -71,7 +69,7 @@ export const Welcome = () => {
                             <input
                                 type="password"
                                 placeholder="Password"
-                                className="w-full p-4 rounded-2xl bg-white/90 border-0 text-lg font-medium text-primary placeholder-primary/40 focus:ring-4 focus:ring-secondary/50 transition-all shadow-inner"
+                                className="w-full p-4 rounded-2xl bg-white border-2 border-stone-200 text-lg font-medium text-primary placeholder-stone-400 focus:ring-0 focus:border-primary transition-all shadow-sm"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                             />
@@ -80,7 +78,7 @@ export const Welcome = () => {
                         <button
                             type="submit"
                             disabled={!username.trim() || !password.trim() || loading}
-                            className="w-full py-4 bg-secondary text-white rounded-2xl font-bold text-xl shadow-lg hover:bg-amber-600 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                            className="w-full py-4 bg-primary text-white rounded-2xl font-bold text-xl shadow-lg hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                         >
                             {loading ? 'Processing...' : (isRegistering ? 'Create Account' : 'Log In')}
                         </button>
@@ -89,7 +87,7 @@ export const Welcome = () => {
                             <button
                                 type="button"
                                 onClick={() => navigate('/reset-password')}
-                                className="text-white/80 text-sm font-medium hover:text-white transition-colors hover:underline decoration-white/50 underline-offset-4"
+                                className="text-stone-500 text-sm font-medium hover:text-primary transition-colors"
                             >
                                 Forgot Password?
                             </button>
@@ -103,7 +101,7 @@ export const Welcome = () => {
                             setIsRegistering(!isRegistering);
                             setError('');
                         }}
-                        className="text-white/90 text-base font-medium hover:text-white transition-colors bg-white/10 px-6 py-3 rounded-full backdrop-blur-md border border-white/10 hover:bg-white/20"
+                        className="text-primary font-bold text-base hover:underline decoration-2 underline-offset-4"
                     >
                         {isRegistering ? 'Already have an account? Log In' : 'New here? Create Account'}
                     </button>
