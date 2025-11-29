@@ -275,16 +275,32 @@ app.get('/api/user/:id', async (req, res) => {
 
 // --- Update User Profile ---
 app.post('/api/user/update', async (req, res) => {
-    const { id, username, avatar, handicapMode, manualHandicap } = req.body;
+    const { id, ...updates } = req.body;
+    if (!id) return res.status(400).json({ error: 'User ID required' });
+
     try {
-        await db.execute({
-            sql: `
-              UPDATE users 
-              SET username = ?, avatar = ?, handicapMode = ?, manualHandicap = ?
-              WHERE id = ?
-            `,
-            args: [username, avatar, handicapMode, manualHandicap, id]
-        });
+        const fields = [];
+        const args = [];
+
+        // Whitelist allowed fields
+        const allowed = ['username', 'avatar', 'handicap', 'handicapMode', 'manualHandicap', 'password'];
+
+        for (const key of Object.keys(updates)) {
+            if (allowed.includes(key)) {
+                fields.push(`${key} = ?`);
+                args.push(updates[key]);
+            }
+        }
+
+        if (fields.length === 0) {
+            return res.json({ success: true, message: 'No updates provided' });
+        }
+
+        args.push(id);
+
+        const sql = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
+
+        await db.execute({ sql, args });
         res.json({ success: true });
     } catch (error) {
         console.error('Error updating profile:', error);
