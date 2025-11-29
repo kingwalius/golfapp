@@ -338,7 +338,17 @@ export const UserProvider = ({ children }) => {
             });
 
             if (res.ok) {
-                console.log("Up-sync completed successfully");
+                const responseData = await res.json();
+                console.log("Up-sync completed successfully", responseData);
+
+                if (responseData.results) {
+                    if (responseData.results.matches.failed > 0) {
+                        console.error("Some matches failed to sync:", responseData.results.matches.errors);
+                    }
+                    if (responseData.results.rounds.failed > 0) {
+                        console.error("Some rounds failed to sync:", responseData.results.rounds.errors);
+                    }
+                }
 
                 // Mark items as synced in local DB
                 const tx = db.transaction(['rounds', 'matches'], 'readwrite');

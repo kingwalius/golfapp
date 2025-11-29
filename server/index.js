@@ -430,6 +430,11 @@ app.post('/sync', async (req, res) => {
 
         const guestId = await getGuestId();
 
+        const results = {
+            rounds: { success: 0, failed: 0, errors: [] },
+            matches: { success: 0, failed: 0, errors: [] }
+        };
+
         // 4. Process Rounds
         if (rounds && rounds.length) {
             for (const round of rounds) {
@@ -456,8 +461,11 @@ app.post('/sync', async (req, res) => {
                             args: [userId, round.courseId, round.date, round.score, round.stableford, round.hcpIndex, scoresJson]
                         });
                     }
+                    results.rounds.success++;
                 } catch (roundError) {
                     console.error("Failed to sync round:", round, roundError);
+                    results.rounds.failed++;
+                    results.rounds.errors.push({ round, error: roundError.message });
                 }
             }
         }
@@ -476,18 +484,18 @@ app.post('/sync', async (req, res) => {
                     if (!match.courseId) console.warn(`Match missing courseId, using ${courseId}`);
 
                     // Ensure Player 2 exists (Self-healing for FK constraints)
-                    if (p2Id !== guestId) {
-                        const p2Check = await db.execute({
-                            sql: 'SELECT id FROM users WHERE id = ?',
-                            args: [p2Id]
+                    // Explicitly check if p2Id exists, even if it is guestId (just to be safe)
+                    const p2Check = await db.execute({
+                        sql: 'SELECT id FROM users WHERE id = ?',
+                        args: [p2Id]
+                    });
+
+                    if (p2Check.rows.length === 0) {
+                        console.log(`Player 2 (${p2Id}) missing on server. Auto-restoring...`);
+                        await db.execute({
+                            sql: "INSERT INTO users (id, username, handicap, handicapMode) VALUES (?, ?, ?, ?)",
+                            args: [p2Id, p2Id == 9999 ? 'Guest' : `Restored_User_${p2Id}`, 18.0, 'MANUAL']
                         });
-                        if (p2Check.rows.length === 0) {
-                            console.log(`Player 2 (${p2Id}) missing on server. Auto-restoring...`);
-                            await db.execute({
-                                sql: "INSERT INTO users (id, username, handicap, handicapMode) VALUES (?, ?, ?, ?)",
-                                args: [p2Id, `Restored_User_${p2Id}`, 28.0, 'AUTO']
-                            });
-                        }
                     }
 
                     // Check if match exists (Upsert Logic)
@@ -527,14 +535,16 @@ app.post('/sync', async (req, res) => {
                             args: [match.player1Id, p2Id, courseId, matchDate, match.winnerId, match.status, scoresJson]
                         });
                     }
+                    results.matches.success++;
                 } catch (matchError) {
                     console.error("Failed to sync match:", match, matchError);
-                    // Continue to next match instead of failing the whole batch
+                    results.matches.failed++;
+                    results.matches.errors.push({ match, error: matchError.message });
                 }
             }
         }
 
-        res.json({ success: true, message: 'Synced successfully' });
+        res.json({ success: true, message: 'Synced successfully', results });
     } catch (error) {
         console.error("Sync Error:", error);
         res.status(500).json({ error: error.message, stack: error.stack });
