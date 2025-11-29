@@ -163,30 +163,28 @@ export const Scorecard = () => {
                             const strokes = round.scores[hole.number] || 0;
                             const strokesReceived = calculateStrokesReceived(playingHcp, hole.hcp);
                             const points = calculateStableford(hole.par, strokes, strokesReceived);
-                            adjustedGrossScore += adjustedScore;
-                        }
 
                             return (
-                        <tr key={hole.number} className={clsx(strokes > 0 ? "bg-white" : "bg-gray-50")}>
-                            <td className="p-3 font-bold">{hole.number}</td>
-                            <td className="p-3">{hole.par}</td>
-                            <td className="p-3 text-gray-400">{hole.hcp}</td>
-                            <td className="p-2">
-                                <input
-                                    type="number"
-                                    inputMode="numeric"
-                                    className={clsx(
-                                        "w-full h-12 text-center border rounded-xl font-bold text-xl focus:ring-2 focus:ring-primary outline-none touch-manipulation",
-                                        strokes === 0 ? "text-gray-300 border-gray-200" : "text-dark border-primary bg-teal-50"
-                                    )}
-                                    value={strokes || ''}
-                                    placeholder="-"
-                                    onChange={(e) => updateScore(hole.number, e.target.value)}
-                                />
-                            </td>
-                            <td className="p-3 font-bold text-primary">{strokes > 0 ? points : '-'}</td>
-                        </tr>
-                        );
+                                <tr key={hole.number} className={clsx(strokes > 0 ? "bg-white" : "bg-gray-50")}>
+                                    <td className="p-3 font-bold">{hole.number}</td>
+                                    <td className="p-3">{hole.par}</td>
+                                    <td className="p-3 text-gray-400">{hole.hcp}</td>
+                                    <td className="p-2">
+                                        <input
+                                            type="number"
+                                            inputMode="numeric"
+                                            className={clsx(
+                                                "w-full h-12 text-center border rounded-xl font-bold text-xl focus:ring-2 focus:ring-primary outline-none touch-manipulation",
+                                                strokes === 0 ? "text-gray-300 border-gray-200" : "text-dark border-primary bg-teal-50"
+                                            )}
+                                            value={strokes || ''}
+                                            placeholder="-"
+                                            onChange={(e) => updateScore(hole.number, e.target.value)}
+                                        />
+                                    </td>
+                                    <td className="p-3 font-bold text-primary">{strokes > 0 ? points : '-'}</td>
+                                </tr>
+                            );
                         })}
                     </tbody>
                     <tfoot className="bg-gray-800 text-white font-bold">
