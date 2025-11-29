@@ -55,7 +55,6 @@ export const LeagueDashboard = () => {
                 if (res.ok) {
                     const data = await res.json();
                     setFeed(data);
-                    console.log("League Feed Data:", data);
 
                     // Calculate Best Score of the Week
                     const now = new Date();
@@ -72,11 +71,8 @@ export const LeagueDashboard = () => {
                         // Check if item has stableford points
                         if (item.stableford !== undefined && item.stableford !== null) {
                             if (!best || item.stableford > best.stableford) {
-                                const playerName = item.username || item.p1Name || 'Player';
-                                console.log("Potential Best:", { item, playerName });
-
                                 best = {
-                                    player: playerName,
+                                    player: item.username || item.p1Name || 'Player',
                                     stableford: item.stableford,
                                     strokes: item.score,
                                     date: new Date(item.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
@@ -87,7 +83,6 @@ export const LeagueDashboard = () => {
                         }
                     });
 
-                    console.log("Best of Week Calculated:", best);
                     setBestOfWeek(best);
                 }
             } catch (error) {
@@ -112,7 +107,7 @@ export const LeagueDashboard = () => {
 
                         <div className="flex justify-between items-end">
                             <div>
-                                <h2 className="text-3xl font-bold mb-1">{bestOfWeek.player}</h2>
+                                <h2 className="text-3xl font-bold mb-1 text-white">{bestOfWeek.player}</h2>
                                 <div className="text-sm text-emerald-100 flex flex-col">
                                     <span>{bestOfWeek.courseName}</span>
                                     <span className="opacity-80">{bestOfWeek.date}</span>
