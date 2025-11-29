@@ -94,7 +94,30 @@ export const MatchplayScorecard = () => {
                     <div className="text-xs opacity-90">HCP: {match.player1.playingHcp} vs {match.player2.playingHcp}</div>
                 </div>
                 <div className="text-2xl font-black bg-white text-secondary px-3 py-1 rounded">
-                    {match.status}
+                    {(() => {
+                        // Calculate status relative to user
+                        let p1Wins = 0;
+                        let p2Wins = 0;
+                        if (match.scores) {
+                            Object.values(match.scores).forEach(s => {
+                                if (s.winner === 1) p1Wins++;
+                                if (s.winner === 2) p2Wins++;
+                            });
+                        }
+
+                        const { user } = useUser();
+                        const userId = user?.id?.toString();
+                        const p1Id = match.player1?.id?.toString();
+                        const isP1 = userId === p1Id;
+
+                        const diff = p1Wins - p2Wins;
+                        const absDiff = Math.abs(diff);
+
+                        if (diff === 0) return 'AS';
+
+                        const isUp = isP1 ? diff > 0 : diff < 0;
+                        return `${absDiff} ${isUp ? 'UP' : 'DOWN'}`;
+                    })()}
                 </div>
             </div>
 

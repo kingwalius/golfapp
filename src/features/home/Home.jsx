@@ -205,7 +205,54 @@ export const Home = () => {
                                         </div>
                                         <div className="text-right">
                                             {isMatch ? (
-                                                <span className="text-sm font-bold bg-stone-100 px-2 py-1 rounded text-stone-600">{item.status}</span>
+                                                <span className={`text-sm font-bold px-2 py-1 rounded ${(() => {
+                                                        // Calculate status relative to user
+                                                        let p1Wins = 0;
+                                                        let p2Wins = 0;
+                                                        if (item.scores) {
+                                                            Object.values(item.scores).forEach(s => {
+                                                                if (s.winner === 1) p1Wins++;
+                                                                if (s.winner === 2) p2Wins++;
+                                                            });
+                                                        }
+
+                                                        const userId = user?.id?.toString();
+                                                        const p1Id = item.player1?.id?.toString();
+                                                        const isP1 = userId === p1Id;
+
+                                                        const diff = p1Wins - p2Wins;
+                                                        const isUp = isP1 ? diff > 0 : diff < 0;
+                                                        const isDown = isP1 ? diff < 0 : diff > 0;
+
+                                                        if (diff === 0) return 'bg-stone-100 text-stone-600'; // AS
+                                                        if (isUp) return 'bg-green-100 text-green-700'; // UP
+                                                        return 'bg-red-100 text-red-700'; // DOWN
+                                                    })()
+                                                    }`}>
+                                                    {(() => {
+                                                        // Calculate text
+                                                        let p1Wins = 0;
+                                                        let p2Wins = 0;
+                                                        if (item.scores) {
+                                                            Object.values(item.scores).forEach(s => {
+                                                                if (s.winner === 1) p1Wins++;
+                                                                if (s.winner === 2) p2Wins++;
+                                                            });
+                                                        }
+
+                                                        const userId = user?.id?.toString();
+                                                        const p1Id = item.player1?.id?.toString();
+                                                        const isP1 = userId === p1Id;
+
+                                                        const diff = p1Wins - p2Wins;
+                                                        const absDiff = Math.abs(diff);
+
+                                                        if (diff === 0) return 'AS';
+
+                                                        const isUp = isP1 ? diff > 0 : diff < 0;
+                                                        return `${absDiff} ${isUp ? 'UP' : 'DOWN'}`;
+                                                    })()}
+                                                </span>
                                             ) : (
                                                 <span className="text-primary font-bold text-lg">
                                                     {(() => {
