@@ -270,6 +270,51 @@ app.get('/api/user/:id/activity', async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
+}
+});
+
+// --- League Feed Route ---
+app.get('/api/league/feed', async (req, res) => {
+    try {
+        // Fetch all rounds with user info
+        const roundsResult = await db.execute(`
+            SELECT r.*, u.username, c.name as courseName, c.holes as courseHoles
+            FROM rounds r
+            JOIN users u ON r.userId = u.id
+            JOIN courses c ON r.courseId = c.id
+            ORDER BY r.date DESC LIMIT 50
+        `);
+
+        // Fetch all matches with user info
+        const matchesResult = await db.execute(`
+            SELECT m.*, u1.username as p1Name, u2.username as p2Name, c.name as courseName, c.holes as courseHoles
+            FROM matches m
+            LEFT JOIN users u1 ON m.player1Id = u1.id
+            LEFT JOIN users u2 ON m.player2Id = u2.id
+            JOIN courses c ON m.courseId = c.id
+            ORDER BY m.date DESC LIMIT 50
+        `);
+
+        const rounds = roundsResult.rows.map(r => ({
+            ...r,
+            type: 'round',
+            courseHoles: JSON.parse(r.courseHoles || '[]')
+        }));
+
+        const matches = matchesResult.rows.map(m => ({
+            ...m,
+            type: 'match',
+            scores: m.scores ? JSON.parse(m.scores) : {},
+            courseHoles: JSON.parse(m.courseHoles || '[]')
+        }));
+
+        // Combine and sort by date
+        const feed = [...rounds, ...matches].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        res.json(feed);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // --- Sync Routes ---

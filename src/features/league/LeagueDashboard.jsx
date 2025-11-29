@@ -1,94 +1,102 @@
-import React, { useState, useEffect } from 'react';
-import { useDB } from '../../lib/store';
-import { getChallenges } from './challenges';
+import React, { useEffect, useState } from 'react';
+import { CompactScorecard } from './CompactScorecard';
+
+const FeedItem = ({ item }) => {
+    const isMatch = item.type === 'match';
+    const date = new Date(item.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+    // Construct the "Blog Post" text
+    let title = '';
+    let description = '';
+
+    if (isMatch) {
+        title = `${item.p1Name || 'Unknown'} vs ${item.p2Name || 'Unknown'}`;
+        description = `${item.p1Name || 'Player 1'} hat eine Runde Matchplay mit ${item.p2Name || 'Player 2'} gespielt.`;
+    } else {
+        title = `${item.username || 'Unknown'} - Round`;
+        description = `${item.username || 'Player'} hat eine Runde auf dem ${item.courseName} gespielt.`;
+    }
+
+    const scores = item.scores || {};
+
+    return (
+        <div className="bg-white rounded-3xl p-6 shadow-sm mb-6 border border-stone-100">
+            <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-xl">
+                    ⛳
+                </div>
+                <div>
+                    <h3 className="font-bold text-primary text-lg">{title}</h3>
+                    <p className="text-stone-400 text-xs">{date} • {item.courseName}</p>
+                </div>
+            </div>
+
+            <p className="text-stone-600 mb-4 font-medium leading-relaxed">
+                {description}
+            </p>
+
+            {/* Scorecard */}
+            {item.courseHoles && item.courseHoles.length > 0 ? (
+                <CompactScorecard
+                    holes={item.courseHoles}
+                    scores={scores}
+                    par={72}
+                />
+            ) : (
+                <div className="bg-stone-100 p-4 rounded-xl text-center text-stone-500">
+                    Scorecard data unavailable
+                </div>
+            )}
+
+            <div className="mt-4 flex gap-4 text-sm font-bold text-primary">
+                {isMatch ? (
+                    <span>Winner: {item.winnerId ? (item.winnerId == item.player1Id ? item.p1Name : item.p2Name) : 'Draw/Pending'}</span>
+                ) : (
+                    <>
+                        <span>Score: {item.score}</span>
+                        <span>Pts: {item.stableford}</span>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+};
 
 export const LeagueDashboard = () => {
-    const db = useDB();
-    const [challenges, setChallenges] = useState({ weekly: null, monthly: null });
-    const [soloLeaderboard, setSoloLeaderboard] = useState([]);
+    const [feed, setFeed] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const load = async () => {
-            const rounds = await db.getAll('rounds');
-            const courses = await db.getAll('courses');
-            const data = getChallenges(rounds, courses);
-            setChallenges(data);
-
-            // Fetch Online Leaderboard
+        const fetchFeed = async () => {
             try {
-                const res = await fetch('http://localhost:3000/leaderboard/solo');
-                const leaderboard = await res.json();
-                setSoloLeaderboard(leaderboard);
-            } catch (e) {
-                console.error("Failed to fetch leaderboard", e);
+                const res = await fetch('/api/league/feed');
+                if (res.ok) {
+                    const data = await res.json();
+                    setFeed(data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch league feed", error);
+            } finally {
+                setLoading(false);
             }
-
-            setLoading(false);
         };
-        load();
-    }, [db]);
 
-    if (loading) return <div className="p-4">Loading League...</div>;
+        fetchFeed();
+    }, []);
 
     return (
         <div className="p-4 pb-20">
-            <h1 className="text-2xl font-bold mb-6 text-primary">League & Challenges</h1>
+            <h1 className="text-2xl font-bold mb-6 text-primary">League Feed</h1>
 
-            <div className="space-y-6">
-                {/* Weekly Challenge */}
-                <div className="bg-gradient-to-br from-teal-500 to-teal-700 rounded-xl p-6 text-white shadow-lg">
-                    <div className="flex justify-between items-start mb-4">
-                        <div>
-                            <h2 className="font-bold text-xl">{challenges.weekly.title}</h2>
-                            <p className="text-teal-100 text-sm">{challenges.weekly.description}</p>
-                        </div>
-                        <span className="text-3xl">📅</span>
-                    </div>
-
-                    {challenges.weekly.leader ? (
-                        <div className="bg-white/20 rounded-lg p-4 backdrop-blur-sm">
-                            <div className="text-xs uppercase tracking-wider opacity-75 mb-1">Current Leader</div>
-                            <div className="flex justify-between items-end">
-                                <span className="font-bold text-lg">You</span>
-                                <span className="text-2xl font-black">{challenges.weekly.leader.score} pts</span>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="text-center py-4 bg-white/10 rounded-lg">
-                            No rounds this week yet. Go play!
-                        </div>
-                    )}
-                </div>
-
-                {/* Online Leaderboard */}
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <h3 className="font-bold text-lg mb-3">Global Handicap Leaderboard</h3>
-                    <table className="w-full text-sm">
-                        <thead className="text-gray-500 border-b">
-                            <tr>
-                                <th className="text-left py-2">Rank</th>
-                                <th className="text-left py-2">Player</th>
-                                <th className="text-right py-2">HCP</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {soloLeaderboard.map((user, i) => (
-                                <tr key={user.id} className={i === 0 ? "text-primary font-bold" : ""}>
-                                    <td className="py-3 font-bold">{i + 1}</td>
-                                    <td className="py-3">{user.username}</td>
-                                    <td className="py-3 text-right">{user.handicap}</td>
-                                </tr>
-                            ))}
-                            {soloLeaderboard.length === 0 && (
-                                <tr>
-                                    <td colSpan="3" className="py-4 text-center text-gray-400">Offline or No Data</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            {loading ? (
+                <div className="text-center py-10 text-stone-400">Loading feed...</div>
+            ) : feed.length === 0 ? (
+                <div className="text-center py-10 text-stone-400">No activity yet. Go play some golf!</div>
+            ) : (
+                feed.map((item, index) => (
+                    <FeedItem key={`${item.type}-${item.id}-${index}`} item={item} />
+                ))
+            )}
         </div>
     );
 };
