@@ -32,6 +32,61 @@ app.get('/api/init', async (req, res) => {
     }
 });
 
+app.get('/api/fix-db', async (req, res) => {
+    const report = [];
+    const log = (msg) => report.push(msg);
+
+    try {
+        log('Starting manual DB fix...');
+
+        // 1. Fix Rounds Table
+        try {
+            log('Checking rounds table...');
+            await db.execute("SELECT scores FROM rounds LIMIT 1");
+            log('✅ rounds.scores column exists.');
+        } catch (e) {
+            log('❌ rounds.scores column missing. Attempting to add...');
+            try {
+                await db.execute("ALTER TABLE rounds ADD COLUMN scores TEXT");
+                log('✅ Successfully added scores column to rounds.');
+            } catch (e2) {
+                log(`❌ Failed to add scores to rounds: ${e2.message}`);
+            }
+        }
+
+        // 2. Fix Matches Table
+        try {
+            log('Checking matches table...');
+            await db.execute("SELECT scores FROM matches LIMIT 1");
+            log('✅ matches.scores column exists.');
+        } catch (e) {
+            log('❌ matches.scores column missing. Attempting to add...');
+            try {
+                await db.execute("ALTER TABLE matches ADD COLUMN scores TEXT");
+                log('✅ Successfully added scores column to matches.');
+            } catch (e2) {
+                log(`❌ Failed to add scores to matches: ${e2.message}`);
+            }
+        }
+
+        // 3. Verify Guest User
+        try {
+            log('Checking Guest user...');
+            await db.execute({
+                sql: "INSERT OR IGNORE INTO users (id, username, handicap, handicapMode) VALUES (?, ?, ?, ?)",
+                args: [9999, 'Guest', 18.0, 'MANUAL']
+            });
+            log('✅ Guest user verified/created.');
+        } catch (e) {
+            log(`❌ Guest user check failed: ${e.message}`);
+        }
+
+        res.json({ status: 'Complete', report });
+    } catch (error) {
+        res.status(500).json({ error: error.message, report });
+    }
+});
+
 // --- Auth Routes ---
 
 import crypto from 'crypto';
