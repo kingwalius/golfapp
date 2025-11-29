@@ -10,7 +10,6 @@ app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 
 // Initialize DB
-// Initialize DB
 initDB();
 
 app.get('/api/debug', (req, res) => {
@@ -228,35 +227,6 @@ app.get('/api/user/:id/activity', async (req, res) => {
             args: [userId, userId]
         });
 
-        // Parse JSON fields if necessary (LibSQL might return strings for JSON columns)
-        // Matches don't have JSON columns in the schema I recall, but let's check.
-        // Rounds don't have JSON columns.
-        // Actually, matches might have 'scores' as JSON if we stored it? 
-        // Wait, the schema for matches is:
-        // CREATE TABLE matches (
-        //   id INTEGER PRIMARY KEY AUTOINCREMENT,
-        //   player1Id INTEGER,
-        //   player2Id INTEGER,
-        //   courseId INTEGER,
-        //   date TEXT,
-        //   winnerId INTEGER,
-        //   status TEXT
-        // );
-        // It seems we are NOT storing scores in the DB for matches in the sync logic?
-        // Let's check the sync logic in server/index.js again.
-        // It inserts: player1Id, player2Id, courseId, date, winnerId, status.
-        // It does NOT insert scores.
-        // This means the "Scorecard" details won't be fully available on the other device if we don't store them.
-        // BUT, for "Recent Activity" list, we just need the summary.
-        // However, if the user clicks on it, they might expect to see the scorecard.
-        // The current `matches` table definition in `db.js` (which I should check) might be missing `scores`.
-        // If so, that's a separate issue, but for now let's just sync what we have.
-
-        // Wait, if I look at `MatchplayScorecard.jsx`, it uses `match.scores`.
-        // If the server doesn't store `scores`, then syncing back will result in a match without scores.
-        // Let's check `db.js` to see the schema. 
-        // I'll proceed with adding the endpoint first, but I should verify the schema.
-
         // Parse scores from JSON string
         const matches = matchesResult.rows.map(m => ({
             ...m,
@@ -316,12 +286,35 @@ app.get('/api/league/feed', async (req, res) => {
     }
 });
 
+// Helper to ensure scores column exists (Self-healing schema)
+const ensureScoresColumn = async (table) => {
+    try {
+        await db.execute(`SELECT scores FROM ${table} LIMIT 1`);
+    } catch (e) {
+        // Check for various "no such column" error messages (driver dependent)
+        if (e.message && (e.message.includes('no such column') || e.message.includes('column not found'))) {
+            console.log(`Adding missing 'scores' column to ${table}...`);
+            try {
+                await db.execute(`ALTER TABLE ${table} ADD COLUMN scores TEXT`);
+            } catch (alterError) {
+                console.error(`Failed to add scores column to ${table}:`, alterError);
+            }
+        }
+    }
+};
+
 // --- Sync Routes ---
 app.post('/sync', async (req, res) => {
     const { userId, rounds, matches } = req.body;
     if (!userId) return res.status(400).json({ error: 'User ID required' });
 
     try {
+        console.log('Sync Request:', { userId, roundsCount: rounds?.length, matchesCount: matches?.length });
+
+        // Ensure schema is correct before attempting inserts
+        await ensureScoresColumn('rounds');
+        await ensureScoresColumn('matches');
+
         // LibSQL doesn't support better-sqlite3 style transactions directly in the same way,
         // but supports batch execution. However, for simplicity/compatibility with this logic,
         // we will execute sequentially or use `batch` if possible.
