@@ -23,7 +23,8 @@ export const CompactScorecard = ({ holes, scores, par }) => {
         const totalScore = nineHoles.reduce((acc, h, i) => {
             const holeNum = startIndex + i + 1;
             const val = typeof scores === 'object' && !Array.isArray(scores) ? scores[holeNum] : scores[i];
-            return acc + (parseInt(val) || 0);
+            const scoreVal = typeof val === 'object' ? val.p1 : val;
+            return acc + (parseInt(scoreVal) || 0);
         }, 0);
 
         return (
@@ -50,8 +51,8 @@ export const CompactScorecard = ({ holes, scores, par }) => {
                         const val = typeof scores === 'object' && !Array.isArray(scores) ? scores[holeNum] : scores[i];
                         return (
                             <div key={i} className="bg-white flex items-center justify-center py-1">
-                                <div className={`w-6 h-6 flex items-center justify-center text-sm ${getScoreStyle(val, h.par)}`}>
-                                    {val || '-'}
+                                <div className={`w-6 h-6 flex items-center justify-center text-sm ${getScoreStyle(typeof val === 'object' ? val.p1 : val, h.par)}`}>
+                                    {typeof val === 'object' ? (val.p1 || '-') : (val || '-')}
                                 </div>
                             </div>
                         );
