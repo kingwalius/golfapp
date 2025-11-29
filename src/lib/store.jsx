@@ -302,7 +302,8 @@ export const UserProvider = ({ children }) => {
                         date: r.date,
                         score: r.totalStrokes || 0,
                         stableford: r.totalStableford || 0,
-                        hcpIndex: r.hcpIndex
+                        hcpIndex: r.hcpIndex,
+                        scores: r.scores || {}
                     })),
                     matches: validMatches.map(m => ({
                         player1Id: m.player1?.id || user.id,

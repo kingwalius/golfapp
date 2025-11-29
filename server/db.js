@@ -80,7 +80,8 @@ export const initDB = async () => {
     "ALTER TABLE users ADD COLUMN handicapMode TEXT DEFAULT 'AUTO'",
     "ALTER TABLE users ADD COLUMN manualHandicap REAL",
     "ALTER TABLE users ADD COLUMN password TEXT",
-    "ALTER TABLE matches ADD COLUMN scores TEXT"
+    "ALTER TABLE matches ADD COLUMN scores TEXT",
+    "ALTER TABLE rounds ADD COLUMN scores TEXT"
   ];
 
   for (const query of migrations) {
@@ -103,8 +104,19 @@ export const initDB = async () => {
       await db.execute("ALTER TABLE matches ADD COLUMN scores TEXT");
       console.log("Added scores column to matches");
     } catch (e2) {
-      console.error("Failed to add scores column:", e2);
+      console.error("Failed to add scores to matches:", e2);
     }
+  }
+
+  // Double check rounds table has scores column
+  try {
+    await db.execute("SELECT scores FROM rounds LIMIT 1");
+  } catch (e) {
+    console.log("Scores column missing in rounds, attempting to add again...");
+    try {
+      await db.execute("ALTER TABLE rounds ADD COLUMN scores TEXT");
+      console.log("Added scores column to rounds");
+    } catch (e2) { console.error("Failed to add scores to rounds:", e2); }
   }
 
   // FIX: Ensure player2Id is nullable (SQLite ALTER COLUMN is limited, so we recreate if needed)
