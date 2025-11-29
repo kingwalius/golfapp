@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { dbPromise } from './db';
+import { calculateHandicapIndex } from '../features/scoring/calculations';
 
 const DBContext = createContext(null);
 
@@ -374,74 +375,114 @@ export const UserProvider = ({ children }) => {
         } catch (e) {
             console.error("Sync failed", e);
         }
-    };
+        // --- Recalculate Handicap (WHI) ---
+        // Now that we have the latest rounds (local + server), calculate the new index.
+        const finalRounds = await db.getAll('rounds');
+        const finalCourses = await db.getAll('courses');
 
-    useEffect(() => {
-        const initUser = async () => {
-            try {
-                const saved = localStorage.getItem('golf_user');
-                if (saved && saved !== "undefined" && saved !== "null") {
-                    const parsed = JSON.parse(saved);
-                    setUser(parsed);
+        // Import dynamically to avoid circular dependency issues if any, 
+        // but standard import at top is better. 
+        // Assuming calculateHandicapIndex is imported at the top.
+        // We need to add the import first.
 
-                    // Verify with server to get latest data
-                    try {
-                        const res = await fetch(`/api/user/${parsed.id}`);
-                        if (res.ok) {
-                            const latest = await res.json();
-                            setUser(latest);
-                            saveToLocalStorage(latest);
-                        }
-                    } catch (e) {
-                        console.warn("Could not verify user with server (offline?)", e);
-                    }
+        // For now, let's assume we will add the import.
+        // Logic:
+        if (user.handicapMode === 'AUTO' || user.handicapMode === 'auto') {
+            const newHandicap = calculateHandicapIndex(finalRounds, finalCourses);
+
+            if (newHandicap !== user.handicap) {
+                console.log(`Updating Handicap: ${user.handicap} -> ${newHandicap}`);
+
+                // Update local user
+                const updatedUser = { ...user, handicap: newHandicap };
+                setUser(updatedUser);
+                saveToLocalStorage(updatedUser);
+
+                // Update server
+                try {
+                    await fetch('/api/user/update', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: user.id, handicap: newHandicap })
+                    });
+                    console.log("Handicap synced to server.");
+                } catch (hcpError) {
+                    console.error("Failed to sync handicap to server", hcpError);
                 }
-            } catch (err) {
-                console.error("Error parsing user from local storage", err);
-                localStorage.removeItem('golf_user');
             }
-        };
-        initUser();
-        console.log("Golf App Frontend v1.1 (HTTP Strategy Fix)");
-    }, []);
-
-    const updateProfile = async (updates) => {
-        let currentUser = user;
-
-        // If no user exists, try to register/login with the provided username or default
-        if (!currentUser) {
-            const username = updates.username || 'Golfer';
-            currentUser = await login(username);
-            if (!currentUser) return; // Login failed
         }
 
-        // Prevent overwriting username with empty string
-        const safeUpdates = { ...updates };
-        if (safeUpdates.username === '') {
-            delete safeUpdates.username;
-        }
+    } catch (e) {
+        console.error("Sync failed", e);
+    }
+};
 
-        const updatedUser = { ...currentUser, ...safeUpdates };
-        setUser(updatedUser);
-        saveToLocalStorage(updatedUser);
-
-        // Sync to backend
+useEffect(() => {
+    const initUser = async () => {
         try {
-            await fetch('/api/user/update', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: updatedUser.id, ...updates })
-            });
+            const saved = localStorage.getItem('golf_user');
+            if (saved && saved !== "undefined" && saved !== "null") {
+                const parsed = JSON.parse(saved);
+                setUser(parsed);
+
+                // Verify with server to get latest data
+                try {
+                    const res = await fetch(`/api/user/${parsed.id}`);
+                    if (res.ok) {
+                        const latest = await res.json();
+                        setUser(latest);
+                        saveToLocalStorage(latest);
+                    }
+                } catch (e) {
+                    console.warn("Could not verify user with server (offline?)", e);
+                }
+            }
         } catch (err) {
-            console.error("Failed to update profile on server", err);
+            console.error("Error parsing user from local storage", err);
+            localStorage.removeItem('golf_user');
         }
     };
+    initUser();
+    console.log("Golf App Frontend v1.1 (HTTP Strategy Fix)");
+}, []);
 
-    return (
-        <UserContext.Provider value={{ user, login, logout, sync, updateProfile, isOnline }}>
-            {children}
-        </UserContext.Provider>
-    );
+const updateProfile = async (updates) => {
+    let currentUser = user;
+
+    // If no user exists, try to register/login with the provided username or default
+    if (!currentUser) {
+        const username = updates.username || 'Golfer';
+        currentUser = await login(username);
+        if (!currentUser) return; // Login failed
+    }
+
+    // Prevent overwriting username with empty string
+    const safeUpdates = { ...updates };
+    if (safeUpdates.username === '') {
+        delete safeUpdates.username;
+    }
+
+    const updatedUser = { ...currentUser, ...safeUpdates };
+    setUser(updatedUser);
+    saveToLocalStorage(updatedUser);
+
+    // Sync to backend
+    try {
+        await fetch('/api/user/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: updatedUser.id, ...updates })
+        });
+    } catch (err) {
+        console.error("Failed to update profile on server", err);
+    }
+};
+
+return (
+    <UserContext.Provider value={{ user, login, logout, sync, updateProfile, isOnline }}>
+        {children}
+    </UserContext.Provider>
+);
 };
 
 export const useUser = () => useContext(UserContext);
