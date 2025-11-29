@@ -13,7 +13,7 @@ export default defineConfig({
         name: 'Golf App',
         short_name: 'GolfApp',
         description: 'Offline-first Golf Scoring and League App',
-        theme_color: '#0f766e',
+        theme_color: '#E3DAC9',
         icons: [
           {
             src: 'pwa-192x192.png',
