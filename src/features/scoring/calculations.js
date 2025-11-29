@@ -55,6 +55,16 @@ export const calculateBruttoStableford = (par, strokes) => {
 };
 
 /**
+ * Calculates Adjusted Gross Score (Net Double Bogey maximum).
+ * Max Score = Par + 2 + Strokes Received.
+ */
+export const calculateAdjustedScore = (par, strokes, strokesReceived) => {
+    if (strokes === 0) return 0;
+    const maxScore = par + 2 + strokesReceived;
+    return Math.min(strokes, maxScore);
+};
+
+/**
  * Calculates the Handicap Differential for a round.
  * Formula: (113 / Slope Rating) * (Adjusted Gross Score - Course Rating)
  * Note: For MVP, we use Total Strokes as Adjusted Gross Score.

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDB } from '../../lib/store';
-import { calculatePlayingHcp, calculateStrokesReceived, calculateStableford, calculateBruttoStableford } from './calculations';
+import { calculatePlayingHcp, calculateStrokesReceived, calculateStableford, calculateBruttoStableford, calculateDifferential, calculateAdjustedScore } from './calculations';
 import clsx from 'clsx';
 
 export const Scorecard = () => {
@@ -60,6 +60,7 @@ export const Scorecard = () => {
 
     let totalStrokes = 0;
     let totalStableford = 0;
+    let adjustedGrossScore = 0;
 
     return (
         <div className="pb-20">
@@ -87,10 +88,12 @@ export const Scorecard = () => {
                             const strokes = round.scores[hole.number] || 0;
                             const strokesReceived = calculateStrokesReceived(playingHcp, hole.hcp);
                             const points = calculateStableford(hole.par, strokes, strokesReceived);
+                            const adjustedScore = calculateAdjustedScore(hole.par, strokes, strokesReceived);
 
                             if (strokes > 0) {
                                 totalStrokes += strokes;
                                 totalStableford += points;
+                                adjustedGrossScore += adjustedScore;
                             }
 
                             return (
@@ -118,7 +121,10 @@ export const Scorecard = () => {
                     </tbody>
                     <tfoot className="bg-gray-800 text-white font-bold">
                         <tr>
-                            <td colSpan="3" className="p-3 text-right">Total</td>
+                            <td colSpan="2" className="p-3 text-right">Total</td>
+                            <td className="p-3 text-xs font-normal text-gray-300">
+                                Diff: {totalStrokes > 0 ? calculateDifferential(adjustedGrossScore, course.slope, course.rating).toFixed(1) : '-'}
+                            </td>
                             <td className="p-3">{totalStrokes}</td>
                             <td className="p-3 text-secondary">{totalStableford}</td>
                         </tr>
