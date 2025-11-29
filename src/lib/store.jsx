@@ -191,6 +191,11 @@ export const UserProvider = ({ children }) => {
 
             if (unsyncedMatches.length > 0) {
                 console.log("Unsynced Matches Details:", unsyncedMatches);
+                unsyncedMatches.forEach(m => {
+                    if (!m.player2 || !m.player2.id) {
+                        console.warn("Skipping match due to missing player2 ID:", m);
+                    }
+                });
             }
 
             if (skippedMatches > 0) {
@@ -303,29 +308,33 @@ export const UserProvider = ({ children }) => {
 
             console.log(`Up-syncing ${unsyncedRounds.length} rounds and ${validMatches.length} matches...`);
 
+            const payload = {
+                userId: user.id,
+                rounds: unsyncedRounds.map(r => ({
+                    courseId: r.courseId,
+                    date: r.date,
+                    score: r.totalStrokes || 0,
+                    stableford: r.totalStableford || 0,
+                    hcpIndex: r.hcpIndex,
+                    scores: r.scores || {}
+                })),
+                matches: validMatches.map(m => ({
+                    player1Id: m.player1?.id || user.id,
+                    player2Id: m.player2?.id || null,
+                    courseId: m.courseId,
+                    date: m.date,
+                    winnerId: m.winnerId,
+                    status: m.status,
+                    scores: m.scores || {}
+                }))
+            };
+
+            console.log("Up-sync Payload:", JSON.stringify(payload, null, 2));
+
             const res = await fetch('/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: user.id,
-                    rounds: unsyncedRounds.map(r => ({
-                        courseId: r.courseId,
-                        date: r.date,
-                        score: r.totalStrokes || 0,
-                        stableford: r.totalStableford || 0,
-                        hcpIndex: r.hcpIndex,
-                        scores: r.scores || {}
-                    })),
-                    matches: validMatches.map(m => ({
-                        player1Id: m.player1?.id || user.id,
-                        player2Id: m.player2?.id || null,
-                        courseId: m.courseId,
-                        date: m.date,
-                        winnerId: m.winnerId,
-                        status: m.status,
-                        scores: m.scores || {}
-                    }))
-                })
+                body: JSON.stringify(payload)
             });
 
             if (res.ok) {
