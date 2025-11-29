@@ -150,6 +150,27 @@ export const MatchplayScorecard = () => {
             <div className="mt-8 pb-8">
                 <button
                     onClick={async () => {
+                        // Calculate final winner
+                        let p1Wins = 0;
+                        let p2Wins = 0;
+                        Object.values(match.scores).forEach(s => {
+                            if (s.winner === 1) p1Wins++;
+                            if (s.winner === 2) p2Wins++;
+                        });
+
+                        let winnerId = null;
+                        if (p1Wins > p2Wins) winnerId = match.player1.id;
+                        else if (p2Wins > p1Wins) winnerId = match.player2.id;
+
+                        // Update match with winner and mark as completed
+                        const completedMatch = {
+                            ...match,
+                            winnerId,
+                            completed: true,
+                            synced: false
+                        };
+
+                        await db.put('matches', completedMatch);
                         await sync();
                         navigate('/');
                     }}
