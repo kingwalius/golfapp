@@ -17,6 +17,7 @@ export const Scorecard = () => {
             if (!id) return;
             const r = await db.get('rounds', parseInt(id));
             if (r) {
+                if (!r.scores) r.scores = {};
                 setRound(r);
                 const c = await db.get('courses', r.courseId);
                 setCourse(c);

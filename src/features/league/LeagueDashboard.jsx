@@ -21,10 +21,7 @@ const FeedItem = ({ item }) => {
 
     return (
         <div className="bg-white rounded-3xl p-6 shadow-sm mb-6 border border-stone-100">
-            <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-xl">
-                    ⛳
-                </div>
+            <div className="mb-4">
                 <div>
                     <h3 className="font-bold text-primary text-lg">{title}</h3>
                     <p className="text-stone-400 text-xs">{date} • {item.courseName}</p>
@@ -65,6 +62,7 @@ const FeedItem = ({ item }) => {
 export const LeagueDashboard = () => {
     const [feed, setFeed] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [bestOfWeek, setBestOfWeek] = useState(null);
 
     useEffect(() => {
         const fetchFeed = async () => {
@@ -73,6 +71,34 @@ export const LeagueDashboard = () => {
                 if (res.ok) {
                     const data = await res.json();
                     setFeed(data);
+
+                    // Calculate Best Score of the Week
+                    const now = new Date();
+                    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+                    const weekItems = data.filter(item => {
+                        const itemDate = new Date(item.date);
+                        return itemDate >= oneWeekAgo && itemDate <= now;
+                    });
+
+                    // Find best Stableford score (assuming higher is better)
+                    // Or best Gross score (lower is better). Let's prioritize Stableford points.
+                    let best = null;
+                    weekItems.forEach(item => {
+                        // Check if item has stableford points
+                        if (item.stableford !== undefined && item.stableford !== null) {
+                            if (!best || item.stableford > best.score) {
+                                best = {
+                                    player: item.username || item.p1Name || 'Player', // Fallback
+                                    score: item.stableford,
+                                    type: 'Points',
+                                    avatar: item.avatar // If available
+                                };
+                            }
+                        }
+                    });
+
+                    setBestOfWeek(best);
                 }
             } catch (error) {
                 console.error("Failed to fetch league feed", error);
@@ -87,6 +113,21 @@ export const LeagueDashboard = () => {
     return (
         <div className="p-4 pb-20">
             <h1 className="text-2xl font-bold mb-6 text-primary">League Feed</h1>
+
+            {/* Best of the Week Banner */}
+            {bestOfWeek && (
+                <div className="bg-primary text-white rounded-2xl p-6 mb-8 shadow-lg relative overflow-hidden">
+                    <div className="relative z-10">
+                        <div className="text-sm font-medium opacity-80 mb-1 uppercase tracking-wider">Best of the Week</div>
+                        <div className="flex items-end gap-3">
+                            <h2 className="text-3xl font-bold">{bestOfWeek.player}</h2>
+                            <div className="text-4xl font-black text-secondary">{bestOfWeek.score} <span className="text-lg font-normal text-white/80">{bestOfWeek.type}</span></div>
+                        </div>
+                    </div>
+                    {/* Decorative background element */}
+                    <div className="absolute -right-4 -bottom-8 opacity-10 text-9xl">🏆</div>
+                </div>
+            )}
 
             {loading ? (
                 <div className="text-center py-10 text-stone-400">Loading feed...</div>
