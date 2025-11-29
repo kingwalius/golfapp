@@ -288,8 +288,13 @@ app.get('/api/user/:id/activity', async (req, res) => {
             scores: m.scores ? JSON.parse(m.scores) : {}
         }));
 
+        const rounds = roundsResult.rows.map(r => ({
+            ...r,
+            scores: r.scores ? JSON.parse(r.scores) : {}
+        }));
+
         res.json({
-            rounds: roundsResult.rows,
+            rounds: rounds,
             matches: matches
         });
     } catch (error) {
@@ -322,6 +327,7 @@ app.get('/api/league/feed', async (req, res) => {
         const rounds = roundsResult.rows.map(r => ({
             ...r,
             type: 'round',
+            scores: r.scores ? JSON.parse(r.scores) : {},
             courseHoles: JSON.parse(r.courseHoles || '[]')
         }));
 
@@ -409,11 +415,32 @@ app.post('/sync', async (req, res) => {
         // 4. Process Rounds
         if (rounds && rounds.length) {
             for (const round of rounds) {
-                await db.execute({
-                    sql: `INSERT OR IGNORE INTO rounds (userId, courseId, date, score, stableford, hcpIndex, scores)
-                          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                    args: [userId, round.courseId, round.date, round.score, round.stableford, round.hcpIndex, JSON.stringify(round.scores || {})]
-                });
+                try {
+                    const scoresJson = JSON.stringify(round.scores || {});
+
+                    // Check if round exists (Upsert Logic)
+                    const existing = await db.execute({
+                        sql: 'SELECT id FROM rounds WHERE userId = ? AND courseId = ? AND date = ?',
+                        args: [userId, round.courseId, round.date]
+                    });
+
+                    if (existing.rows.length > 0) {
+                        // Update existing round
+                        await db.execute({
+                            sql: 'UPDATE rounds SET score = ?, stableford = ?, hcpIndex = ?, scores = ? WHERE id = ?',
+                            args: [round.score, round.stableford, round.hcpIndex, scoresJson, existing.rows[0].id]
+                        });
+                    } else {
+                        // Insert new round
+                        await db.execute({
+                            sql: `INSERT INTO rounds (userId, courseId, date, score, stableford, hcpIndex, scores)
+                                  VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                            args: [userId, round.courseId, round.date, round.score, round.stableford, round.hcpIndex, scoresJson]
+                        });
+                    }
+                } catch (roundError) {
+                    console.error("Failed to sync round:", round, roundError);
+                }
             }
         }
 
