@@ -218,20 +218,23 @@ export const MatchplayScorecard = () => {
                             // Calculate Adjusted Gross Score (approximate for MVP)
                             // We need total strokes.
                             let totalStrokes = 0;
-                            let holesPlayed = 0;
+                            let holesPlayedCount = 0;
 
                             course.holes.forEach(h => {
                                 const s = match.scores[h.number];
                                 if (s && s.p1) {
                                     totalStrokes += s.p1;
-                                    holesPlayed++;
+                                    holesPlayedCount++;
                                 }
                             });
 
-                            // Only count if 18 holes played (MVP simplification)
-                            if (holesPlayed === 18 && totalStrokes > 0) {
+                            const targetHoles = match.holesPlayed || 18;
+
+                            // Only count if all holes played (MVP simplification)
+                            if (holesPlayedCount === targetHoles && totalStrokes > 0) {
                                 // Formula: (113 / Slope) * (Score - Rating)
-                                p1Diff = (113 / course.slope) * (totalStrokes - course.rating);
+                                const rating = targetHoles === 9 ? (course.rating / 2) : course.rating;
+                                p1Diff = (113 / course.slope) * (totalStrokes - rating);
                                 p1Diff = Math.round(p1Diff * 10) / 10;
                             }
                         }
@@ -254,6 +257,15 @@ export const MatchplayScorecard = () => {
                     <span>🏁</span> Finish Match
                 </button>
             </div>
+
+            {/* Disclaimer for 9-hole rounds */}
+            {match.holesPlayed === 9 && (
+                <div className="px-4 pb-4 text-center">
+                    <div className="bg-amber-50 text-amber-800 text-xs p-2 rounded-lg border border-amber-100 font-medium inline-block">
+                        ℹ️ 9-Hole round: Not included in Handicap Calculation.
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -63,30 +63,89 @@ export const Scorecard = () => {
         await db.put('rounds', newRound);
     };
 
+    // Calculate totals for display
+    const playingHcp = round && course ? calculatePlayingHcp(round.hcpIndex, course.slope, course.rating, 72) : 0;
+    let totalStrokes = 0;
+    let totalStableford = 0;
+    let adjustedGrossScore = 0;
+    const stablefordScores = {}; // To store stableford points per hole for later use if needed
+
+    if (round && course) {
+        course.holes.forEach(hole => {
+            const strokes = round.scores[hole.number] || 0;
+            if (strokes > 0) {
+                const strokesReceived = calculateStrokesReceived(playingHcp, hole.hcp);
+                const points = calculateStableford(hole.par, strokes, strokesReceived);
+                const adjustedScore = calculateAdjustedScore(hole.par, strokes, strokesReceived);
+
+                totalStrokes += strokes;
+                totalStableford += points;
+                adjustedGrossScore += adjustedScore;
+                stablefordScores[hole.number] = points;
+            }
+        });
+    }
+
+    // Calculate Differential (Live)
+    let differential = 0;
+    if (course && round && totalStrokes > 0) {
+        // Adjust Rating for 9-hole rounds
+        const rating = round.holesPlayed === 9 ? (course.rating / 2) : course.rating;
+        const slope = round.holesPlayed === 9 ? (course.slope / 2) : course.slope; // Also adjust slope for 9-hole calculation
+        differential = calculateDifferential(adjustedGrossScore, slope, rating);
+    }
+
     const handleFinish = async () => {
         // Trigger sync to upload round immediately
         sync();
         navigate('/');
     };
 
-    if (loading) return <div className="p-4">Loading scorecard...</div>;
+    if (loading) return <div className="p-8 text-center">Loading...</div>;
     if (!round || !course) return <div className="p-4">Round not found.</div>;
 
-    const playingHcp = calculatePlayingHcp(round.hcpIndex, course.slope, course.rating, 72); // Assuming Par 72 for total if not calc'd
-
-    let totalStrokes = 0;
-    let totalStableford = 0;
-    let adjustedGrossScore = 0;
-
     return (
-        <div className="pb-20">
-            <div className="bg-primary text-white p-4 sticky top-0 z-10 shadow-md">
-                <h1 className="text-xl font-bold">{course.name}</h1>
-                <div className="flex justify-between text-sm mt-1 opacity-90">
-                    <span>HCP: {round.hcpIndex}</span>
-                    <span>Playing HCP: {playingHcp}</span>
+        <div className="pb-24">
+            {/* Header */}
+            <div className="bg-white sticky top-0 z-10 shadow-sm border-b border-stone-100">
+                <div className="p-4 flex justify-between items-center">
+                    <button onClick={() => navigate('/')} className="p-2 -ml-2 text-stone-400 hover:text-dark">
+                        <ChevronLeft size={24} />
+                    </button>
+                    <div className="text-center">
+                        <h1 className="font-bold text-lg text-dark">{course?.name}</h1>
+                        <div className="text-xs text-muted font-medium uppercase tracking-wider">
+                            {round.holesPlayed === 9 ? '9 Holes' : '18 Holes'} • HCP {round.hcpIndex}
+                        </div>
+                    </div>
+                    <div className="w-10" />
+                </div>
+
+                {/* Score Summary */}
+                <div className="grid grid-cols-3 divide-x divide-stone-100 border-t border-stone-100 bg-stone-50">
+                    <div className="p-3 text-center">
+                        <div className="text-xs text-muted uppercase font-bold mb-1">Total</div>
+                        <div className="text-2xl font-black text-dark">{totalStrokes}</div>
+                    </div>
+                    <div className="p-3 text-center">
+                        <div className="text-xs text-muted uppercase font-bold mb-1">Diff</div>
+                        <div className="text-2xl font-black text-dark">
+                            {differential > 0 ? '+' : ''}{differential.toFixed(1)}
+                        </div>
+                    </div>
+                    <div className="p-3 text-center">
+                        <div className="text-xs text-muted uppercase font-bold mb-1">Pts</div>
+                        <div className="text-2xl font-black text-primary">{totalStableford}</div>
+                    </div>
                 </div>
             </div>
+
+            {/* Disclaimer for 9-hole rounds */}
+            {round.holesPlayed === 9 && (
+                <div className="bg-amber-50 text-amber-800 text-xs p-2 text-center border-b border-amber-100 font-medium">
+                    ℹ️ 9-Hole round: Not included in Handicap Calculation.
+                </div>
+            )}
 
             <div className="overflow-x-auto">
                 <table className="w-full text-sm text-center">
@@ -104,35 +163,30 @@ export const Scorecard = () => {
                             const strokes = round.scores[hole.number] || 0;
                             const strokesReceived = calculateStrokesReceived(playingHcp, hole.hcp);
                             const points = calculateStableford(hole.par, strokes, strokesReceived);
-                            const adjustedScore = calculateAdjustedScore(hole.par, strokes, strokesReceived);
-
-                            if (strokes > 0) {
-                                totalStrokes += strokes;
-                                totalStableford += points;
-                                adjustedGrossScore += adjustedScore;
-                            }
+                            adjustedGrossScore += adjustedScore;
+                        }
 
                             return (
-                                <tr key={hole.number} className={clsx(strokes > 0 ? "bg-white" : "bg-gray-50")}>
-                                    <td className="p-3 font-bold">{hole.number}</td>
-                                    <td className="p-3">{hole.par}</td>
-                                    <td className="p-3 text-gray-400">{hole.hcp}</td>
-                                    <td className="p-2">
-                                        <input
-                                            type="number"
-                                            inputMode="numeric"
-                                            className={clsx(
-                                                "w-full h-12 text-center border rounded-xl font-bold text-xl focus:ring-2 focus:ring-primary outline-none touch-manipulation",
-                                                strokes === 0 ? "text-gray-300 border-gray-200" : "text-dark border-primary bg-teal-50"
-                                            )}
-                                            value={strokes || ''}
-                                            placeholder="-"
-                                            onChange={(e) => updateScore(hole.number, e.target.value)}
-                                        />
-                                    </td>
-                                    <td className="p-3 font-bold text-primary">{strokes > 0 ? points : '-'}</td>
-                                </tr>
-                            );
+                        <tr key={hole.number} className={clsx(strokes > 0 ? "bg-white" : "bg-gray-50")}>
+                            <td className="p-3 font-bold">{hole.number}</td>
+                            <td className="p-3">{hole.par}</td>
+                            <td className="p-3 text-gray-400">{hole.hcp}</td>
+                            <td className="p-2">
+                                <input
+                                    type="number"
+                                    inputMode="numeric"
+                                    className={clsx(
+                                        "w-full h-12 text-center border rounded-xl font-bold text-xl focus:ring-2 focus:ring-primary outline-none touch-manipulation",
+                                        strokes === 0 ? "text-gray-300 border-gray-200" : "text-dark border-primary bg-teal-50"
+                                    )}
+                                    value={strokes || ''}
+                                    placeholder="-"
+                                    onChange={(e) => updateScore(hole.number, e.target.value)}
+                                />
+                            </td>
+                            <td className="p-3 font-bold text-primary">{strokes > 0 ? points : '-'}</td>
+                        </tr>
+                        );
                         })}
                     </tbody>
                     <tfoot className="bg-gray-800 text-white font-bold">
