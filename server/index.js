@@ -420,61 +420,71 @@ app.post('/sync', async (req, res) => {
         // 5. Process Matches
         if (matches && matches.length) {
             for (const match of matches) {
-                // Use Guest ID if player2Id is missing/null
-                const p2Id = match.player2Id || guestId;
-                const scoresJson = JSON.stringify(match.scores || {});
+                try {
+                    // Validation & Defaults
+                    const p2Id = match.player2Id || guestId;
+                    const scoresJson = JSON.stringify(match.scores || {});
+                    const matchDate = match.date || new Date().toISOString();
+                    const courseId = match.courseId || 1; // Default to course 1 if missing
 
-                // Ensure Player 2 exists (Self-healing for FK constraints)
-                if (p2Id !== guestId) {
-                    const p2Check = await db.execute({
-                        sql: 'SELECT id FROM users WHERE id = ?',
-                        args: [p2Id]
-                    });
-                    if (p2Check.rows.length === 0) {
-                        console.log(`Player 2 (${p2Id}) missing on server. Auto-restoring...`);
-                        await db.execute({
-                            sql: "INSERT INTO users (id, username, handicap, handicapMode) VALUES (?, ?, ?, ?)",
-                            args: [p2Id, `Restored_User_${p2Id}`, 28.0, 'AUTO']
+                    if (!match.date) console.warn(`Match missing date, using ${matchDate}`);
+                    if (!match.courseId) console.warn(`Match missing courseId, using ${courseId}`);
+
+                    // Ensure Player 2 exists (Self-healing for FK constraints)
+                    if (p2Id !== guestId) {
+                        const p2Check = await db.execute({
+                            sql: 'SELECT id FROM users WHERE id = ?',
+                            args: [p2Id]
                         });
+                        if (p2Check.rows.length === 0) {
+                            console.log(`Player 2 (${p2Id}) missing on server. Auto-restoring...`);
+                            await db.execute({
+                                sql: "INSERT INTO users (id, username, handicap, handicapMode) VALUES (?, ?, ?, ?)",
+                                args: [p2Id, `Restored_User_${p2Id}`, 28.0, 'AUTO']
+                            });
+                        }
                     }
-                }
 
-                // Check if match exists (Upsert Logic)
-                let existing = await db.execute({
-                    sql: 'SELECT id FROM matches WHERE player1Id = ? AND player2Id = ? AND courseId = ? AND date = ?',
-                    args: [match.player1Id, p2Id, match.courseId, match.date]
-                });
-
-                // If not found, check if it's a Guest match we should claim
-                if (existing.rows.length === 0 && p2Id !== guestId) {
-                    const guestMatch = await db.execute({
+                    // Check if match exists (Upsert Logic)
+                    let existing = await db.execute({
                         sql: 'SELECT id FROM matches WHERE player1Id = ? AND player2Id = ? AND courseId = ? AND date = ?',
-                        args: [match.player1Id, guestId, match.courseId, match.date]
+                        args: [match.player1Id, p2Id, courseId, matchDate]
                     });
 
-                    if (guestMatch.rows.length > 0) {
-                        console.log(`Linking Guest match ${guestMatch.rows[0].id} to Real User ${p2Id}`);
-                        existing = guestMatch;
+                    // If not found, check if it's a Guest match we should claim
+                    if (existing.rows.length === 0 && p2Id !== guestId) {
+                        const guestMatch = await db.execute({
+                            sql: 'SELECT id FROM matches WHERE player1Id = ? AND player2Id = ? AND courseId = ? AND date = ?',
+                            args: [match.player1Id, guestId, courseId, matchDate]
+                        });
+
+                        if (guestMatch.rows.length > 0) {
+                            console.log(`Linking Guest match ${guestMatch.rows[0].id} to Real User ${p2Id}`);
+                            existing = guestMatch;
+                            await db.execute({
+                                sql: 'UPDATE matches SET player2Id = ? WHERE id = ?',
+                                args: [p2Id, existing.rows[0].id]
+                            });
+                        }
+                    }
+
+                    if (existing.rows.length > 0) {
+                        // Update existing match
                         await db.execute({
-                            sql: 'UPDATE matches SET player2Id = ? WHERE id = ?',
-                            args: [p2Id, existing.rows[0].id]
+                            sql: 'UPDATE matches SET winnerId = ?, status = ?, scores = ? WHERE id = ?',
+                            args: [match.winnerId, match.status, scoresJson, existing.rows[0].id]
+                        });
+                    } else {
+                        // Insert new match
+                        await db.execute({
+                            sql: `INSERT INTO matches (player1Id, player2Id, courseId, date, winnerId, status, scores)
+                                  VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                            args: [match.player1Id, p2Id, courseId, matchDate, match.winnerId, match.status, scoresJson]
                         });
                     }
-                }
-
-                if (existing.rows.length > 0) {
-                    // Update existing match
-                    await db.execute({
-                        sql: 'UPDATE matches SET winnerId = ?, status = ?, scores = ? WHERE id = ?',
-                        args: [match.winnerId, match.status, scoresJson, existing.rows[0].id]
-                    });
-                } else {
-                    // Insert new match
-                    await db.execute({
-                        sql: `INSERT INTO matches (player1Id, player2Id, courseId, date, winnerId, status, scores)
-                              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                        args: [match.player1Id, p2Id, match.courseId, match.date, match.winnerId, match.status, scoresJson]
-                    });
+                } catch (matchError) {
+                    console.error("Failed to sync match:", match, matchError);
+                    // Continue to next match instead of failing the whole batch
                 }
             }
         }
@@ -482,7 +492,6 @@ app.post('/sync', async (req, res) => {
         res.json({ success: true, message: 'Synced successfully' });
     } catch (error) {
         console.error("Sync Error:", error);
-        // Return detailed error to client for debugging
         res.status(500).json({ error: error.message, stack: error.stack });
     }
 });
