@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useDB, useUser } from '../../lib/store';
 import { calculatePlayingHcp, calculateStrokesReceived, calculateStableford, calculateBruttoStableford, calculateDifferential, calculateAdjustedScore } from './calculations';
 import clsx from 'clsx';
+import { ChevronLeft } from 'lucide-react';
 
 export const Scorecard = () => {
     const { id } = useParams();
