@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useDB } from '../../lib/store';
+import { useDB, useUser } from '../../lib/store';
 import { calculatePlayingHcp, calculateStrokesReceived, calculateStableford, calculateBruttoStableford, calculateDifferential, calculateAdjustedScore } from './calculations';
 import clsx from 'clsx';
 
 export const Scorecard = () => {
     const { id } = useParams();
     const db = useDB();
+    const { sync } = useUser();
     const navigate = useNavigate();
     const [round, setRound] = useState(null);
     const [course, setCourse] = useState(null);
@@ -52,6 +53,12 @@ export const Scorecard = () => {
         };
         setRound(newRound);
         await db.put('rounds', newRound);
+    };
+
+    const handleFinish = async () => {
+        // Trigger sync to upload round immediately
+        sync();
+        navigate('/');
     };
 
     if (loading) return <div className="p-4">Loading scorecard...</div>;
@@ -135,7 +142,7 @@ export const Scorecard = () => {
             {/* Finish Round Button */}
             <div className="mt-8 pb-8">
                 <button
-                    onClick={() => navigate('/')}
+                    onClick={handleFinish}
                     className="w-full bg-primary text-white py-4 rounded-xl font-bold shadow-lg hover:bg-primaryLight transition active:scale-95 flex items-center justify-center gap-2"
                 >
                     <span>🏁</span> Finish Round
