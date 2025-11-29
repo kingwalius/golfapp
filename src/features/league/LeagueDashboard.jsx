@@ -7,14 +7,11 @@ const FeedItem = ({ item }) => {
 
     // Construct the "Blog Post" text
     let title = '';
-    let description = '';
 
     if (isMatch) {
         title = `${item.p1Name || 'Unknown'} vs ${item.p2Name || 'Unknown'}`;
-        description = `${item.p1Name || 'Player 1'} hat eine Runde Matchplay mit ${item.p2Name || 'Player 2'} gespielt.`;
     } else {
-        title = `${item.username || 'Unknown'} - Round`;
-        description = `${item.username || 'Player'} hat eine Runde auf dem ${item.courseName} gespielt.`;
+        title = item.username || 'Unknown';
     }
 
     const scores = item.scores || {};
@@ -28,10 +25,6 @@ const FeedItem = ({ item }) => {
                 </div>
             </div>
 
-            <p className="text-stone-600 mb-4 font-medium leading-relaxed">
-                {description}
-            </p>
-
             {/* Scorecard */}
             {item.courseHoles && item.courseHoles.length > 0 ? (
                 <CompactScorecard
@@ -44,17 +37,6 @@ const FeedItem = ({ item }) => {
                     Scorecard data unavailable
                 </div>
             )}
-
-            <div className="mt-4 flex gap-4 text-sm font-bold text-primary">
-                {isMatch ? (
-                    <span>Winner: {item.winnerId ? (item.winnerId == item.player1Id ? item.p1Name : item.p2Name) : 'Draw/Pending'}</span>
-                ) : (
-                    <>
-                        <span>Score: {item.score}</span>
-                        <span>Pts: {item.stableford}</span>
-                    </>
-                )}
-            </div>
         </div>
     );
 };

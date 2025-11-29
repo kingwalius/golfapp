@@ -89,6 +89,21 @@ export const initDB = async () => {
       console.log(`Migrated: ${query}`);
     } catch (e) {
       // Ignore error if column exists
+      // console.log(`Migration skipped (likely exists): ${query}`);
+    }
+  }
+
+  // Double check matches table has scores column
+  try {
+    // Try to select scores column. If it fails, we really need to add it.
+    await db.execute("SELECT scores FROM matches LIMIT 1");
+  } catch (e) {
+    console.log("Scores column missing in matches, attempting to add again...");
+    try {
+      await db.execute("ALTER TABLE matches ADD COLUMN scores TEXT");
+      console.log("Added scores column to matches");
+    } catch (e2) {
+      console.error("Failed to add scores column:", e2);
     }
   }
 
