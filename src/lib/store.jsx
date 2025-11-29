@@ -323,8 +323,8 @@ export const UserProvider = ({ children }) => {
                     player2Id: m.player2?.id || null,
                     courseId: m.courseId,
                     date: m.date,
-                    winnerId: m.winnerId,
-                    status: m.status,
+                    winnerId: m.winnerId || null,
+                    status: m.status || 'AS',
                     scores: m.scores || {}
                 }))
             };
