@@ -366,26 +366,27 @@ app.post('/sync', async (req, res) => {
     try {
         console.log('Sync Request:', { userId, roundsCount: rounds?.length, matchesCount: matches?.length });
 
-        // Ensure schema is correct before attempting inserts
+        // 1. Ensure Schema (Self-healing)
         await ensureScoresColumn('rounds');
         await ensureScoresColumn('matches');
 
-        // LibSQL doesn't support better-sqlite3 style transactions directly in the same way,
-        // but supports batch execution. However, for simplicity/compatibility with this logic,
-        // we will execute sequentially or use `batch` if possible.
-        // For now, sequential await is safest migration.
+        // 2. Ensure User Exists (Self-healing for FK constraints)
+        // If the DB was wiped, the client might still have a user ID that doesn't exist on server.
+        const userCheck = await db.execute({
+            sql: 'SELECT id FROM users WHERE id = ?',
+            args: [userId]
+        });
 
-        if (rounds && rounds.length) {
-            for (const round of rounds) {
-                await db.execute({
-                    sql: `INSERT OR IGNORE INTO rounds (userId, courseId, date, score, stableford, hcpIndex)
-                          VALUES (?, ?, ?, ?, ?, ?)`,
-                    args: [userId, round.courseId, round.date, round.score, round.stableford, round.hcpIndex]
-                });
-            }
+        if (userCheck.rows.length === 0) {
+            console.log(`User ${userId} missing on server. Auto-restoring...`);
+            // Restore user with a placeholder to allow sync to proceed
+            await db.execute({
+                sql: "INSERT INTO users (id, username, handicap, handicapMode) VALUES (?, ?, ?, ?)",
+                args: [userId, `Restored_User_${userId}`, 28.0, 'AUTO']
+            });
         }
 
-        // Helper to get or create Guest ID
+        // 3. Helper to get or create Guest ID
         const getGuestId = async () => {
             try {
                 const result = await db.execute("SELECT id FROM users WHERE username = 'Guest'");
@@ -405,6 +406,18 @@ app.post('/sync', async (req, res) => {
 
         const guestId = await getGuestId();
 
+        // 4. Process Rounds
+        if (rounds && rounds.length) {
+            for (const round of rounds) {
+                await db.execute({
+                    sql: `INSERT OR IGNORE INTO rounds (userId, courseId, date, score, stableford, hcpIndex, scores)
+                          VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                    args: [userId, round.courseId, round.date, round.score, round.stableford, round.hcpIndex, JSON.stringify(round.scores || {})]
+                });
+            }
+        }
+
+        // 5. Process Matches
         if (matches && matches.length) {
             for (const match of matches) {
                 // Use Guest ID if player2Id is missing/null
@@ -412,13 +425,12 @@ app.post('/sync', async (req, res) => {
                 const scoresJson = JSON.stringify(match.scores || {});
 
                 // Check if match exists (Upsert Logic)
-                // 1. Try exact match
                 let existing = await db.execute({
                     sql: 'SELECT id FROM matches WHERE player1Id = ? AND player2Id = ? AND courseId = ? AND date = ?',
                     args: [match.player1Id, p2Id, match.courseId, match.date]
                 });
 
-                // 2. If not found, and we have a Real ID (not Guest), try to find a Guest match to claim
+                // If not found, check if it's a Guest match we should claim
                 if (existing.rows.length === 0 && p2Id !== guestId) {
                     const guestMatch = await db.execute({
                         sql: 'SELECT id FROM matches WHERE player1Id = ? AND player2Id = ? AND courseId = ? AND date = ?',
@@ -427,11 +439,7 @@ app.post('/sync', async (req, res) => {
 
                     if (guestMatch.rows.length > 0) {
                         console.log(`Linking Guest match ${guestMatch.rows[0].id} to Real User ${p2Id}`);
-                        // Update the Guest match to be the Real User match
-                        // We will update it in the next step (UPDATE block)
                         existing = guestMatch;
-
-                        // Explicitly update player2Id now
                         await db.execute({
                             sql: 'UPDATE matches SET player2Id = ? WHERE id = ?',
                             args: [p2Id, existing.rows[0].id]
@@ -458,8 +466,9 @@ app.post('/sync', async (req, res) => {
 
         res.json({ success: true, message: 'Synced successfully' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: error.message });
+        console.error("Sync Error:", error);
+        // Return detailed error to client for debugging
+        res.status(500).json({ error: error.message, stack: error.stack });
     }
 });
 
