@@ -56,21 +56,22 @@ export const SwipeableItem = ({ children, onDelete, onClick }) => {
                         onDelete();
                     }}
                     className="text-white font-bold flex items-center gap-2"
+                >
                     Delete
                 </button>
-        </div>
+            </div>
 
-            {/* Content */ }
-    <div
-        className="relative bg-white rounded-2xl shadow-soft transition-transform duration-200 ease-out border border-stone-100"
-        style={{ transform: `translateX(${offset}px)` }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onClick={handleClick}
-    >
-        {children}
-    </div>
+            {/* Content */}
+            <div
+                className="relative bg-white rounded-2xl shadow-soft transition-transform duration-200 ease-out border border-stone-100"
+                style={{ transform: `translateX(${offset}px)` }}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onClick={handleClick}
+            >
+                {children}
+            </div>
         </div >
     );
 };
