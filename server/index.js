@@ -424,6 +424,21 @@ app.post('/sync', async (req, res) => {
                 const p2Id = match.player2Id || guestId;
                 const scoresJson = JSON.stringify(match.scores || {});
 
+                // Ensure Player 2 exists (Self-healing for FK constraints)
+                if (p2Id !== guestId) {
+                    const p2Check = await db.execute({
+                        sql: 'SELECT id FROM users WHERE id = ?',
+                        args: [p2Id]
+                    });
+                    if (p2Check.rows.length === 0) {
+                        console.log(`Player 2 (${p2Id}) missing on server. Auto-restoring...`);
+                        await db.execute({
+                            sql: "INSERT INTO users (id, username, handicap, handicapMode) VALUES (?, ?, ?, ?)",
+                            args: [p2Id, `Restored_User_${p2Id}`, 28.0, 'AUTO']
+                        });
+                    }
+                }
+
                 // Check if match exists (Upsert Logic)
                 let existing = await db.execute({
                     sql: 'SELECT id FROM matches WHERE player1Id = ? AND player2Id = ? AND courseId = ? AND date = ?',

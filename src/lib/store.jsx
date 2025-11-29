@@ -333,7 +333,13 @@ export const UserProvider = ({ children }) => {
 
                 await tx.done;
             } else {
-                console.error("Up-sync failed with status:", res.status);
+                let errorDetails;
+                try {
+                    errorDetails = await res.json();
+                } catch (e) {
+                    errorDetails = await res.text();
+                }
+                console.error("Up-sync failed with status:", res.status, errorDetails);
             }
         } catch (e) {
             console.error("Sync failed", e);
