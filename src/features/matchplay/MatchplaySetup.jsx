@@ -64,11 +64,14 @@ export const MatchplaySetup = () => {
         const p1Playing = calculatePlayingHcp(setup.player1.hcp, course.slope, course.rating, 72);
         const p2Playing = calculatePlayingHcp(setup.player2.hcp, course.slope, course.rating, 72);
 
+        // Ensure Player 2 has an ID (use 9999 for Guest if null)
+        const player2Id = setup.player2.id || 9999;
+
         const match = {
             date: new Date(),
             courseId: course.id,
             player1: { ...setup.player1, playingHcp: p1Playing },
-            player2: { ...setup.player2, playingHcp: p2Playing },
+            player2: { ...setup.player2, id: player2Id, playingHcp: p2Playing },
             scores: {},
             status: 'AS',
             completed: false,
