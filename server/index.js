@@ -87,6 +87,24 @@ app.get('/api/fix-db', async (req, res) => {
     }
 });
 
+app.get('/api/nuke-db', async (req, res) => {
+    try {
+        console.log('Nuking database...');
+        await db.execute('DELETE FROM rounds');
+        await db.execute('DELETE FROM matches');
+        await db.execute('DELETE FROM users');
+        await db.execute('DELETE FROM courses');
+
+        console.log('Database cleared. Re-initializing...');
+        await initDB();
+
+        res.json({ success: true, message: 'Database completely erased and re-initialized.' });
+    } catch (error) {
+        console.error('Nuke failed:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- Auth Routes ---
 
 import crypto from 'crypto';
