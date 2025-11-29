@@ -471,6 +471,21 @@ app.post('/sync', async (req, res) => {
         await ensureScoresColumn('rounds');
         await ensureScoresColumn('matches');
 
+        // Ensure differential columns for matches
+        try {
+            await db.execute("SELECT player1Differential FROM matches LIMIT 1");
+        } catch (e) {
+            if (e.message && (e.message.includes('no such column') || e.message.includes('column not found'))) {
+                console.log('Adding missing differential columns to matches...');
+                try {
+                    await db.execute("ALTER TABLE matches ADD COLUMN player1Differential REAL");
+                    await db.execute("ALTER TABLE matches ADD COLUMN player2Differential REAL");
+                } catch (alterError) {
+                    console.error("Failed to add differential columns:", alterError);
+                }
+            }
+        }
+
         // 2. Ensure User Exists (Self-healing for FK constraints)
         // If the DB was wiped, the client might still have a user ID that doesn't exist on server.
         const userCheck = await db.execute({
