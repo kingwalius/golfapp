@@ -80,14 +80,39 @@ export const calculateDifferential = (score, slope, rating) => {
  */
 export const prepareHandicapData = (rounds, matches, courses, userId) => {
     const userRounds = rounds
-        .filter(r => r.userId == userId && r.holesPlayed !== 9 && r.score)
-        .map(r => ({ ...r, type: 'round', date: new Date(r.date) }));
+        .filter(r => r.userId == userId && r.holesPlayed !== 9) // Basic filter first
+        .map(r => {
+            // Calculate score dynamically
+            let totalStrokes = 0;
+            let holesPlayedCount = 0;
+            if (r.scores) {
+                Object.values(r.scores).forEach(s => {
+                    if (s > 0) {
+                        totalStrokes += s;
+                        holesPlayedCount++;
+                    }
+                });
+            }
+
+            // Determine target holes (default 18)
+            const targetHoles = r.holesPlayed || 18;
+
+            // Only include if fully completed
+            if (holesPlayedCount < targetHoles) return null;
+
+            return {
+                ...r,
+                type: 'round',
+                date: new Date(r.date),
+                score: totalStrokes // Ensure score is set
+            };
+        })
+        .filter(r => r !== null); // Remove nulls (incomplete rounds)
 
     const userMatches = matches
         .filter(m => (m.player1?.id == userId || m.player2?.id == userId) && m.holesPlayed !== 9)
         .filter(m => {
             // Only include if user is P1 and has differential (MVP limitation)
-            // Or if we have a way to get differential for P2 (not yet implemented)
             if (m.player1?.id == userId && m.player1Differential) return true;
             return false;
         })
