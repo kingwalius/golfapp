@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useUser, useDB } from '../../lib/store';
 import { SwipeableItem } from '../../components/SwipeableItem';
-import { calculatePlayingHcp, calculateStableford, calculateStrokesReceived } from '../scoring/calculations';
-import { User, Trophy, Calendar, Swords, Flag, Plus } from 'lucide-react';
+import { calculatePlayingHcp, calculateStableford, calculateStrokesReceived, prepareHandicapData, calculateHandicapDetails } from '../scoring/calculations';
+import { User, Trophy, Calendar, Swords, Flag, Plus, Star } from 'lucide-react';
 
 export const Home = () => {
     const { user } = useUser();
     const db = useDB();
     const navigate = useNavigate();
-    const [recentActivity, setRecentActivity] = useState([]);
+    const [countingRounds, setCountingRounds] = useState([]);
     const [courses, setCourses] = useState([]);
 
     const loadData = async () => {
@@ -35,14 +35,16 @@ export const Home = () => {
             }
         }
 
-        // Combine and sort by date (newest first)
-        const combined = [
-            ...r.filter(item => item.userId == user?.id).map(item => ({ ...item, type: 'round' })),
-            ...m.filter(item => item.player1?.id == user?.id || item.player2?.id == user?.id).map(item => ({ ...item, type: 'match' }))
-        ].sort((a, b) => new Date(b.date) - new Date(a.date))
-            .slice(0, 3); // Top 3 only
+        // Prepare data for handicap calculation
+        const preparedData = prepareHandicapData(r, m, c, user?.id);
+        const { rounds } = calculateHandicapDetails(preparedData, c);
 
-        setRecentActivity(combined);
+        // Filter to show only the rounds that are included in the calculation (top 8)
+        // Or show last 20 and highlight included ones? 
+        // User asked for "8 rounds that are used", so let's filter for included.
+        const includedRounds = rounds.filter(r => r.included);
+
+        setCountingRounds(includedRounds);
         setCourses(c);
     };
 
@@ -129,35 +131,17 @@ export const Home = () => {
                 </div>
             </div>
 
-            {/* Recent Activity */}
+            {/* Counting Rounds */}
             <div>
                 <div className="flex justify-between items-end mb-4">
-                    <h3 className="font-bold text-lg text-dark">Recent Activity</h3>
+                    <h3 className="font-bold text-lg text-dark">Counting Rounds</h3>
                     <Link to="/play" className="text-primary text-sm font-medium hover:underline">View All</Link>
                 </div>
-                <div className="space-y-1">
-                    {recentActivity.length > 0 ? (
-                        recentActivity.map(item => {
+                <div className="space-y-3">
+                    {countingRounds.length > 0 ? (
+                        countingRounds.map(item => {
                             const course = courses.find(c => c.id === item.courseId);
                             const isMatch = item.type === 'match';
-
-                            // Determine opponent name
-                            let opponentName = 'Opponent';
-                            if (isMatch) {
-                                // Ensure we compare strings/numbers safely
-                                const userId = user?.id?.toString();
-                                const p1Id = item.player1?.id?.toString();
-                                const p2Id = item.player2?.id?.toString();
-
-                                if (userId === p1Id) {
-                                    opponentName = item.player2?.name || 'Opponent';
-                                } else if (userId === p2Id) {
-                                    opponentName = item.player1?.name || 'Opponent';
-                                } else {
-                                    // Fallback if user is neither (shouldn't happen in personal feed)
-                                    opponentName = item.player2?.name || 'Opponent';
-                                }
-                            }
 
                             return (
                                 <SwipeableItem
@@ -167,103 +151,25 @@ export const Home = () => {
                                 >
                                     <div className="p-4 flex justify-between items-center">
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isMatch ? 'bg-orange-50 text-orange-500' : 'bg-stone-100 text-stone-500'}`}>
-                                                {isMatch ? <Swords size={20} /> : <Flag size={20} />}
+                                            <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                                                <Star size={20} fill="currentColor" className="text-emerald-500" />
                                             </div>
                                             <div>
                                                 <p className="font-bold text-dark">{course?.name || 'Unknown Course'}</p>
                                                 <div className="text-xs text-muted flex items-center gap-1">
                                                     <span>{new Date(item.date).toLocaleDateString()}</span>
                                                     <span>•</span>
-                                                    {isMatch ? (
-                                                        <span className="font-medium text-secondary">
-                                                            vs {opponentName}
-                                                        </span>
-                                                    ) : (
-                                                        <span>
-                                                            {(() => {
-                                                                // Recalculate totals on the fly
-                                                                let tStrokes = 0;
-                                                                let tStableford = 0;
-                                                                if (course && item.scores) {
-                                                                    const playingHcp = calculatePlayingHcp(item.hcpIndex || 54, course.slope, course.rating, 72);
-                                                                    course.holes.forEach(h => {
-                                                                        const s = item.scores[h.number] || 0;
-                                                                        if (s > 0) {
-                                                                            tStrokes += s;
-                                                                            tStableford += calculateStableford(h.par, s, calculateStrokesReceived(playingHcp, h.hcp));
-                                                                        }
-                                                                    });
-                                                                }
-                                                                const displayStableford = tStrokes > 0 ? tStableford : (item.stableford || item.totalStableford || 0);
-                                                                return `${displayStableford} pts`;
-                                                            })()}
-                                                        </span>
-                                                    )}
+                                                    <span className="font-medium text-dark">
+                                                        {isMatch ? 'Matchplay' : 'Stroke Play'}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            {isMatch ? (
-                                                <span className={`text-sm font-bold px-2 py-1 rounded ${(() => {
-                                                        // Calculate status relative to user
-                                                        let p1Wins = 0;
-                                                        let p2Wins = 0;
-                                                        if (item.scores) {
-                                                            Object.values(item.scores).forEach(s => {
-                                                                if (s.winner === 1) p1Wins++;
-                                                                if (s.winner === 2) p2Wins++;
-                                                            });
-                                                        }
-
-                                                        const userId = user?.id?.toString();
-                                                        const p1Id = item.player1?.id?.toString();
-                                                        const isP1 = userId === p1Id;
-
-                                                        const diff = p1Wins - p2Wins;
-                                                        const isUp = isP1 ? diff > 0 : diff < 0;
-                                                        const isDown = isP1 ? diff < 0 : diff > 0;
-
-                                                        if (diff === 0) return 'bg-stone-100 text-stone-600'; // AS
-                                                        if (isUp) return 'bg-green-100 text-green-700'; // UP
-                                                        return 'bg-red-100 text-red-700'; // DOWN
-                                                    })()
-                                                    }`}>
-                                                    {(() => {
-                                                        // Calculate text
-                                                        let p1Wins = 0;
-                                                        let p2Wins = 0;
-                                                        if (item.scores) {
-                                                            Object.values(item.scores).forEach(s => {
-                                                                if (s.winner === 1) p1Wins++;
-                                                                if (s.winner === 2) p2Wins++;
-                                                            });
-                                                        }
-
-                                                        const userId = user?.id?.toString();
-                                                        const p1Id = item.player1?.id?.toString();
-                                                        const isP1 = userId === p1Id;
-
-                                                        const diff = p1Wins - p2Wins;
-                                                        const absDiff = Math.abs(diff);
-
-                                                        if (diff === 0) return 'AS';
-
-                                                        const isUp = isP1 ? diff > 0 : diff < 0;
-                                                        return `${absDiff} ${isUp ? 'UP' : 'DOWN'}`;
-                                                    })()}
-                                                </span>
-                                            ) : (
-                                                <span className="text-primary font-bold text-lg">
-                                                    {(() => {
-                                                        let tStrokes = 0;
-                                                        if (course && item.scores) {
-                                                            Object.values(item.scores).forEach(s => tStrokes += (s || 0));
-                                                        }
-                                                        return tStrokes > 0 ? tStrokes : (item.totalStrokes || item.score || '-');
-                                                    })()}
-                                                </span>
-                                            )}
+                                            <div className="text-xs text-muted font-bold uppercase mb-1">Diff</div>
+                                            <span className="text-lg font-black text-primary">
+                                                {item.differential > 0 ? '+' : ''}{item.differential.toFixed(1)}
+                                            </span>
                                         </div>
                                     </div>
                                 </SwipeableItem>
@@ -276,8 +182,8 @@ export const Home = () => {
                                     <Calendar size={20} />
                                 </div>
                                 <div>
-                                    <p className="font-bold text-dark">Last Round</p>
-                                    <p className="text-xs text-muted">No recent activity</p>
+                                    <p className="font-bold text-dark">No Counting Rounds</p>
+                                    <p className="text-xs text-muted">Play more rounds to establish a handicap</p>
                                 </div>
                             </div>
                             <span className="text-muted text-sm font-medium">-</span>

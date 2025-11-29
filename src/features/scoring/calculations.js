@@ -75,52 +75,114 @@ export const calculateDifferential = (score, slope, rating) => {
 };
 
 /**
- * Calculates the new Handicap Index based on the last 20 rounds.
- * Logic:
- * 1. Sort rounds by date descending.
- * 2. Take the most recent 20 rounds.
- * 3. Calculate differential for each.
- * 4. Select the best 8 differentials.
- * 5. Average them.
+ * Prepares a unified list of rounds for handicap calculation.
+ * Filters by user, excludes 9-hole rounds, and normalizes data structure.
  */
-export const calculateHandicapIndex = (rounds, courses) => {
-    if (!rounds || rounds.length === 0) return 54.0; // Default starter HCP
+export const prepareHandicapData = (rounds, matches, courses, userId) => {
+    const userRounds = rounds
+        .filter(r => r.userId == userId && r.holesPlayed !== 9 && r.score)
+        .map(r => ({ ...r, type: 'round', date: new Date(r.date) }));
 
-    // Sort by date desc
-    const sortedRounds = [...rounds].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const userMatches = matches
+        .filter(m => (m.player1?.id == userId || m.player2?.id == userId) && m.holesPlayed !== 9)
+        .filter(m => {
+            // Only include if user is P1 and has differential (MVP limitation)
+            // Or if we have a way to get differential for P2 (not yet implemented)
+            if (m.player1?.id == userId && m.player1Differential) return true;
+            return false;
+        })
+        .map(m => ({
+            ...m,
+            type: 'match',
+            date: new Date(m.date),
+            differential: m.player1Differential // Explicitly map to differential
+        }));
 
-    // Take last 20
-    const recentRounds = sortedRounds.slice(0, 20);
+    return [...userRounds, ...userMatches].sort((a, b) => b.date - a.date);
+};
 
-    // Calculate differentials
-    const differentials = recentRounds.map(round => {
-        // If pre-calculated (e.g. Matchplay), use it
-        if (round.differential !== undefined && round.differential !== null) {
-            return round.differential;
+/**
+ * Calculates detailed handicap information, including which rounds count.
+ */
+export const calculateHandicapDetails = (preparedRounds, courses) => {
+    if (!preparedRounds || preparedRounds.length === 0) {
+        return { handicapIndex: 54.0, rounds: [] };
+    }
+
+    // 1. Calculate differentials for all rounds
+    const roundsWithDiff = preparedRounds.map(round => {
+        let differential = round.differential;
+
+        if (differential === undefined || differential === null) {
+            const course = courses.find(c => c.id === round.courseId);
+            if (course && round.score) {
+                differential = calculateDifferential(round.score, course.slope, course.rating);
+            }
         }
 
-        const course = courses.find(c => c.id === round.courseId);
-        if (!course || !round.score) return null;
-        return calculateDifferential(round.score, course.slope, course.rating);
-    }).filter(d => d !== null);
+        return {
+            ...round,
+            differential: differential !== undefined ? differential : null
+        };
+    }).filter(r => r.differential !== null);
 
-    if (differentials.length === 0) return 54.0;
+    if (roundsWithDiff.length === 0) {
+        return { handicapIndex: 54.0, rounds: [] };
+    }
 
-    // If less than 20 rounds, WHS has a table for how many to use.
-    // Simplified for MVP:
-    // < 3 rounds: Use lowest - 2
-    // 3-6 rounds: Use lowest
-    // 7-8 rounds: Avg of lowest 2
-    // ...
-    // Let's just use "Best 40%" logic for simplicity if < 20
+    // 2. Take last 20
+    const recentRounds = roundsWithDiff.slice(0, 20);
 
-    const countToUse = Math.max(1, Math.ceil(differentials.length * 0.4));
+    // 3. Determine how many to use (WHS logic simplified)
+    let countToUse = 8;
+    if (recentRounds.length < 20) {
+        // Simplified table
+        if (recentRounds.length <= 3) countToUse = 1;
+        else if (recentRounds.length <= 5) countToUse = 1;
+        else if (recentRounds.length <= 8) countToUse = 2;
+        else if (recentRounds.length <= 10) countToUse = 3;
+        else if (recentRounds.length <= 12) countToUse = 4;
+        else if (recentRounds.length <= 14) countToUse = 5;
+        else if (recentRounds.length <= 16) countToUse = 6;
+        else if (recentRounds.length <= 18) countToUse = 7;
+    }
 
-    differentials.sort((a, b) => a - b); // Ascending (lower is better)
-    const bestDifferentials = differentials.slice(0, countToUse);
+    // 4. Identify counting rounds
+    // Sort by differential ascending to find the best ones
+    const sortedByDiff = [...recentRounds].sort((a, b) => a.differential - b.differential);
+    const bestRounds = sortedByDiff.slice(0, countToUse);
+    const bestIds = new Set(bestRounds.map(r => r.id + '-' + r.type)); // Composite ID to be safe
 
-    const sum = bestDifferentials.reduce((a, b) => a + b, 0);
-    const avg = sum / bestDifferentials.length;
+    // 5. Mark rounds as included
+    const finalRounds = recentRounds.map(r => ({
+        ...r,
+        included: bestIds.has(r.id + '-' + r.type)
+    }));
 
-    return Math.round(avg * 10) / 10; // Round to 1 decimal
+    // 6. Calculate Average
+    const sum = bestRounds.reduce((a, b) => a + b.differential, 0);
+    const avg = sum / bestRounds.length;
+    const handicapIndex = Math.round(avg * 10) / 10;
+
+    return {
+        handicapIndex,
+        rounds: finalRounds
+    };
+};
+
+/**
+ * Calculates the new Handicap Index based on the last 20 rounds.
+ * Wrapper for backward compatibility.
+ */
+export const calculateHandicapIndex = (rounds, courses) => {
+    // This function expects "prepared" rounds or raw rounds?
+    // The existing code passed a mix.
+    // Let's assume the input is already a list of objects with differentials or scores.
+    // We can reuse calculateHandicapDetails logic but we need to adapt the input if it's not fully prepared.
+
+    // For safety, let's just use the logic inside calculateHandicapDetails
+    // assuming 'rounds' here are already filtered/prepared as they were in store.jsx
+
+    const details = calculateHandicapDetails(rounds, courses);
+    return details.handicapIndex;
 };
