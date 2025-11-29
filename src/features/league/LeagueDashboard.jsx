@@ -66,17 +66,18 @@ export const LeagueDashboard = () => {
                     });
 
                     // Find best Stableford score (assuming higher is better)
-                    // Or best Gross score (lower is better). Let's prioritize Stableford points.
                     let best = null;
                     weekItems.forEach(item => {
                         // Check if item has stableford points
                         if (item.stableford !== undefined && item.stableford !== null) {
-                            if (!best || item.stableford > best.score) {
+                            if (!best || item.stableford > best.stableford) {
                                 best = {
-                                    player: item.username || item.p1Name || 'Player', // Fallback
-                                    score: item.stableford,
-                                    type: 'Points',
-                                    avatar: item.avatar // If available
+                                    player: item.username || item.p1Name || 'Player',
+                                    stableford: item.stableford,
+                                    strokes: item.score,
+                                    date: new Date(item.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+                                    courseName: item.courseName,
+                                    avatar: item.avatar
                                 };
                             }
                         }
@@ -102,10 +103,27 @@ export const LeagueDashboard = () => {
             {bestOfWeek && (
                 <div className="bg-primary text-white rounded-2xl p-6 mb-8 shadow-lg relative overflow-hidden">
                     <div className="relative z-10">
-                        <div className="text-sm font-medium opacity-80 mb-1 uppercase tracking-wider">Best of the Week</div>
-                        <div className="flex items-end gap-3">
-                            <h2 className="text-3xl font-bold">{bestOfWeek.player}</h2>
-                            <div className="text-4xl font-black text-secondary">{bestOfWeek.score} <span className="text-lg font-normal text-white/80">{bestOfWeek.type}</span></div>
+                        <div className="text-sm font-medium opacity-80 mb-2 uppercase tracking-wider">Best of the Week</div>
+
+                        <div className="flex justify-between items-end">
+                            <div>
+                                <h2 className="text-3xl font-bold mb-1">{bestOfWeek.player}</h2>
+                                <div className="text-sm text-emerald-100 flex flex-col">
+                                    <span>{bestOfWeek.courseName}</span>
+                                    <span className="opacity-80">{bestOfWeek.date}</span>
+                                </div>
+                            </div>
+
+                            <div className="text-right">
+                                <div className="flex flex-col items-end">
+                                    <div className="text-4xl font-black text-secondary leading-none">
+                                        {bestOfWeek.stableford} <span className="text-sm font-bold text-white/60">Pts</span>
+                                    </div>
+                                    <div className="text-lg font-bold text-white/90 mt-1">
+                                        {bestOfWeek.strokes} <span className="text-xs font-normal opacity-80">Strokes</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     {/* Decorative background element */}
