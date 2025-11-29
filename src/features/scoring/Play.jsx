@@ -17,6 +17,7 @@ export const Play = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [hcpIndex, setHcpIndex] = useState(54.0);
     const [holesToPlay, setHolesToPlay] = useState(18);
+    const [startingHole, setStartingHole] = useState(1);
 
     const loadData = async () => {
         const r = await db.getAll('rounds');
@@ -78,7 +79,8 @@ export const Play = () => {
             completed: false,
             synced: false,
             userId: user.id,
-            holesPlayed: holesToPlay
+            holesPlayed: holesToPlay,
+            startingHole: startingHole
         };
 
         const id = await db.add('rounds', newRound);
@@ -295,7 +297,7 @@ export const Play = () => {
 
                         <div className="pt-4 border-t border-stone-100">
                             <label className="block text-sm font-bold text-muted mb-2 uppercase tracking-wide">Round Type</label>
-                            <div className="flex gap-4">
+                            <div className="flex gap-4 mb-4">
                                 <button
                                     onClick={() => setHolesToPlay(18)}
                                     className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${holesToPlay === 18
@@ -315,6 +317,38 @@ export const Play = () => {
                                     9 Holes
                                 </button>
                             </div>
+
+                            {/* Front 9 / Back 9 Selection */}
+                            {holesToPlay === 9 && (() => {
+                                const course = courses.find(c => c.id.toString() === selectedCourseId);
+                                const is18HoleCourse = course?.holes?.length === 18;
+
+                                if (is18HoleCourse) {
+                                    return (
+                                        <div className="flex gap-4 animate-fade-in">
+                                            <button
+                                                onClick={() => setStartingHole(1)}
+                                                className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${startingHole === 1
+                                                    ? 'bg-secondary text-white shadow-md'
+                                                    : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                Front 9 (1-9)
+                                            </button>
+                                            <button
+                                                onClick={() => setStartingHole(10)}
+                                                className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${startingHole === 10
+                                                    ? 'bg-secondary text-white shadow-md'
+                                                    : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                Back 9 (10-18)
+                                            </button>
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            })()}
                         </div>
 
                         <div className="flex gap-4 pt-4">

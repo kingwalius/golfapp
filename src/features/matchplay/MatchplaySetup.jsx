@@ -79,7 +79,8 @@ export const MatchplaySetup = () => {
             manualStrokes: setup.manualStrokes || 0,
             manualStrokesPlayer: setup.manualStrokesPlayer || 'p1',
             synced: false,
-            holesPlayed: setup.holesToPlay || 18
+            holesPlayed: setup.holesToPlay || 18,
+            startingHole: setup.startingHole || 1
         };
 
         const id = await db.add('matches', match);
@@ -186,6 +187,38 @@ export const MatchplaySetup = () => {
                             9 Holes
                         </button>
                     </div>
+
+                    {/* Front 9 / Back 9 Selection */}
+                    {setup.holesToPlay === 9 && (() => {
+                        const course = courses.find(c => c.id.toString() === setup.courseId);
+                        const is18HoleCourse = course?.holes?.length === 18;
+
+                        if (is18HoleCourse) {
+                            return (
+                                <div className="flex gap-4 mb-4 animate-fade-in">
+                                    <button
+                                        onClick={() => setSetup({ ...setup, startingHole: 1 })}
+                                        className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${(!setup.startingHole || setup.startingHole === 1)
+                                            ? 'bg-secondary text-white shadow-md'
+                                            : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        Front 9 (1-9)
+                                    </button>
+                                    <button
+                                        onClick={() => setSetup({ ...setup, startingHole: 10 })}
+                                        className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${setup.startingHole === 10
+                                            ? 'bg-secondary text-white shadow-md'
+                                            : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        Back 9 (10-18)
+                                    </button>
+                                </div>
+                            );
+                        }
+                        return null;
+                    })()}
 
                     <label className="block text-sm font-bold text-muted mb-2 uppercase tracking-wide">Match Type</label>
                     <div className="flex gap-4 mb-4">

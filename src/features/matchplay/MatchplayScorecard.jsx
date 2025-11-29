@@ -22,7 +22,11 @@ export const MatchplayScorecard = () => {
                 if (c) {
                     // Filter holes if 9-hole round
                     if (m.holesPlayed === 9) {
-                        c.holes = c.holes.slice(0, 9);
+                        if (m.startingHole === 10) {
+                            c.holes = c.holes.slice(9, 18);
+                        } else {
+                            c.holes = c.holes.slice(0, 9);
+                        }
                     }
                     setCourse(c);
                 }
