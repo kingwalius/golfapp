@@ -120,7 +120,7 @@ export default function Profile() {
                 {/* Handicap Settings Card */}
                 <div className="card bg-white/90 backdrop-blur-md">
                     <h2 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
-                        <span>⛳</span> Handicap Settings
+                        Handicap Settings
                     </h2>
 
                     <div className="space-y-4">
