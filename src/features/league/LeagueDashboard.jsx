@@ -31,6 +31,8 @@ const FeedItem = ({ item }) => {
                     holes={item.courseHoles}
                     scores={scores}
                     par={72}
+                    p1Name={item.p1Name}
+                    p2Name={item.p2Name}
                 />
             ) : (
                 <div className="bg-stone-100 p-4 rounded-xl text-center text-stone-500">
