@@ -378,17 +378,52 @@ export const UserProvider = ({ children }) => {
         // --- Recalculate Handicap (WHI) ---
         // Now that we have the latest rounds (local + server), calculate the new index.
         const finalRounds = await db.getAll('rounds');
+        const finalMatches = await db.getAll('matches');
         const finalCourses = await db.getAll('courses');
 
-        // Import dynamically to avoid circular dependency issues if any, 
-        // but standard import at top is better. 
-        // Assuming calculateHandicapIndex is imported at the top.
-        // We need to add the import first.
+        // Convert eligible matches to "Round-like" objects for calculation
+        const matchRounds = finalMatches
+            .filter(m => m.player1Differential !== undefined && m.player1Differential !== null && m.player1?.id == user.id)
+            .map(m => {
+                // Create a synthetic round object that calculateHandicapIndex can use
+                // It needs: date, score (for differential calc, but we have diff already)
+                // Actually calculateHandicapIndex calculates differential from score.
+                // We should update calculateHandicapIndex to accept pre-calculated differentials OR
+                // we reverse engineer a score? No, that's messy.
+                // Better: Update calculateHandicapIndex to accept objects with a 'differential' property.
+                return {
+                    date: m.date,
+                    differential: m.player1Differential,
+                    courseId: m.courseId
+                };
+            });
 
-        // For now, let's assume we will add the import.
-        // Logic:
+        // Combine real rounds and match rounds
+        // We need to adapt calculateHandicapIndex to handle pre-calculated differentials.
+        // Or we can just map rounds to differentials here and pass a list of differentials?
+        // calculateHandicapIndex takes (rounds, courses).
+        // Let's modify the input to calculateHandicapIndex or wrap it.
+
+        // Let's prepare a list of objects that have { date, differential }
+        const allDifferentials = [
+            ...finalRounds.map(r => {
+                const c = finalCourses.find(c => c.id === r.courseId);
+                if (!c || !r.score) return null;
+                // Import calculateDifferential if needed or assume it's available
+                // We can't easily import it here if not already.
+                // But wait, calculateHandicapIndex does this internally.
+                // We should probably modify calculateHandicapIndex to be more flexible.
+                // For now, let's just pass the mixed array and update calculateHandicapIndex.
+                return { ...r, type: 'round' };
+            }),
+            ...matchRounds.map(m => ({ ...m, type: 'match' }))
+        ].filter(Boolean);
+
+        // We need to update calculateHandicapIndex in calculations.js to handle this mixed list.
+        // But first let's pass it.
+
         if (user.handicapMode === 'AUTO' || user.handicapMode === 'auto') {
-            const newHandicap = calculateHandicapIndex(finalRounds, finalCourses);
+            const newHandicap = calculateHandicapIndex(allDifferentials, finalCourses);
 
             if (newHandicap !== user.handicap) {
                 console.log(`Updating Handicap: ${user.handicap} -> ${newHandicap}`);

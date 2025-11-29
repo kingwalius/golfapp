@@ -94,6 +94,11 @@ export const calculateHandicapIndex = (rounds, courses) => {
 
     // Calculate differentials
     const differentials = recentRounds.map(round => {
+        // If pre-calculated (e.g. Matchplay), use it
+        if (round.differential !== undefined && round.differential !== null) {
+            return round.differential;
+        }
+
         const course = courses.find(c => c.id === round.courseId);
         if (!course || !round.score) return null;
         return calculateDifferential(round.score, course.slope, course.rating);

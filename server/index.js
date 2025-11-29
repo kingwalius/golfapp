@@ -69,6 +69,20 @@ app.get('/api/fix-db', async (req, res) => {
             }
         }
 
+        try {
+            await db.execute("SELECT player1Differential FROM matches LIMIT 1");
+            log('✅ matches.player1Differential column exists.');
+        } catch (e) {
+            log('❌ matches.player1Differential missing. Adding...');
+            try {
+                await db.execute("ALTER TABLE matches ADD COLUMN player1Differential REAL");
+                await db.execute("ALTER TABLE matches ADD COLUMN player2Differential REAL");
+                log('✅ Added differential columns.');
+            } catch (e2) {
+                log(`❌ Failed to add differential columns: ${e2.message}`);
+            }
+        }
+
         // 3. Verify Guest User
         try {
             log('Checking Guest user...');
@@ -524,15 +538,15 @@ app.post('/sync', async (req, res) => {
                     if (existing.rows.length > 0) {
                         // Update existing match
                         await db.execute({
-                            sql: 'UPDATE matches SET winnerId = ?, status = ?, scores = ? WHERE id = ?',
-                            args: [match.winnerId, match.status, scoresJson, existing.rows[0].id]
+                            sql: 'UPDATE matches SET winnerId = ?, status = ?, scores = ?, player1Differential = ?, player2Differential = ? WHERE id = ?',
+                            args: [match.winnerId, match.status, scoresJson, match.player1Differential || null, match.player2Differential || null, existing.rows[0].id]
                         });
                     } else {
                         // Insert new match
                         await db.execute({
-                            sql: `INSERT INTO matches (player1Id, player2Id, courseId, date, winnerId, status, scores)
-                                  VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                            args: [match.player1Id, p2Id, courseId, matchDate, match.winnerId, match.status, scoresJson]
+                            sql: `INSERT INTO matches (player1Id, player2Id, courseId, date, winnerId, status, scores, player1Differential, player2Differential)
+                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                            args: [match.player1Id, p2Id, courseId, matchDate, match.winnerId, match.status, scoresJson, match.player1Differential || null, match.player2Differential || null]
                         });
                     }
                     results.matches.success++;

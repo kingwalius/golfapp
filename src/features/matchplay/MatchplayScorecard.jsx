@@ -169,8 +169,25 @@ export const MatchplayScorecard = () => {
                     </tbody>
                 </table>
             </div>
+            {/* Handicap Toggle */}
+            <div className="px-4 mt-4">
+                <label className="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-stone-100">
+                    <input
+                        type="checkbox"
+                        className="w-6 h-6 text-primary rounded focus:ring-primary"
+                        checked={match.countForHandicap || false}
+                        onChange={e => {
+                            const newMatch = { ...match, countForHandicap: e.target.checked };
+                            setMatch(newMatch);
+                            db.put('matches', newMatch);
+                        }}
+                    />
+                    <span className="font-bold text-dark">Count for Handicap (WHI)</span>
+                </label>
+            </div>
+
             {/* Finish Match Button */}
-            <div className="mt-8 pb-8">
+            <div className="mt-4 pb-8 px-4">
                 <button
                     onClick={async () => {
                         // Calculate final winner
@@ -185,10 +202,35 @@ export const MatchplayScorecard = () => {
                         if (p1Wins > p2Wins) winnerId = match.player1.id;
                         else if (p2Wins > p1Wins) winnerId = match.player2.id;
 
+                        // Calculate Differential if enabled
+                        let p1Diff = null;
+                        if (match.countForHandicap) {
+                            // Calculate Adjusted Gross Score (approximate for MVP)
+                            // We need total strokes.
+                            let totalStrokes = 0;
+                            let holesPlayed = 0;
+
+                            course.holes.forEach(h => {
+                                const s = match.scores[h.number];
+                                if (s && s.p1) {
+                                    totalStrokes += s.p1;
+                                    holesPlayed++;
+                                }
+                            });
+
+                            // Only count if 18 holes played (MVP simplification)
+                            if (holesPlayed === 18 && totalStrokes > 0) {
+                                // Formula: (113 / Slope) * (Score - Rating)
+                                p1Diff = (113 / course.slope) * (totalStrokes - course.rating);
+                                p1Diff = Math.round(p1Diff * 10) / 10;
+                            }
+                        }
+
                         // Update match with winner and mark as completed
                         const completedMatch = {
                             ...match,
                             winnerId,
+                            player1Differential: p1Diff,
                             completed: true,
                             synced: false
                         };
