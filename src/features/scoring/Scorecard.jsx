@@ -109,34 +109,38 @@ export const Scorecard = () => {
         <div className="pb-24">
             {/* Header */}
             <div className="bg-white sticky top-0 z-10 shadow-sm border-b border-stone-100">
-                <div className="p-4 flex justify-between items-center">
-                    <button onClick={() => navigate('/')} className="p-2 -ml-2 text-stone-400 hover:text-dark">
-                        <ChevronLeft size={24} />
-                    </button>
-                    <div className="text-center">
-                        <h1 className="font-bold text-lg text-dark">{course?.name}</h1>
-                        <div className="text-xs text-muted font-medium uppercase tracking-wider">
-                            {round.holesPlayed === 9 ? '9 Holes' : '18 Holes'} • HCP {round.hcpIndex}
+                <div className="p-4">
+                    <div className="flex justify-between items-start mb-2">
+                        <button onClick={() => navigate('/')} className="p-2 -ml-2 text-stone-400 hover:text-dark">
+                            <ChevronLeft size={24} />
+                        </button>
+                        <div className="text-center flex-1 px-4">
+                            <h1 className="font-bold text-lg text-dark leading-tight">{course?.name}</h1>
+                            <div className="text-xs text-muted font-medium uppercase tracking-wider mt-1">
+                                {round.holesPlayed === 9 ? '9 Holes' : '18 Holes'} • HCP {round.hcpIndex}
+                            </div>
                         </div>
+                        <div className="w-10" />
                     </div>
-                    <div className="w-10" />
-                </div>
 
-                {/* Score Summary */}
-                <div className="grid grid-cols-3 divide-x divide-stone-100 border-t border-stone-100 bg-stone-50">
-                    <div className="p-3 text-center">
-                        <div className="text-xs text-muted uppercase font-bold mb-1">Total</div>
-                        <div className="text-2xl font-black text-dark">{totalStrokes}</div>
-                    </div>
-                    <div className="p-3 text-center">
-                        <div className="text-xs text-muted uppercase font-bold mb-1">Diff</div>
-                        <div className="text-2xl font-black text-dark">
-                            {differential > 0 ? '+' : ''}{differential.toFixed(1)}
+                    {/* Compact Stats */}
+                    <div className="flex justify-center items-center gap-6 text-sm">
+                        <div className="flex flex-col items-center">
+                            <span className="text-[10px] text-muted font-bold uppercase tracking-wider">Total</span>
+                            <span className="text-xl font-black text-dark">{totalStrokes}</span>
                         </div>
-                    </div>
-                    <div className="p-3 text-center">
-                        <div className="text-xs text-muted uppercase font-bold mb-1">Pts</div>
-                        <div className="text-2xl font-black text-primary">{totalStableford}</div>
+                        <div className="w-px h-8 bg-stone-100"></div>
+                        <div className="flex flex-col items-center">
+                            <span className="text-[10px] text-muted font-bold uppercase tracking-wider">Diff</span>
+                            <span className="text-xl font-black text-dark">
+                                {differential > 0 ? '+' : ''}{differential.toFixed(1)}
+                            </span>
+                        </div>
+                        <div className="w-px h-8 bg-stone-100"></div>
+                        <div className="flex flex-col items-center">
+                            <span className="text-[10px] text-muted font-bold uppercase tracking-wider">Pts</span>
+                            <span className="text-xl font-black text-primary">{totalStableford}</span>
+                        </div>
                     </div>
                 </div>
             </div>
