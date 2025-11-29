@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useUser, useDB } from '../../lib/store';
 import { SwipeableItem } from '../../components/SwipeableItem';
+import { calculatePlayingHcp, calculateStableford, calculateStrokesReceived } from '../scoring/calculations';
 import { User, Trophy, Calendar, Swords, Flag, Plus } from 'lucide-react';
 
 export const Home = () => {
@@ -14,7 +15,25 @@ export const Home = () => {
     const loadData = async () => {
         const r = await db.getAll('rounds');
         const m = await db.getAll('matches');
-        const c = await db.getAll('courses');
+        let c = await db.getAll('courses');
+
+        // If no courses found locally, try to fetch from server
+        if (c.length === 0) {
+            try {
+                const res = await fetch('/courses');
+                if (res.ok) {
+                    const serverCourses = await res.json();
+                    const tx = db.transaction('courses', 'readwrite');
+                    for (const course of serverCourses) {
+                        await tx.store.put(course);
+                    }
+                    await tx.done;
+                    c = serverCourses;
+                }
+            } catch (e) {
+                console.warn("Failed to fetch courses in Home.jsx", e);
+            }
+        }
 
         // Combine and sort by date (newest first)
         const combined = [
@@ -161,7 +180,25 @@ export const Home = () => {
                                                             vs {opponentName}
                                                         </span>
                                                     ) : (
-                                                        <span>{item.totalStableford || 0} pts</span>
+                                                        <span>
+                                                            {(() => {
+                                                                // Recalculate totals on the fly
+                                                                let tStrokes = 0;
+                                                                let tStableford = 0;
+                                                                if (course && item.scores) {
+                                                                    const playingHcp = calculatePlayingHcp(item.hcpIndex || 54, course.slope, course.rating, 72);
+                                                                    course.holes.forEach(h => {
+                                                                        const s = item.scores[h.number] || 0;
+                                                                        if (s > 0) {
+                                                                            tStrokes += s;
+                                                                            tStableford += calculateStableford(h.par, s, calculateStrokesReceived(playingHcp, h.hcp));
+                                                                        }
+                                                                    });
+                                                                }
+                                                                const displayStableford = tStrokes > 0 ? tStableford : (item.stableford || item.totalStableford || 0);
+                                                                return `${displayStableford} pts`;
+                                                            })()}
+                                                        </span>
                                                     )}
                                                 </div>
                                             </div>
@@ -170,7 +207,15 @@ export const Home = () => {
                                             {isMatch ? (
                                                 <span className="text-sm font-bold bg-stone-100 px-2 py-1 rounded text-stone-600">{item.status}</span>
                                             ) : (
-                                                <span className="text-primary font-bold text-lg">{item.totalStrokes || '-'}</span>
+                                                <span className="text-primary font-bold text-lg">
+                                                    {(() => {
+                                                        let tStrokes = 0;
+                                                        if (course && item.scores) {
+                                                            Object.values(item.scores).forEach(s => tStrokes += (s || 0));
+                                                        }
+                                                        return tStrokes > 0 ? tStrokes : (item.totalStrokes || item.score || '-');
+                                                    })()}
+                                                </span>
                                             )}
                                         </div>
                                     </div>
