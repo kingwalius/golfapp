@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDB, useUser } from '../../lib/store';
 import clsx from 'clsx';
+import { ChevronLeft } from 'lucide-react';
 
 export const MatchplayScorecard = () => {
     const { id } = useParams();
@@ -284,7 +285,7 @@ export const MatchplayScorecard = () => {
                     }}
                     className="w-full bg-primary text-white py-4 rounded-xl font-bold shadow-lg hover:bg-primaryLight transition active:scale-95 flex items-center justify-center gap-2"
                 >
-                    <span>🏁</span> Finish Match
+                    Finish Match
                 </button>
             </div>
 
