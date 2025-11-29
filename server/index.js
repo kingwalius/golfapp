@@ -350,6 +350,53 @@ app.get('/api/user/:id/activity', async (req, res) => {
     }
 });
 
+// --- Delete Routes ---
+app.post('/api/rounds/delete', async (req, res) => {
+    const { userId, courseId, date } = req.body;
+    if (!userId || !courseId || !date) return res.status(400).json({ error: 'Missing required fields' });
+
+    try {
+        // Find and delete the round
+        // Note: Using date string comparison might be tricky if formats differ.
+        // Ideally we pass the ID if we have it, but local ID != server ID.
+        // Let's rely on the composite key (userId, courseId, date) which we use for sync.
+
+        const result = await db.execute({
+            sql: 'DELETE FROM rounds WHERE userId = ? AND courseId = ? AND date = ?',
+            args: [userId, courseId, date]
+        });
+
+        if (result.rowsAffected > 0) {
+            res.json({ success: true, message: 'Round deleted' });
+        } else {
+            res.status(404).json({ error: 'Round not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/matches/delete', async (req, res) => {
+    const { userId, courseId, date } = req.body;
+    if (!userId || !courseId || !date) return res.status(400).json({ error: 'Missing required fields' });
+
+    try {
+        // Delete match where user is either player 1 or player 2
+        const result = await db.execute({
+            sql: 'DELETE FROM matches WHERE (player1Id = ? OR player2Id = ?) AND courseId = ? AND date = ?',
+            args: [userId, userId, courseId, date]
+        });
+
+        if (result.rowsAffected > 0) {
+            res.json({ success: true, message: 'Match deleted' });
+        } else {
+            res.status(404).json({ error: 'Match not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- League Feed Route ---
 app.get('/api/league/feed', async (req, res) => {
     try {

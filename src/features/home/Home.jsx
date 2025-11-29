@@ -57,6 +57,27 @@ export const Home = () => {
     const handleDelete = async (id, type) => {
         if (confirm('Are you sure you want to delete this?')) {
             const storeName = type === 'round' ? 'rounds' : 'matches';
+
+            // Get item to find its details for server deletion
+            const item = await db.get(storeName, id);
+
+            if (item && user) {
+                try {
+                    const endpoint = type === 'round' ? '/api/rounds/delete' : '/api/matches/delete';
+                    await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userId: user.id,
+                            courseId: item.courseId,
+                            date: item.date
+                        })
+                    });
+                } catch (e) {
+                    console.error("Failed to delete from server", e);
+                }
+            }
+
             await db.delete(storeName, id);
             loadData(); // Reload list
         }
