@@ -123,25 +123,6 @@ export const Scorecard = () => {
                         <div className="w-10" />
                     </div>
 
-                    {/* Compact Stats */}
-                    <div className="flex justify-center items-center gap-6 text-sm">
-                        <div className="flex flex-col items-center">
-                            <span className="text-[10px] text-muted font-bold uppercase tracking-wider">Total</span>
-                            <span className="text-xl font-black text-dark">{totalStrokes}</span>
-                        </div>
-                        <div className="w-px h-8 bg-stone-100"></div>
-                        <div className="flex flex-col items-center">
-                            <span className="text-[10px] text-muted font-bold uppercase tracking-wider">Diff</span>
-                            <span className="text-xl font-black text-dark">
-                                {differential > 0 ? '+' : ''}{differential.toFixed(1)}
-                            </span>
-                        </div>
-                        <div className="w-px h-8 bg-stone-100"></div>
-                        <div className="flex flex-col items-center">
-                            <span className="text-[10px] text-muted font-bold uppercase tracking-wider">Pts</span>
-                            <span className="text-xl font-black text-primary">{totalStableford}</span>
-                        </div>
-                    </div>
                 </div>
             </div>
 
