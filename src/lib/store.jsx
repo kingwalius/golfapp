@@ -372,152 +372,150 @@ export const UserProvider = ({ children }) => {
                 }
                 console.error("Up-sync failed with status:", res.status, errorDetails);
             }
+
+            // --- Recalculate Handicap (WHI) ---
+            // Now that we have the latest rounds (local + server), calculate the new index.
+            const finalRounds = await db.getAll('rounds');
+            const finalMatches = await db.getAll('matches');
+            const finalCourses = await db.getAll('courses');
+
+            // Convert eligible matches to "Round-like" objects for calculation
+            const matchRounds = finalMatches
+                .filter(m => m.player1Differential !== undefined && m.player1Differential !== null && m.player1?.id == user.id)
+                .map(m => {
+                    // Create a synthetic round object that calculateHandicapIndex can use
+                    // It needs: date, score (for differential calc, but we have diff already)
+                    // Actually calculateHandicapIndex calculates differential from score.
+                    // We should update calculateHandicapIndex to accept pre-calculated differentials OR
+                    // we reverse engineer a score? No, that's messy.
+                    // Better: Update calculateHandicapIndex to accept objects with a 'differential' property.
+                    return {
+                        date: m.date,
+                        differential: m.player1Differential,
+                        courseId: m.courseId
+                    };
+                });
+
+            // Combine real rounds and match rounds
+            // We need to adapt calculateHandicapIndex to handle pre-calculated differentials.
+            // Or we can just map rounds to differentials here and pass a list of differentials?
+            // calculateHandicapIndex takes (rounds, courses).
+            // Let's modify the input to calculateHandicapIndex or wrap it.
+
+            // Let's prepare a list of objects that have { date, differential }
+            const allDifferentials = [
+                ...finalRounds.map(r => {
+                    const c = finalCourses.find(c => c.id === r.courseId);
+                    if (!c || !r.score) return null;
+                    // Import calculateDifferential if needed or assume it's available
+                    // We can't easily import it here if not already.
+                    // But wait, calculateHandicapIndex does this internally.
+                    // We should probably modify calculateHandicapIndex to be more flexible.
+                    // For now, let's just pass the mixed array and update calculateHandicapIndex.
+                    return { ...r, type: 'round' };
+                }),
+                ...matchRounds.map(m => ({ ...m, type: 'match' }))
+            ].filter(Boolean);
+
+            // We need to update calculateHandicapIndex in calculations.js to handle this mixed list.
+            // But first let's pass it.
+
+            if (user.handicapMode === 'AUTO' || user.handicapMode === 'auto') {
+                const newHandicap = calculateHandicapIndex(allDifferentials, finalCourses);
+
+                if (newHandicap !== user.handicap) {
+                    console.log(`Updating Handicap: ${user.handicap} -> ${newHandicap}`);
+
+                    // Update local user
+                    const updatedUser = { ...user, handicap: newHandicap };
+                    setUser(updatedUser);
+                    saveToLocalStorage(updatedUser);
+
+                    // Update server
+                    try {
+                        await fetch('/api/user/update', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: user.id, handicap: newHandicap })
+                        });
+                        console.log("Handicap synced to server.");
+                    } catch (hcpError) {
+                        console.error("Failed to sync handicap to server", hcpError);
+                    }
+                }
+            }
+
         } catch (e) {
             console.error("Sync failed", e);
         }
-        // --- Recalculate Handicap (WHI) ---
-        // Now that we have the latest rounds (local + server), calculate the new index.
-        const finalRounds = await db.getAll('rounds');
-        const finalMatches = await db.getAll('matches');
-        const finalCourses = await db.getAll('courses');
+    };
 
-        // Convert eligible matches to "Round-like" objects for calculation
-        const matchRounds = finalMatches
-            .filter(m => m.player1Differential !== undefined && m.player1Differential !== null && m.player1?.id == user.id)
-            .map(m => {
-                // Create a synthetic round object that calculateHandicapIndex can use
-                // It needs: date, score (for differential calc, but we have diff already)
-                // Actually calculateHandicapIndex calculates differential from score.
-                // We should update calculateHandicapIndex to accept pre-calculated differentials OR
-                // we reverse engineer a score? No, that's messy.
-                // Better: Update calculateHandicapIndex to accept objects with a 'differential' property.
-                return {
-                    date: m.date,
-                    differential: m.player1Differential,
-                    courseId: m.courseId
-                };
-            });
+    useEffect(() => {
+        const initUser = async () => {
+            try {
+                const saved = localStorage.getItem('golf_user');
+                if (saved && saved !== "undefined" && saved !== "null") {
+                    const parsed = JSON.parse(saved);
+                    setUser(parsed);
 
-        // Combine real rounds and match rounds
-        // We need to adapt calculateHandicapIndex to handle pre-calculated differentials.
-        // Or we can just map rounds to differentials here and pass a list of differentials?
-        // calculateHandicapIndex takes (rounds, courses).
-        // Let's modify the input to calculateHandicapIndex or wrap it.
-
-        // Let's prepare a list of objects that have { date, differential }
-        const allDifferentials = [
-            ...finalRounds.map(r => {
-                const c = finalCourses.find(c => c.id === r.courseId);
-                if (!c || !r.score) return null;
-                // Import calculateDifferential if needed or assume it's available
-                // We can't easily import it here if not already.
-                // But wait, calculateHandicapIndex does this internally.
-                // We should probably modify calculateHandicapIndex to be more flexible.
-                // For now, let's just pass the mixed array and update calculateHandicapIndex.
-                return { ...r, type: 'round' };
-            }),
-            ...matchRounds.map(m => ({ ...m, type: 'match' }))
-        ].filter(Boolean);
-
-        // We need to update calculateHandicapIndex in calculations.js to handle this mixed list.
-        // But first let's pass it.
-
-        if (user.handicapMode === 'AUTO' || user.handicapMode === 'auto') {
-            const newHandicap = calculateHandicapIndex(allDifferentials, finalCourses);
-
-            if (newHandicap !== user.handicap) {
-                console.log(`Updating Handicap: ${user.handicap} -> ${newHandicap}`);
-
-                // Update local user
-                const updatedUser = { ...user, handicap: newHandicap };
-                setUser(updatedUser);
-                saveToLocalStorage(updatedUser);
-
-                // Update server
-                try {
-                    await fetch('/api/user/update', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: user.id, handicap: newHandicap })
-                    });
-                    console.log("Handicap synced to server.");
-                } catch (hcpError) {
-                    console.error("Failed to sync handicap to server", hcpError);
+                    // Verify with server to get latest data
+                    try {
+                        const res = await fetch(`/api/user/${parsed.id}`);
+                        if (res.ok) {
+                            const latest = await res.json();
+                            setUser(latest);
+                            saveToLocalStorage(latest);
+                        }
+                    } catch (e) {
+                        console.warn("Could not verify user with server (offline?)", e);
+                    }
                 }
+            } catch (err) {
+                console.error("Error parsing user from local storage", err);
+                localStorage.removeItem('golf_user');
             }
+        };
+        initUser();
+        console.log("Golf App Frontend v1.1 (HTTP Strategy Fix)");
+    }, []);
+
+    const updateProfile = async (updates) => {
+        let currentUser = user;
+
+        // If no user exists, try to register/login with the provided username or default
+        if (!currentUser) {
+            const username = updates.username || 'Golfer';
+            currentUser = await login(username);
+            if (!currentUser) return; // Login failed
         }
 
-    } catch (e) {
-        console.error("Sync failed", e);
-    }
-};
+        // Prevent overwriting username with empty string
+        const safeUpdates = { ...updates };
+        if (safeUpdates.username === '') {
+            delete safeUpdates.username;
+        }
 
-useEffect(() => {
-    const initUser = async () => {
+        const updatedUser = { ...currentUser, ...safeUpdates };
+        setUser(updatedUser);
+        saveToLocalStorage(updatedUser);
+
+        // Sync to backend
         try {
-            const saved = localStorage.getItem('golf_user');
-            if (saved && saved !== "undefined" && saved !== "null") {
-                const parsed = JSON.parse(saved);
-                setUser(parsed);
-
-                // Verify with server to get latest data
-                try {
-                    const res = await fetch(`/api/user/${parsed.id}`);
-                    if (res.ok) {
-                        const latest = await res.json();
-                        setUser(latest);
-                        saveToLocalStorage(latest);
-                    }
-                } catch (e) {
-                    console.warn("Could not verify user with server (offline?)", e);
-                }
-            }
+            await fetch('/api/user/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: updatedUser.id, ...updates })
+            });
         } catch (err) {
-            console.error("Error parsing user from local storage", err);
-            localStorage.removeItem('golf_user');
+            console.error("Failed to update profile on server", err);
         }
     };
-    initUser();
-    console.log("Golf App Frontend v1.1 (HTTP Strategy Fix)");
-}, []);
 
-const updateProfile = async (updates) => {
-    let currentUser = user;
-
-    // If no user exists, try to register/login with the provided username or default
-    if (!currentUser) {
-        const username = updates.username || 'Golfer';
-        currentUser = await login(username);
-        if (!currentUser) return; // Login failed
-    }
-
-    // Prevent overwriting username with empty string
-    const safeUpdates = { ...updates };
-    if (safeUpdates.username === '') {
-        delete safeUpdates.username;
-    }
-
-    const updatedUser = { ...currentUser, ...safeUpdates };
-    setUser(updatedUser);
-    saveToLocalStorage(updatedUser);
-
-    // Sync to backend
-    try {
-        await fetch('/api/user/update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: updatedUser.id, ...updates })
-        });
-    } catch (err) {
-        console.error("Failed to update profile on server", err);
-    }
-};
-
-return (
-    <UserContext.Provider value={{ user, login, logout, sync, updateProfile, isOnline }}>
-        {children}
-    </UserContext.Provider>
-);
+    return (
+        <UserContext.Provider value={{ user, login, logout, sync, updateProfile, isOnline }}>
+            {children}
+        </UserContext.Provider>
+    );
 };
 
 export const useUser = () => useContext(UserContext);
