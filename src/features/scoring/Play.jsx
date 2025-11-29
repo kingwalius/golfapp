@@ -20,9 +20,26 @@ export const Play = () => {
     const loadData = async () => {
         const r = await db.getAll('rounds');
         const m = await db.getAll('matches');
-        const c = await db.getAll('courses');
+        let c = await db.getAll('courses');
 
-        // Combine and sort by date (newest first)
+        // If no courses found locally, try to fetch from server
+        if (c.length === 0) {
+            try {
+                const res = await fetch('/courses');
+                if (res.ok) {
+                    const serverCourses = await res.json();
+                    const tx = db.transaction('courses', 'readwrite');
+                    for (const course of serverCourses) {
+                        await tx.store.put(course);
+                    }
+                    await tx.done;
+                    c = serverCourses; // Use fetched courses
+                }
+            } catch (e) {
+                console.warn("Failed to fetch courses in Play.jsx", e);
+            }
+        }
+
         // Combine and sort by date (newest first)
         const combined = [
             ...r.filter(item => item.userId == user?.id).map(item => ({ ...item, type: 'round' })),

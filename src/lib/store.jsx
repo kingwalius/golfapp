@@ -225,7 +225,14 @@ export const UserProvider = ({ children }) => {
                             // We can't easily map server ID to local ID without a new column.
                             // For MVP: Check if a round exists with same date (string match) and courseId.
 
-                            const existing = allRounds.find(r => r.date === serverRound.date && r.courseId === serverRound.courseId);
+                            // Normalize dates for comparison
+                            const serverDate = new Date(serverRound.date).toISOString();
+
+                            const existing = allRounds.find(r => {
+                                const localDate = new Date(r.date).toISOString();
+                                return localDate === serverDate && r.courseId === serverRound.courseId;
+                            });
+
                             if (!existing) {
                                 console.log("Down-syncing round:", serverRound);
                                 // Remove ID to avoid collision
@@ -244,7 +251,11 @@ export const UserProvider = ({ children }) => {
                             // Try to find by serverId first, then fallback to date/course
                             let existing = allMatches.find(m => m.serverId === serverMatch.id);
                             if (!existing) {
-                                existing = allMatches.find(m => m.date === serverMatch.date && m.courseId === serverMatch.courseId);
+                                const serverDate = new Date(serverMatch.date).toISOString();
+                                existing = allMatches.find(m => {
+                                    const localDate = new Date(m.date).toISOString();
+                                    return localDate === serverDate && m.courseId === serverMatch.courseId;
+                                });
                             }
 
                             // Destructure to remove ID (let local DB assign it) and get names
