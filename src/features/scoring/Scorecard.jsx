@@ -97,6 +97,46 @@ export const Scorecard = () => {
     }
 
     const handleFinish = async () => {
+        // Calculate final stats
+        let finalStrokes = 0;
+        let finalStableford = 0;
+        let finalAdjustedScore = 0;
+
+        if (round && course) {
+            course.holes.forEach(hole => {
+                const strokes = round.scores[hole.number] || 0;
+                if (strokes > 0) {
+                    const strokesReceived = calculateStrokesReceived(playingHcp, hole.hcp);
+                    const points = calculateStableford(hole.par, strokes, strokesReceived);
+                    const adjustedScore = calculateAdjustedScore(hole.par, strokes, strokesReceived);
+
+                    finalStrokes += strokes;
+                    finalStableford += points;
+                    finalAdjustedScore += adjustedScore;
+                }
+            });
+        }
+
+        // Calculate Differential
+        let finalDifferential = 0;
+        if (course && round && finalStrokes > 0) {
+            const rating = round.holesPlayed === 9 ? (course.rating / 2) : course.rating;
+            const slope = round.holesPlayed === 9 ? (course.slope / 2) : course.slope;
+            finalDifferential = calculateDifferential(finalAdjustedScore, slope, rating);
+        }
+
+        // Update round with final stats
+        const finishedRound = {
+            ...round,
+            completed: true,
+            totalStrokes: finalStrokes,
+            totalStableford: finalStableford,
+            differential: finalDifferential,
+            synced: false
+        };
+
+        await db.put('rounds', finishedRound);
+
         // Trigger sync to upload round immediately
         sync();
         navigate('/');
