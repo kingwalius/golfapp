@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDB, useUser } from '../../lib/store';
-import { calculateHandicapIndex } from './calculations';
+import { calculateHandicapIndex, calculatePlayingHcp, calculateStableford, calculateStrokesReceived } from './calculations';
 import { Flag, Swords, Calendar, ChevronRight, Search, Check } from 'lucide-react';
 
 import { SwipeableItem } from '../../components/SwipeableItem';
@@ -149,7 +149,32 @@ export const Play = () => {
                                                             vs {opponentName} ({item.status})
                                                         </span>
                                                     ) : (
-                                                        <span>{item.totalStableford || 0} pts</span>
+                                                        <span>
+                                                            {(() => {
+                                                                // Recalculate totals on the fly to ensure accuracy
+                                                                let tStrokes = 0;
+                                                                let tStableford = 0;
+                                                                if (course && item.scores) {
+                                                                    // We need to calculate playing HCP to get accurate stableford
+                                                                    // If we don't have the original HCP index stored, we might be slightly off, 
+                                                                    // but usually item.hcpIndex is stored.
+                                                                    const playingHcp = calculatePlayingHcp(item.hcpIndex || 54, course.slope, course.rating, 72);
+
+                                                                    course.holes.forEach(h => {
+                                                                        const s = item.scores[h.number] || 0;
+                                                                        if (s > 0) {
+                                                                            tStrokes += s;
+                                                                            tStableford += calculateStableford(h.par, s, calculateStrokesReceived(playingHcp, h.hcp));
+                                                                        }
+                                                                    });
+                                                                }
+                                                                // Fallback to stored if calc fails (e.g. missing course data)
+                                                                const displayStrokes = tStrokes > 0 ? tStrokes : (item.score || 0);
+                                                                const displayStableford = tStrokes > 0 ? tStableford : (item.stableford || item.totalStableford || 0);
+
+                                                                return `${displayStableford} pts (${displayStrokes})`;
+                                                            })()}
+                                                        </span>
                                                     )}
                                                 </div>
                                             </div>
