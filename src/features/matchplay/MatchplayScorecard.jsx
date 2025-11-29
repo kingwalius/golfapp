@@ -96,34 +96,32 @@ export const MatchplayScorecard = () => {
 
     if (!match || !course) return <div>Loading...</div>;
 
+    // Calculate current score for display
+    let p1Score = 0;
+    let p2Score = 0;
+    if (match.scores) {
+        Object.values(match.scores).forEach(s => {
+            if (s.winner === 1) p1Score++;
+            if (s.winner === 2) p2Score++;
+        });
+    }
+
+    const diff = p1Score - p2Score;
+    const absDiff = Math.abs(diff);
+    let matchStatus = 'AS';
+    if (diff !== 0) {
+        const isUp = diff > 0; // Player 1 is up if diff > 0
+        matchStatus = `${absDiff} ${isUp ? 'UP' : 'DOWN'}`;
+        // If we want relative to user, we need user context, but for now let's stick to P1 perspective or generic "UP"
+        // Actually, usually "2 UP" means the leader is 2 up.
+        // Let's just show the leader.
+        if (p1Score > p2Score) matchStatus = `${match.player1.name} +${absDiff}`;
+        else if (p2Score > p1Score) matchStatus = `${match.player2.name} +${absDiff}`;
+    }
+
     return (
-        <div className="pb-20">
-            <div className="bg-secondary text-white p-4 sticky top-0 z-10 shadow-md flex justify-between items-center">
-                <div>
-                    <div className="font-bold">{match.player1.name} vs {match.player2.name}</div>
-                    <div className="text-xs opacity-90">HCP: {match.player1.playingHcp} vs {match.player2.playingHcp}</div>
-                </div>
-                <div className="text-2xl font-black bg-white text-secondary px-3 py-1 rounded">
-                    {(() => {
-                        // Calculate status relative to user
-                        let p1Wins = 0;
-                        let p2Wins = 0;
-                        if (match.scores) {
-                            Object.values(match.scores).forEach(s => {
-                                if (s.winner === 1) p1Wins++;
-                                if (s.winner === 2) p2Wins++;
-                            });
-                        }
-
-                        const { user } = useUser();
-                        const userId = user?.id?.toString();
-                        const p1Id = match.player1?.id?.toString();
-                        const isP1 = userId === p1Id;
-
-                        const diff = p1Wins - p2Wins;
-                        const absDiff = Math.abs(diff);
-
-                        {/* Header */ }
+        <div className="pb-24">
+            {/* Header */}
             <div className="bg-white sticky top-0 z-10 shadow-sm border-b border-stone-100">
                 <div className="p-4">
                     <div className="flex justify-between items-start mb-2">
@@ -211,95 +209,95 @@ export const MatchplayScorecard = () => {
                     </tbody>
                 </table>
             </div>
-                        {/* Handicap Toggle */ }
-                        <div className="px-4 mt-4">
-                            <label className="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-stone-100">
-                                <input
-                                    type="checkbox"
-                                    className="w-6 h-6 text-primary rounded focus:ring-primary"
-                                    checked={match.countForHandicap || false}
-                                    onChange={e => {
-                                        const newMatch = { ...match, countForHandicap: e.target.checked };
-                                        setMatch(newMatch);
-                                        db.put('matches', newMatch);
-                                    }}
-                                />
-                                <span className="font-bold text-dark">Count for Handicap (WHI)</span>
-                            </label>
-                        </div>
+            {/* Handicap Toggle */}
+            <div className="px-4 mt-4">
+                <label className="flex items-center gap-3 bg-white p-4 rounded-xl shadow-sm border border-stone-100">
+                    <input
+                        type="checkbox"
+                        className="w-6 h-6 text-primary rounded focus:ring-primary"
+                        checked={match.countForHandicap || false}
+                        onChange={e => {
+                            const newMatch = { ...match, countForHandicap: e.target.checked };
+                            setMatch(newMatch);
+                            db.put('matches', newMatch);
+                        }}
+                    />
+                    <span className="font-bold text-dark">Count for Handicap (WHI)</span>
+                </label>
+            </div>
 
-                        {/* Finish Match Button */ }
-                        <div className="mt-4 pb-8 px-4">
-                            <button
-                                onClick={async () => {
-                                    // Calculate final winner
-                                    let p1Wins = 0;
-                                    let p2Wins = 0;
-                                    Object.values(match.scores).forEach(s => {
-                                        if (s.winner === 1) p1Wins++;
-                                        if (s.winner === 2) p2Wins++;
-                                    });
+            {/* Finish Match Button */}
+            <div className="mt-4 pb-8 px-4">
+                <button
+                    onClick={async () => {
+                        // Calculate final winner
+                        let p1Wins = 0;
+                        let p2Wins = 0;
+                        Object.values(match.scores).forEach(s => {
+                            if (s.winner === 1) p1Wins++;
+                            if (s.winner === 2) p2Wins++;
+                        });
 
-                                    let winnerId = null;
-                                    if (p1Wins > p2Wins) winnerId = match.player1.id;
-                                    else if (p2Wins > p1Wins) winnerId = match.player2.id;
+                        let winnerId = null;
+                        if (p1Wins > p2Wins) winnerId = match.player1.id;
+                        else if (p2Wins > p1Wins) winnerId = match.player2.id;
 
-                                    // Calculate Differential if enabled
-                                    let p1Diff = null;
-                                    if (match.countForHandicap) {
-                                        // Calculate Adjusted Gross Score (approximate for MVP)
-                                        // We need total strokes.
-                                        let totalStrokes = 0;
-                                        let holesPlayedCount = 0;
+                        // Calculate Differential if enabled
+                        let p1Diff = null;
+                        if (match.countForHandicap) {
+                            // Calculate Adjusted Gross Score (approximate for MVP)
+                            // We need total strokes.
+                            let totalStrokes = 0;
+                            let holesPlayedCount = 0;
 
-                                        course.holes.forEach(h => {
-                                            const s = match.scores[h.number];
-                                            if (s && s.p1) {
-                                                totalStrokes += s.p1;
-                                                holesPlayedCount++;
-                                            }
-                                        });
+                            course.holes.forEach(h => {
+                                const s = match.scores[h.number];
+                                if (s && s.p1) {
+                                    totalStrokes += s.p1;
+                                    holesPlayedCount++;
+                                }
+                            });
 
-                                        const targetHoles = match.holesPlayed || 18;
+                            const targetHoles = match.holesPlayed || 18;
 
-                                        // Only count if all holes played (MVP simplification)
-                                        if (holesPlayedCount === targetHoles && totalStrokes > 0) {
-                                            // Formula: (113 / Slope) * (Score - Rating)
-                                            const rating = targetHoles === 9 ? (course.rating / 2) : course.rating;
-                                            p1Diff = (113 / course.slope) * (totalStrokes - rating);
-                                            p1Diff = Math.round(p1Diff * 10) / 10;
-                                        }
-                                    }
-
-                                    // Update match with winner and mark as completed
-                                    const completedMatch = {
-                                        ...match,
-                                        winnerId,
-                                        player1Differential: p1Diff,
-                                        completed: true,
-                                        synced: false
-                                    };
-
-                                    await db.put('matches', completedMatch);
-                                    await sync();
-                                    navigate('/');
-                                }}
-                                className="w-full bg-primary text-white py-4 rounded-xl font-bold shadow-lg hover:bg-primaryLight transition active:scale-95 flex items-center justify-center gap-2"
-                            >
-                                <span>🏁</span> Finish Match
-                            </button>
-                        </div>
-
-                        {/* Disclaimer for 9-hole rounds */ }
-                        {
-                            match.holesPlayed === 9 && (
-                                <div className="px-4 pb-4 text-center">
-                                    <div className="bg-amber-50 text-amber-800 text-xs p-2 rounded-lg border border-amber-100 font-medium inline-block">
-                                        ℹ️ 9-Hole round: Not included in Handicap Calculation.
-                                    </div>
-                                </div>
-                            )
+                            // Only count if all holes played (MVP simplification)
+                            if (holesPlayedCount === targetHoles && totalStrokes > 0) {
+                                // Formula: (113 / Slope) * (Score - Rating)
+                                const rating = targetHoles === 9 ? (course.rating / 2) : course.rating;
+                                p1Diff = (113 / course.slope) * (totalStrokes - rating);
+                                p1Diff = Math.round(p1Diff * 10) / 10;
+                            }
                         }
+
+                        // Update match with winner and mark as completed
+                        const completedMatch = {
+                            ...match,
+                            winnerId,
+                            player1Differential: p1Diff,
+                            completed: true,
+                            synced: false
+                        };
+
+                        await db.put('matches', completedMatch);
+                        await sync();
+                        navigate('/');
+                    }}
+                    className="w-full bg-primary text-white py-4 rounded-xl font-bold shadow-lg hover:bg-primaryLight transition active:scale-95 flex items-center justify-center gap-2"
+                >
+                    <span>🏁</span> Finish Match
+                </button>
+            </div>
+
+            {/* Disclaimer for 9-hole rounds */}
+            {
+                match.holesPlayed === 9 && (
+                    <div className="px-4 pb-4 text-center">
+                        <div className="bg-amber-50 text-amber-800 text-xs p-2 rounded-lg border border-amber-100 font-medium inline-block">
+                            ℹ️ 9-Hole round: Not included in Handicap Calculation.
+                        </div>
+                    </div>
+                )
+            }
         </div>
-                );
+    );
 };
