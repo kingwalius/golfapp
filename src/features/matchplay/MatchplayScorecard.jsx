@@ -19,11 +19,17 @@ export const MatchplayScorecard = () => {
                 if (!m.scores) m.scores = {};
                 setMatch(m);
                 const c = await db.get('courses', m.courseId);
-                setCourse(c);
+                if (c) {
+                    // Filter holes if 9-hole round
+                    if (m.holesPlayed === 9) {
+                        c.holes = c.holes.slice(0, 9);
+                    }
+                    setCourse(c);
+                }
             }
         };
         load();
-    }, [db, id]);
+    }, [id, db]);
 
     const updateHole = async (holeNumber, p1Score, p2Score) => {
         const currentScores = match.scores[holeNumber] || {};

@@ -78,7 +78,8 @@ export const MatchplaySetup = () => {
             matchType: setup.matchType,
             manualStrokes: setup.manualStrokes || 0,
             manualStrokesPlayer: setup.manualStrokesPlayer || 'p1',
-            synced: false
+            synced: false,
+            holesPlayed: setup.holesToPlay || 18
         };
 
         const id = await db.add('matches', match);
@@ -164,6 +165,28 @@ export const MatchplaySetup = () => {
                 </div>
 
                 <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                    <label className="block text-sm font-bold text-muted mb-2 uppercase tracking-wide">Round Length</label>
+                    <div className="flex gap-4 mb-4">
+                        <button
+                            onClick={() => setSetup({ ...setup, holesToPlay: 18 })}
+                            className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${setup.holesToPlay !== 9
+                                ? 'bg-primary text-white shadow-md'
+                                : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+                                }`}
+                        >
+                            18 Holes
+                        </button>
+                        <button
+                            onClick={() => setSetup({ ...setup, holesToPlay: 9 })}
+                            className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${setup.holesToPlay === 9
+                                ? 'bg-primary text-white shadow-md'
+                                : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+                                }`}
+                        >
+                            9 Holes
+                        </button>
+                    </div>
+
                     <label className="block text-sm font-bold text-muted mb-2 uppercase tracking-wide">Match Type</label>
                     <div className="flex gap-4 mb-4">
                         <button

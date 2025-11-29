@@ -16,6 +16,7 @@ export const Play = () => {
     const [selectedCourseId, setSelectedCourseId] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [hcpIndex, setHcpIndex] = useState(54.0);
+    const [holesToPlay, setHolesToPlay] = useState(18);
 
     const loadData = async () => {
         const r = await db.getAll('rounds');
@@ -76,7 +77,8 @@ export const Play = () => {
             scores: {},
             completed: false,
             synced: false,
-            userId: user.id
+            userId: user.id,
+            holesPlayed: holesToPlay
         };
 
         const id = await db.add('rounds', newRound);
@@ -288,6 +290,30 @@ export const Play = () => {
                                 <div className="text-sm text-muted">
                                     Current Index
                                 </div>
+                            </div>
+                        </div>
+
+                        <div className="pt-4 border-t border-stone-100">
+                            <label className="block text-sm font-bold text-muted mb-2 uppercase tracking-wide">Round Type</label>
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => setHolesToPlay(18)}
+                                    className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${holesToPlay === 18
+                                        ? 'bg-primary text-white shadow-md'
+                                        : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    18 Holes
+                                </button>
+                                <button
+                                    onClick={() => setHolesToPlay(9)}
+                                    className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${holesToPlay === 9
+                                        ? 'bg-primary text-white shadow-md'
+                                        : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    9 Holes
+                                </button>
                             </div>
                         </div>
 

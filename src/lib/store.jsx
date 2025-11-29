@@ -398,23 +398,28 @@ export const UserProvider = ({ children }) => {
 
             // Combine real rounds and match rounds
             // We need to adapt calculateHandicapIndex to handle pre-calculated differentials.
+            // We need to adapt calculateHandicapIndex to handle this mixed list.
             // Or we can just map rounds to differentials here and pass a list of differentials?
             // calculateHandicapIndex takes (rounds, courses).
             // Let's modify the input to calculateHandicapIndex or wrap it.
 
             // Let's prepare a list of objects that have { date, differential }
             const allDifferentials = [
-                ...finalRounds.map(r => {
-                    const c = finalCourses.find(c => c.id === r.courseId);
-                    if (!c || !r.score) return null;
-                    // Import calculateDifferential if needed or assume it's available
-                    // We can't easily import it here if not already.
-                    // But wait, calculateHandicapIndex does this internally.
-                    // We should probably modify calculateHandicapIndex to be more flexible.
-                    // For now, let's just pass the mixed array and update calculateHandicapIndex.
-                    return { ...r, type: 'round' };
-                }),
-                ...matchRounds.map(m => ({ ...m, type: 'match' }))
+                ...finalRounds
+                    .filter(r => r.holesPlayed !== 9) // Exclude 9-hole rounds
+                    .map(r => {
+                        const c = finalCourses.find(c => c.id === r.courseId);
+                        if (!c || !r.score) return null;
+                        // Import calculateDifferential if needed or assume it's available
+                        // We can't easily import it here if not already.
+                        // But wait, calculateHandicapIndex does this internally.
+                        // We should probably modify calculateHandicapIndex to be more flexible.
+                        // For now, let's just pass the mixed array and update calculateHandicapIndex.
+                        return { ...r, type: 'round' };
+                    }),
+                ...matchRounds
+                    .filter(m => m.holesPlayed !== 9) // Exclude 9-hole matches
+                    .map(m => ({ ...m, type: 'match' }))
             ].filter(Boolean);
 
             // We need to update calculateHandicapIndex in calculations.js to handle this mixed list.

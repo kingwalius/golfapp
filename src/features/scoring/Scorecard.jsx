@@ -14,19 +14,23 @@ export const Scorecard = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const loadData = async () => {
-            if (!id) return;
+        const load = async () => {
             const r = await db.get('rounds', parseInt(id));
             if (r) {
-                if (!r.scores) r.scores = {};
                 setRound(r);
                 const c = await db.get('courses', r.courseId);
-                setCourse(c);
+                if (c) {
+                    // Filter holes if 9-hole round
+                    if (r.holesPlayed === 9) {
+                        c.holes = c.holes.slice(0, 9);
+                    }
+                    setCourse(c);
+                }
             }
-            setLoading(false);
+            setLoading(false); // Keep setLoading(false) to ensure loading state is handled
         };
-        loadData();
-    }, [db, id]);
+        load();
+    }, [id, db]);
 
     const updateScore = async (holeNumber, strokes) => {
         const newScores = { ...round.scores, [holeNumber]: parseInt(strokes) || 0 };
