@@ -87,10 +87,27 @@ export const Play = () => {
         navigate(`/play/${id}`);
     };
 
-    const handleDelete = async (id, type) => {
+    const handleDelete = async (item) => {
         if (confirm('Are you sure you want to delete this?')) {
-            const storeName = type === 'round' ? 'rounds' : 'matches';
-            await db.delete(storeName, id);
+            const storeName = item.type === 'round' ? 'rounds' : 'matches';
+            await db.delete(storeName, item.id);
+
+            // Also delete from server to prevent re-sync
+            try {
+                const endpoint = item.type === 'round' ? '/api/rounds/delete' : '/api/matches/delete';
+                await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: user.id,
+                        courseId: item.courseId,
+                        date: item.date
+                    })
+                });
+            } catch (e) {
+                console.error("Failed to delete from server", e);
+            }
+
             loadData(); // Reload list
         }
     };
@@ -146,7 +163,7 @@ export const Play = () => {
                                 return (
                                     <SwipeableItem
                                         key={`${item.type}-${item.id}`}
-                                        onDelete={() => handleDelete(item.id, item.type)}
+                                        onDelete={() => handleDelete(item)}
                                         onClick={() => navigate(isMatch ? `/matchplay/${item.id}` : `/play/${item.id}`)}
                                     >
                                         <div className="p-5 flex justify-between items-center">
