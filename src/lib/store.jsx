@@ -326,7 +326,10 @@ export const UserProvider = ({ children }) => {
                     date: m.date,
                     winnerId: m.winnerId || null,
                     status: m.status || 'AS',
-                    scores: m.scores || {}
+                    scores: m.scores || {},
+                    player1Differential: m.player1Differential,
+                    player2Differential: m.player2Differential,
+                    countForHandicap: m.countForHandicap
                 }))
             };
 
