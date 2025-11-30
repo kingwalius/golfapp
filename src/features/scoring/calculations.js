@@ -112,15 +112,16 @@ export const prepareHandicapData = (rounds, matches, courses, userId) => {
     const userMatches = matches
         .filter(m => (m.player1?.id == userId || m.player2?.id == userId) && m.holesPlayed !== 9)
         .filter(m => {
-            // Only include if user is P1 and has differential (MVP limitation)
-            if (m.player1?.id == userId && m.player1Differential) return true;
+            // Include if user is P1 with diff OR user is P2 with diff
+            if (m.player1?.id == userId && m.player1Differential !== undefined && m.player1Differential !== null) return true;
+            if (m.player2?.id == userId && m.player2Differential !== undefined && m.player2Differential !== null) return true;
             return false;
         })
         .map(m => ({
             ...m,
             type: 'match',
             date: new Date(m.date),
-            differential: m.player1Differential // Explicitly map to differential
+            differential: m.player1?.id == userId ? m.player1Differential : m.player2Differential
         }));
 
     return [...userRounds, ...userMatches].sort((a, b) => b.date - a.date);

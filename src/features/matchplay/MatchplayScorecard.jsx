@@ -245,28 +245,36 @@ export const MatchplayScorecard = () => {
 
                         // Calculate Differential if enabled
                         let p1Diff = null;
+                        let p2Diff = null;
+
                         if (match.countForHandicap) {
                             // Calculate Adjusted Gross Score (approximate for MVP)
-                            // We need total strokes.
-                            let totalStrokes = 0;
+                            let p1Strokes = 0;
+                            let p2Strokes = 0;
                             let holesPlayedCount = 0;
 
                             course.holes.forEach(h => {
                                 const s = match.scores[h.number];
-                                if (s && s.p1) {
-                                    totalStrokes += s.p1;
-                                    holesPlayedCount++;
+                                if (s) {
+                                    if (s.p1) p1Strokes += s.p1;
+                                    if (s.p2) p2Strokes += s.p2;
+                                    if (s.p1 || s.p2) holesPlayedCount++;
                                 }
                             });
 
                             const targetHoles = match.holesPlayed || 18;
+                            const rating = targetHoles === 9 ? (course.rating / 2) : course.rating;
 
                             // Only count if all holes played (MVP simplification)
-                            if (holesPlayedCount === targetHoles && totalStrokes > 0) {
-                                // Formula: (113 / Slope) * (Score - Rating)
-                                const rating = targetHoles === 9 ? (course.rating / 2) : course.rating;
-                                p1Diff = (113 / course.slope) * (totalStrokes - rating);
-                                p1Diff = Math.round(p1Diff * 10) / 10;
+                            if (holesPlayedCount === targetHoles) {
+                                if (p1Strokes > 0) {
+                                    p1Diff = (113 / course.slope) * (p1Strokes - rating);
+                                    p1Diff = Math.round(p1Diff * 10) / 10;
+                                }
+                                if (p2Strokes > 0) {
+                                    p2Diff = (113 / course.slope) * (p2Strokes - rating);
+                                    p2Diff = Math.round(p2Diff * 10) / 10;
+                                }
                             }
                         }
 
@@ -275,6 +283,7 @@ export const MatchplayScorecard = () => {
                             ...match,
                             winnerId,
                             player1Differential: p1Diff,
+                            player2Differential: p2Diff,
                             completed: true,
                             synced: false
                         };
