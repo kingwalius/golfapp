@@ -377,38 +377,7 @@ export const UserProvider = ({ children }) => {
             }
 
             // --- Recalculate Handicap (WHI) ---
-            // Now that we have the latest rounds (local + server), calculate the new index.
-            const finalRounds = await db.getAll('rounds');
-            const finalMatches = await db.getAll('matches');
-            const finalCourses = await db.getAll('courses');
-
-            // Use shared logic to prepare data
-            const allDifferentials = prepareHandicapData(finalRounds, finalMatches, finalCourses, user.id);
-
-            if (user.handicapMode === 'AUTO' || user.handicapMode === 'auto') {
-                const newHandicap = calculateHandicapIndex(allDifferentials, finalCourses);
-
-                if (newHandicap !== user.handicap) {
-                    console.log(`Updating Handicap: ${user.handicap} -> ${newHandicap}`);
-
-                    // Update local user
-                    const updatedUser = { ...user, handicap: newHandicap };
-                    setUser(updatedUser);
-                    saveToLocalStorage(updatedUser);
-
-                    // Update server
-                    try {
-                        await fetch('/api/user/update', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ id: user.id, handicap: newHandicap })
-                        });
-                        console.log("Handicap synced to server.");
-                    } catch (hcpError) {
-                        console.error("Failed to sync handicap to server", hcpError);
-                    }
-                }
-            }
+            await recalculateHandicap();
 
         } catch (e) {
             console.error("Sync failed", e);
@@ -476,8 +445,48 @@ export const UserProvider = ({ children }) => {
         }
     };
 
+    const recalculateHandicap = async () => {
+        if (!user || !db) return;
+
+        try {
+            const finalRounds = await db.getAll('rounds');
+            const finalMatches = await db.getAll('matches');
+            const finalCourses = await db.getAll('courses');
+
+            // Use shared logic to prepare data
+            const allDifferentials = prepareHandicapData(finalRounds, finalMatches, finalCourses, user.id);
+
+            if (user.handicapMode === 'AUTO' || user.handicapMode === 'auto') {
+                const newHandicap = calculateHandicapIndex(allDifferentials, finalCourses);
+
+                if (newHandicap !== user.handicap) {
+                    console.log(`Updating Handicap: ${user.handicap} -> ${newHandicap}`);
+
+                    // Update local user
+                    const updatedUser = { ...user, handicap: newHandicap };
+                    setUser(updatedUser);
+                    saveToLocalStorage(updatedUser);
+
+                    // Update server
+                    try {
+                        await fetch('/api/user/update', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: user.id, handicap: newHandicap })
+                        });
+                        console.log("Handicap synced to server.");
+                    } catch (hcpError) {
+                        console.error("Failed to sync handicap to server", hcpError);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Failed to recalculate handicap", e);
+        }
+    };
+
     return (
-        <UserContext.Provider value={{ user, login, logout, sync, updateProfile, isOnline }}>
+        <UserContext.Provider value={{ user, login, logout, sync, updateProfile, isOnline, recalculateHandicap }}>
             {children}
         </UserContext.Provider>
     );

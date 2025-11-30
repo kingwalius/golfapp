@@ -8,7 +8,7 @@ import { SwipeableItem } from '../../components/SwipeableItem';
 
 export const Play = () => {
     const db = useDB();
-    const { user } = useUser();
+    const { user, recalculateHandicap } = useUser();
     const navigate = useNavigate();
     const [activities, setActivities] = useState([]);
     const [courses, setCourses] = useState([]);
@@ -109,6 +109,9 @@ export const Play = () => {
             }
 
             loadData(); // Reload list
+
+            // Recalculate handicap
+            await recalculateHandicap();
         }
     };
 
