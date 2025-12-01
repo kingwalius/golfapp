@@ -186,6 +186,8 @@ export const MatchplayScorecard = () => {
                                     <td className="p-2 relative">
                                         <input
                                             type="number"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
                                             className="w-12 h-12 border rounded-xl text-center text-lg font-bold touch-manipulation"
                                             value={s.p1 || ''}
                                             onChange={e => updateHole(hole.number, e.target.value, undefined)}
@@ -195,6 +197,8 @@ export const MatchplayScorecard = () => {
                                     <td className="p-2 relative">
                                         <input
                                             type="number"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
                                             className="w-12 h-12 border rounded-xl text-center text-lg font-bold touch-manipulation"
                                             value={s.p2 || ''}
                                             onChange={e => updateHole(hole.number, undefined, e.target.value)}
