@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useDB, useUser } from '../../lib/store';
 import { calculatePlayingHcp } from '../scoring/calculations';
 import { User, Search, Check } from 'lucide-react';
+import { CourseSelectionModal } from '../../components/CourseSelectionModal';
 
 export const MatchplaySetup = () => {
     const db = useDB();
@@ -10,7 +11,7 @@ export const MatchplaySetup = () => {
     const navigate = useNavigate();
     const [courses, setCourses] = useState([]);
     const [onlineUsers, setOnlineUsers] = useState([]);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
     const [opponentSearchQuery, setOpponentSearchQuery] = useState('');
     const [setup, setSetup] = useState({
         courseId: '',
@@ -108,61 +109,50 @@ export const MatchplaySetup = () => {
                 <div>
                     <label className="block text-sm font-bold text-muted mb-4 uppercase tracking-wide">Select Course</label>
 
-                    {/* Search Input */}
-                    <div className="relative mb-4">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted">
-                            <Search size={20} />
-                        </span>
-                        <input
-                            type="text"
-                            placeholder="Search courses..."
-                            className="w-full p-4 pl-12 border rounded-xl bg-gray-50 text-lg"
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-
-                    {/* Course Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
-                        {Array.isArray(courses) && courses
-                            .filter(c => c?.name?.toLowerCase().includes(searchQuery.toLowerCase()))
-                            .map(c => (
-                                <button
-                                    key={c.id}
-                                    onClick={() => setSetup({ ...setup, courseId: c.id.toString() })}
-                                    className={`
-                                    relative p-4 rounded-xl border-2 text-left transition-all duration-200 group
-                                    ${setup.courseId === c.id.toString()
-                                            ? 'border-primary bg-primary/5 shadow-md'
-                                            : 'border-stone-100 bg-white hover:border-primary/30 hover:shadow-soft'
-                                        }
-                                `}
-                                >
+                    {!setup.courseId ? (
+                        <button
+                            onClick={() => setIsCourseModalOpen(true)}
+                            className="w-full py-5 border-2 border-dashed border-stone-200 rounded-2xl flex flex-col items-center justify-center text-muted hover:border-primary hover:text-primary hover:bg-primary/5 transition group"
+                        >
+                            <div className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center mb-2 group-hover:bg-white transition">
+                                <Search size={24} />
+                            </div>
+                            <span className="font-bold">Tap to select a course</span>
+                        </button>
+                    ) : (
+                        (() => {
+                            const c = courses.find(course => course.id.toString() === setup.courseId);
+                            if (!c) return null;
+                            return (
+                                <div className="relative p-4 rounded-2xl border-2 border-primary bg-primary/5 shadow-md">
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <h3 className={`font-bold text-lg mb-1 ${setup.courseId === c.id.toString() ? 'text-primary' : 'text-dark'}`}>
-                                                {c.name}
-                                            </h3>
-                                            <div className="flex items-center gap-2 text-sm text-muted">
+                                            <h3 className="font-bold text-lg text-primary mb-1">{c.name}</h3>
+                                            <div className="flex items-center gap-2 text-sm text-dark/70">
                                                 <span>{c.holes?.length || 18} Holes</span>
                                                 <span>•</span>
                                                 <span>Par {c.holes ? c.holes.reduce((sum, h) => sum + (h.par || 0), 0) : 72}</span>
                                             </div>
                                         </div>
-                                        {setup.courseId === c.id.toString() && (
-                                            <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-sm">
-                                                <Check size={16} />
-                                            </div>
-                                        )}
+                                        <button
+                                            onClick={() => setIsCourseModalOpen(true)}
+                                            className="px-3 py-1.5 bg-white text-primary text-xs font-bold rounded-lg shadow-sm hover:bg-primary hover:text-white transition"
+                                        >
+                                            Change
+                                        </button>
                                     </div>
-                                </button>
-                            ))}
-                        {(!Array.isArray(courses) || courses.length === 0) && (
-                            <div className="col-span-full text-center py-8 text-muted">
-                                No courses found.
-                            </div>
-                        )}
-                    </div>
+                                </div>
+                            );
+                        })()
+                    )}
+
+                    <CourseSelectionModal
+                        isOpen={isCourseModalOpen}
+                        onClose={() => setIsCourseModalOpen(false)}
+                        onSelect={(course) => setSetup({ ...setup, courseId: course.id.toString() })}
+                        courses={courses}
+                        selectedCourseId={setup.courseId}
+                    />
                 </div>
 
                 <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
