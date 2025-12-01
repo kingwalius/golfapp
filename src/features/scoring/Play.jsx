@@ -5,6 +5,7 @@ import { calculateHandicapIndex, calculatePlayingHcp, calculateStableford, calcu
 import { Flag, Swords, Calendar, ChevronRight, Search, Check } from 'lucide-react';
 
 import { SwipeableItem } from '../../components/SwipeableItem';
+import { CourseSelectionModal } from '../../components/CourseSelectionModal';
 
 export const Play = () => {
     const db = useDB();
@@ -13,8 +14,8 @@ export const Play = () => {
     const [activities, setActivities] = useState([]);
     const [courses, setCourses] = useState([]);
     const [showNewRound, setShowNewRound] = useState(false);
+    const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
     const [selectedCourseId, setSelectedCourseId] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
     const [hcpIndex, setHcpIndex] = useState(54.0);
     const [holesToPlay, setHolesToPlay] = useState(18);
     const [startingHole, setStartingHole] = useState(1);
@@ -242,61 +243,50 @@ export const Play = () => {
                         <div>
                             <label className="block text-sm font-bold text-muted mb-4 uppercase tracking-wide">Select Course</label>
 
-                            {/* Search Input */}
-                            <div className="relative mb-4">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted">
-                                    <Search size={20} />
-                                </span>
-                                <input
-                                    type="text"
-                                    placeholder="Search courses..."
-                                    className="input-field pl-12"
-                                    value={searchQuery}
-                                    onChange={e => setSearchQuery(e.target.value)}
-                                />
-                            </div>
-
-                            {/* Course Grid */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
-                                {courses
-                                    .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                                    .map(c => (
-                                        <button
-                                            key={c.id}
-                                            onClick={() => setSelectedCourseId(c.id.toString())}
-                                            className={`
-                                            relative p-4 rounded-xl border-2 text-left transition-all duration-200 group
-                                            ${selectedCourseId === c.id.toString()
-                                                    ? 'border-primary bg-primary/5 shadow-md'
-                                                    : 'border-stone-100 bg-white hover:border-primary/30 hover:shadow-soft'
-                                                }
-                                        `}
-                                        >
+                            {!selectedCourseId ? (
+                                <button
+                                    onClick={() => setIsCourseModalOpen(true)}
+                                    className="w-full py-8 border-2 border-dashed border-stone-200 rounded-2xl flex flex-col items-center justify-center text-muted hover:border-primary hover:text-primary hover:bg-primary/5 transition group"
+                                >
+                                    <div className="w-12 h-12 rounded-full bg-stone-50 flex items-center justify-center mb-3 group-hover:bg-white transition">
+                                        <Search size={24} />
+                                    </div>
+                                    <span className="font-bold">Tap to select a course</span>
+                                </button>
+                            ) : (
+                                (() => {
+                                    const c = courses.find(course => course.id.toString() === selectedCourseId);
+                                    if (!c) return null;
+                                    return (
+                                        <div className="relative p-5 rounded-2xl border-2 border-primary bg-primary/5 shadow-md">
                                             <div className="flex justify-between items-start">
                                                 <div>
-                                                    <h3 className={`font-bold text-lg mb-1 ${selectedCourseId === c.id.toString() ? 'text-primary' : 'text-dark'}`}>
-                                                        {c.name}
-                                                    </h3>
-                                                    <div className="flex items-center gap-2 text-sm text-muted">
+                                                    <h3 className="font-bold text-xl text-primary mb-1">{c.name}</h3>
+                                                    <div className="flex items-center gap-2 text-sm text-dark/70">
                                                         <span>{c.holes?.length || 18} Holes</span>
                                                         <span>•</span>
                                                         <span>Par {c.holes ? c.holes.reduce((sum, h) => sum + (h.par || 0), 0) : 72}</span>
                                                     </div>
                                                 </div>
-                                                {selectedCourseId === c.id.toString() && (
-                                                    <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-sm">
-                                                        <Check size={16} />
-                                                    </div>
-                                                )}
+                                                <button
+                                                    onClick={() => setIsCourseModalOpen(true)}
+                                                    className="px-4 py-2 bg-white text-primary text-sm font-bold rounded-lg shadow-sm hover:bg-primary hover:text-white transition"
+                                                >
+                                                    Change
+                                                </button>
                                             </div>
-                                        </button>
-                                    ))}
-                                {courses.length === 0 && (
-                                    <div className="col-span-full text-center py-8 text-muted">
-                                        No courses found.
-                                    </div>
-                                )}
-                            </div>
+                                        </div>
+                                    );
+                                })()
+                            )}
+
+                            <CourseSelectionModal
+                                isOpen={isCourseModalOpen}
+                                onClose={() => setIsCourseModalOpen(false)}
+                                onSelect={(course) => setSelectedCourseId(course.id.toString())}
+                                courses={courses}
+                                selectedCourseId={selectedCourseId}
+                            />
                         </div>
 
                         <div className="pt-4 border-t border-stone-100">
