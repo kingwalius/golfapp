@@ -39,7 +39,11 @@ export const CourseEditor = () => {
             const method = isNew ? 'POST' : 'PUT';
 
             const totalPar = course.holes.reduce((sum, hole) => sum + (parseInt(hole.par) || 0), 0);
-            const payload = { ...course, par: totalPar };
+
+            // Parse rating: replace comma with dot and convert to float
+            const parsedRating = parseFloat(course.rating.toString().replace(',', '.'));
+
+            const payload = { ...course, par: totalPar, rating: parsedRating };
 
             const res = await fetch(endpoint, {
                 method: method,
@@ -99,12 +103,12 @@ export const CourseEditor = () => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Course Rating</label>
                         <input
-                            type="number"
-                            step="0.1"
+                            type="text"
+                            inputMode="decimal"
                             required
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary p-2 border"
                             value={course.rating}
-                            onChange={e => setCourse({ ...course, rating: parseFloat(e.target.value) })}
+                            onChange={e => setCourse({ ...course, rating: e.target.value })}
                         />
                     </div>
                 </div>
