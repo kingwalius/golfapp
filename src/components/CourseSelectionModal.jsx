@@ -22,7 +22,7 @@ export const CourseSelectionModal = ({ isOpen, onClose, onSelect, courses, selec
             <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
 
                 {/* Header */}
-                <div className="p-4 border-b border-stone-100 flex justify-between items-center bg-white z-10">
+                <div className="p-3 border-b border-stone-100 flex justify-between items-center bg-white z-10">
                     <h2 className="text-xl font-bold text-dark">Select Course</h2>
                     <button
                         onClick={onClose}
@@ -33,7 +33,7 @@ export const CourseSelectionModal = ({ isOpen, onClose, onSelect, courses, selec
                 </div>
 
                 {/* Search */}
-                <div className="p-4 border-b border-stone-100 bg-stone-50/50">
+                <div className="p-3 border-b border-stone-100 bg-stone-50/50">
                     <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted">
                             <Search size={20} />
@@ -50,8 +50,8 @@ export const CourseSelectionModal = ({ isOpen, onClose, onSelect, courses, selec
                 </div>
 
                 {/* Course List */}
-                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                    <div className="space-y-3">
+                <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
+                    <div className="space-y-2">
                         {filteredCourses.map(c => (
                             <button
                                 key={c.id}
@@ -60,7 +60,7 @@ export const CourseSelectionModal = ({ isOpen, onClose, onSelect, courses, selec
                                     onClose();
                                 }}
                                 className={`
-                                    w-full text-left relative p-4 rounded-xl border-2 transition-all duration-200 group
+                                    w-full text-left relative p-3 rounded-xl border-2 transition-all duration-200 group
                                     ${selectedCourseId === c.id.toString()
                                         ? 'border-primary bg-primary/5 shadow-md'
                                         : 'border-stone-100 bg-white hover:border-primary/30 hover:shadow-soft'

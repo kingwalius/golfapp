@@ -246,9 +246,9 @@ export const Play = () => {
                             {!selectedCourseId ? (
                                 <button
                                     onClick={() => setIsCourseModalOpen(true)}
-                                    className="w-full py-8 border-2 border-dashed border-stone-200 rounded-2xl flex flex-col items-center justify-center text-muted hover:border-primary hover:text-primary hover:bg-primary/5 transition group"
+                                    className="w-full py-5 border-2 border-dashed border-stone-200 rounded-2xl flex flex-col items-center justify-center text-muted hover:border-primary hover:text-primary hover:bg-primary/5 transition group"
                                 >
-                                    <div className="w-12 h-12 rounded-full bg-stone-50 flex items-center justify-center mb-3 group-hover:bg-white transition">
+                                    <div className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center mb-2 group-hover:bg-white transition">
                                         <Search size={24} />
                                     </div>
                                     <span className="font-bold">Tap to select a course</span>
@@ -258,10 +258,10 @@ export const Play = () => {
                                     const c = courses.find(course => course.id.toString() === selectedCourseId);
                                     if (!c) return null;
                                     return (
-                                        <div className="relative p-5 rounded-2xl border-2 border-primary bg-primary/5 shadow-md">
+                                        <div className="relative p-4 rounded-2xl border-2 border-primary bg-primary/5 shadow-md">
                                             <div className="flex justify-between items-start">
                                                 <div>
-                                                    <h3 className="font-bold text-xl text-primary mb-1">{c.name}</h3>
+                                                    <h3 className="font-bold text-lg text-primary mb-1">{c.name}</h3>
                                                     <div className="flex items-center gap-2 text-sm text-dark/70">
                                                         <span>{c.holes?.length || 18} Holes</span>
                                                         <span>•</span>
@@ -270,7 +270,7 @@ export const Play = () => {
                                                 </div>
                                                 <button
                                                     onClick={() => setIsCourseModalOpen(true)}
-                                                    className="px-4 py-2 bg-white text-primary text-sm font-bold rounded-lg shadow-sm hover:bg-primary hover:text-white transition"
+                                                    className="px-3 py-1.5 bg-white text-primary text-xs font-bold rounded-lg shadow-sm hover:bg-primary hover:text-white transition"
                                                 >
                                                     Change
                                                 </button>
