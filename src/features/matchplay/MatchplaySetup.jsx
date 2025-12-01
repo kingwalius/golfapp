@@ -260,14 +260,14 @@ export const MatchplaySetup = () => {
                                             className={`
                                                 flex justify-between items-center p-4 rounded-xl border text-left transition-all text-base
                                                 ${setup.manualStrokesPlayer === p.id
-                                                    ? 'bg-teal-100 border-teal-300 shadow-sm ring-1 ring-teal-300'
+                                                    ? 'bg-primary/5 border-primary shadow-sm ring-1 ring-primary'
                                                     : 'bg-white border-gray-100 hover:bg-gray-50'
                                                 }
                                             `}
                                         >
                                             <span className="font-medium truncate">{p.name}</span>
                                             {setup.manualStrokesPlayer === p.id && (
-                                                <span className="text-teal-600 font-bold">
+                                                <span className="text-primary font-bold">
                                                     <Check size={16} />
                                                 </span>
                                             )}
@@ -308,7 +308,7 @@ export const MatchplaySetup = () => {
                             {!setup.player2.id ? (
                                 <button
                                     onClick={() => setIsPlayerModalOpen(true)}
-                                    className="w-full py-4 border-2 border-dashed border-stone-200 rounded-xl flex flex-col items-center justify-center text-muted hover:border-secondary hover:text-secondary hover:bg-secondary/5 transition group"
+                                    className="w-full py-4 border-2 border-dashed border-stone-200 rounded-xl flex flex-col items-center justify-center text-muted hover:border-primary hover:text-primary hover:bg-primary/5 transition group"
                                 >
                                     <div className="w-8 h-8 rounded-full bg-stone-50 flex items-center justify-center mb-1 group-hover:bg-white transition">
                                         <Search size={18} />
@@ -316,14 +316,14 @@ export const MatchplaySetup = () => {
                                     <span className="font-bold text-sm">Select Opponent</span>
                                 </button>
                             ) : (
-                                <div className="relative p-3 rounded-xl border-2 border-secondary bg-secondary/5 shadow-sm">
+                                <div className="relative p-3 rounded-xl border-2 border-primary bg-primary/5 shadow-sm">
                                     <div className="flex justify-between items-center">
                                         <div className="flex items-center gap-3 overflow-hidden">
-                                            <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary border border-secondary/20 flex-shrink-0">
+                                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20 flex-shrink-0">
                                                 <User size={20} />
                                             </div>
                                             <div className="min-w-0">
-                                                <h3 className="font-bold text-base text-secondary truncate">{setup.player2.name}</h3>
+                                                <h3 className="font-bold text-base text-primary truncate">{setup.player2.name}</h3>
                                                 <div className="text-xs text-dark/70">
                                                     HCP: {setup.player2.hcp}
                                                 </div>
@@ -331,7 +331,7 @@ export const MatchplaySetup = () => {
                                         </div>
                                         <button
                                             onClick={() => setIsPlayerModalOpen(true)}
-                                            className="ml-2 px-2 py-1 bg-white text-secondary text-xs font-bold rounded-lg shadow-sm hover:bg-secondary hover:text-white transition flex-shrink-0"
+                                            className="ml-2 px-2 py-1 bg-white text-primary text-xs font-bold rounded-lg shadow-sm hover:bg-primary hover:text-white transition flex-shrink-0"
                                         >
                                             Change
                                         </button>

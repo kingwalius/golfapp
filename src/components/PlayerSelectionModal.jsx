@@ -62,14 +62,14 @@ export const PlayerSelectionModal = ({ isOpen, onClose, onSelect, players, selec
                                 className={`
                                     w-full text-left relative p-3 rounded-xl border-2 transition-all duration-200 group
                                     ${selectedPlayerId === p.id
-                                        ? 'border-secondary bg-secondary/5 shadow-md'
-                                        : 'border-stone-100 bg-white hover:border-secondary/30 hover:shadow-soft'
+                                        ? 'border-primary bg-primary/5 shadow-md'
+                                        : 'border-stone-100 bg-white hover:border-primary/30 hover:shadow-soft'
                                     }
                                 `}
                             >
                                 <div className="flex justify-between items-center">
                                     <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center border ${selectedPlayerId === p.id ? 'bg-secondary/10 border-secondary/20 text-secondary' : 'bg-stone-50 border-stone-100 text-stone-400'}`}>
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center border ${selectedPlayerId === p.id ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-stone-50 border-stone-100 text-stone-400'}`}>
                                             {p.avatar ? (
                                                 <img src={p.avatar} alt={p.username} className="w-full h-full rounded-full object-cover" />
                                             ) : (
@@ -77,7 +77,7 @@ export const PlayerSelectionModal = ({ isOpen, onClose, onSelect, players, selec
                                             )}
                                         </div>
                                         <div>
-                                            <h3 className={`font-bold text-lg leading-tight ${selectedPlayerId === p.id ? 'text-secondary' : 'text-dark'}`}>
+                                            <h3 className={`font-bold text-lg leading-tight ${selectedPlayerId === p.id ? 'text-primary' : 'text-dark'}`}>
                                                 {p.username}
                                             </h3>
                                             <div className="text-sm text-muted">
@@ -86,7 +86,7 @@ export const PlayerSelectionModal = ({ isOpen, onClose, onSelect, players, selec
                                         </div>
                                     </div>
                                     {selectedPlayerId === p.id && (
-                                        <div className="w-6 h-6 rounded-full bg-secondary text-white flex items-center justify-center text-sm">
+                                        <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-sm">
                                             <Check size={16} />
                                         </div>
                                     )}
