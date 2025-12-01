@@ -4,6 +4,7 @@ import { useDB, useUser } from '../../lib/store';
 import { calculatePlayingHcp, calculateStrokesReceived, calculateStableford, calculateBruttoStableford, calculateDifferential, calculateAdjustedScore } from './calculations';
 import clsx from 'clsx';
 import { ChevronLeft } from 'lucide-react';
+import { ScoreSelector } from '../../components/ScoreSelector';
 
 export const Scorecard = () => {
     const { id } = useParams();
@@ -177,11 +178,11 @@ export const Scorecard = () => {
                 <table className="w-full text-sm text-center">
                     <thead className="bg-gray-100 text-gray-600 font-medium">
                         <tr>
-                            <th className="p-2">Hole</th>
-                            <th className="p-2">Par</th>
-                            <th className="p-2">HCP</th>
-                            <th className="p-2 w-20">Score</th>
-                            <th className="p-2">Pts</th>
+                            <th className="p-2 w-12 text-xs uppercase text-muted">Hole</th>
+                            <th className="p-2 w-12 text-xs uppercase text-muted">Par</th>
+                            <th className="p-2 w-12 text-xs uppercase text-muted">HCP</th>
+                            <th className="p-2">Score</th>
+                            <th className="p-2 w-12 text-xs uppercase text-muted">Pts</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -192,10 +193,16 @@ export const Scorecard = () => {
 
                             return (
                                 <tr key={hole.number} className={clsx(strokes > 0 ? "bg-white" : "bg-gray-50")}>
-                                    <td className="p-3 font-bold">{hole.number}</td>
-                                    <td className="p-3">{hole.par}</td>
-                                    <td className="p-3 text-gray-400">{hole.hcp}</td>
-                                    <td className="p-2">
+                                    <td className="p-2 font-bold text-dark">{hole.number}</td>
+                                    <td className="p-2 text-muted">{hole.par}</td>
+                                    <td className="p-2 text-stone-400 text-xs">{hole.hcp}</td>
+                                    <td className="p-1">
+                                        <ScoreSelector
+                                            par={hole.par}
+                                            value={strokes}
+                                            onChange={(val) => updateScore(hole.number, val)}
+                                        />
+                                        {/* 
                                         <input
                                             type="number"
                                             inputMode="numeric"
@@ -206,7 +213,8 @@ export const Scorecard = () => {
                                             value={strokes || ''}
                                             placeholder="-"
                                             onChange={(e) => updateScore(hole.number, e.target.value)}
-                                        />
+                                        /> 
+                                        */}
                                     </td>
                                     <td className="p-3 font-bold text-primary">{strokes > 0 ? points : '-'}</td>
                                 </tr>
