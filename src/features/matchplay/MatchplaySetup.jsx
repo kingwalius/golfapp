@@ -4,6 +4,7 @@ import { useDB, useUser } from '../../lib/store';
 import { calculatePlayingHcp } from '../scoring/calculations';
 import { User, Search, Check } from 'lucide-react';
 import { CourseSelectionModal } from '../../components/CourseSelectionModal';
+import { PlayerSelectionModal } from '../../components/PlayerSelectionModal';
 
 export const MatchplaySetup = () => {
     const db = useDB();
@@ -12,6 +13,7 @@ export const MatchplaySetup = () => {
     const [courses, setCourses] = useState([]);
     const [onlineUsers, setOnlineUsers] = useState([]);
     const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
+    const [isPlayerModalOpen, setIsPlayerModalOpen] = useState(false);
     const [opponentSearchQuery, setOpponentSearchQuery] = useState('');
     const [setup, setSetup] = useState({
         courseId: '',
@@ -303,50 +305,55 @@ export const MatchplaySetup = () => {
 
                         {/* Online User Selection */}
                         <div className="mb-4">
-                            <div className="relative mb-2">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-sm">
-                                    <Search size={16} />
-                                </span>
-                                <input
-                                    type="text"
-                                    placeholder="Search opponent..."
-                                    className="w-full p-3 pl-10 border rounded-xl bg-teal-50 border-teal-200 text-base"
-                                    value={opponentSearchQuery}
-                                    onChange={e => setOpponentSearchQuery(e.target.value)}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-2 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
-                                {Array.isArray(onlineUsers) && onlineUsers
-                                    .filter(u => u?.username?.toLowerCase().includes(opponentSearchQuery.toLowerCase()))
-                                    .map(u => (
+                            {!setup.player2.id ? (
+                                <button
+                                    onClick={() => setIsPlayerModalOpen(true)}
+                                    className="w-full py-4 border-2 border-dashed border-stone-200 rounded-xl flex flex-col items-center justify-center text-muted hover:border-secondary hover:text-secondary hover:bg-secondary/5 transition group"
+                                >
+                                    <div className="w-8 h-8 rounded-full bg-stone-50 flex items-center justify-center mb-1 group-hover:bg-white transition">
+                                        <Search size={18} />
+                                    </div>
+                                    <span className="font-bold text-sm">Select Opponent</span>
+                                </button>
+                            ) : (
+                                <div className="relative p-3 rounded-xl border-2 border-secondary bg-secondary/5 shadow-sm">
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center gap-3 overflow-hidden">
+                                            <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary border border-secondary/20 flex-shrink-0">
+                                                <User size={20} />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <h3 className="font-bold text-base text-secondary truncate">{setup.player2.name}</h3>
+                                                <div className="text-xs text-dark/70">
+                                                    HCP: {setup.player2.hcp}
+                                                </div>
+                                            </div>
+                                        </div>
                                         <button
-                                            key={u.id}
-                                            onClick={() => setSetup({
-                                                ...setup,
-                                                player2: { name: u.username, hcp: u.handicap, id: u.id }
-                                            })}
-                                            className={`
-                                                flex justify-between items-center p-3 rounded-xl border text-left transition-all text-base
-                                                ${setup.player2.id === u.id
-                                                    ? 'bg-teal-100 border-teal-300 shadow-sm'
-                                                    : 'bg-white border-gray-100 hover:bg-gray-50'
-                                                }
-                                            `}
+                                            onClick={() => setIsPlayerModalOpen(true)}
+                                            className="ml-2 px-2 py-1 bg-white text-secondary text-xs font-bold rounded-lg shadow-sm hover:bg-secondary hover:text-white transition flex-shrink-0"
                                         >
-                                            <span className="font-medium truncate">{u.username}</span>
-                                            <span className="text-muted text-xs bg-gray-100 px-2 py-1 rounded-lg">{u.handicap}</span>
+                                            Change
                                         </button>
-                                    ))}
-                                {(!Array.isArray(onlineUsers) || onlineUsers.length === 0) && (
-                                    <div className="text-center py-4 text-muted text-sm">No opponents found</div>
-                                )}
-                            </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <PlayerSelectionModal
+                                isOpen={isPlayerModalOpen}
+                                onClose={() => setIsPlayerModalOpen(false)}
+                                onSelect={(player) => setSetup({
+                                    ...setup,
+                                    player2: { name: player.username, hcp: player.handicap, id: player.id }
+                                })}
+                                players={onlineUsers}
+                                selectedPlayerId={setup.player2.id}
+                            />
                         </div>
 
                         <input
                             type="text" placeholder="Name"
-                            className="w-full p-3 border rounded-xl mb-2 bg-gray-100 text-gray-600 cursor-not-allowed font-medium"
+                            className="w-full p-3 border rounded-xl mb-2 bg-gray-100 text-gray-600 cursor-not-allowed font-medium hidden"
                             value={setup.player2.name}
                             readOnly
                         />
