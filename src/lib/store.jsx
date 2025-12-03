@@ -151,8 +151,11 @@ export const UserProvider = ({ children }) => {
         window.addEventListener('offline', handleOffline);
 
         // Trigger sync immediately if user and db are ready
-        if (user && db && navigator.onLine) {
-            sync();
+        if (user && db) {
+            recalculateHandicap(); // Ensure local calculation runs to populate new fields
+            if (navigator.onLine) {
+                sync();
+            }
         }
 
         return () => {
