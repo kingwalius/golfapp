@@ -122,23 +122,25 @@ export const Home = () => {
                                     </span>
                                 )}
                             </h2>
-                            <div className="mt-4 pt-4 border-t border-white/10 flex justify-between items-end">
-                                <div>
-                                    <div className="text-xs font-bold text-white/60 uppercase tracking-wider mb-1">Avg 5 Rounds</div>
-                                    <div className="text-3xl font-black text-white">
+                        </div>
+                        <div className="flex flex-col items-end">
+                            <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide mb-4">
+                                WHS Index
+                            </span>
+                            <div className="text-right">
+                                <div className="text-xs font-bold text-secondary uppercase tracking-wider mb-1">Avg 5 Rounds</div>
+                                <div className="flex items-baseline justify-end gap-2">
+                                    <div className="text-2xl font-black text-secondary">
                                         {user?.avgScore ? user.avgScore.toFixed(1) : '-'}
                                     </div>
+                                    {user?.avgScoreChange !== undefined && (
+                                        <div className={`text-lg font-bold ${user.avgScoreChange < 0 ? 'text-secondary' : 'text-secondary/80'}`}>
+                                            {user.avgScoreChange === 0 ? '' : (user.avgScoreChange > 0 ? '+' : '') + user.avgScoreChange.toFixed(1)}
+                                        </div>
+                                    )}
                                 </div>
-                                {user?.avgScoreChange !== undefined && (
-                                    <div className={`text-2xl font-semibold mb-1 ${user.avgScoreChange < 0 ? 'text-secondary' : 'text-white/80'}`}>
-                                        {user.avgScoreChange === 0 ? '-' : (user.avgScoreChange > 0 ? '+' : '') + user.avgScoreChange.toFixed(1)}
-                                    </div>
-                                )}
                             </div>
                         </div>
-                        <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
-                            WHS Index
-                        </span>
                     </div>
 
                     <div className="flex gap-3">
