@@ -12,11 +12,6 @@ const NavItem = ({ to, label, icon: Icon, activeIcon: ActiveIcon }) => {
 
     return (
         <Link to={to} className="group relative flex flex-col items-center justify-center w-full h-full">
-            <div className={clsx(
-                "absolute top-2 w-12 h-1 rounded-full transition-all duration-300",
-                isActive ? "bg-primary" : "bg-transparent"
-            )} />
-
             <span className={clsx(
                 "transition-transform duration-300",
                 isActive ? "scale-110 -translate-y-1 text-primary" : "text-muted group-hover:scale-105"
