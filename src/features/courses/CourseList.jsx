@@ -1,9 +1,29 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { useCourses } from '../../lib/store';
+import { Link, useNavigate } from 'react-router-dom';
+import { useCourses, useDB } from '../../lib/store';
+import { SwipeableItem } from '../../components/SwipeableItem';
 
 export const CourseList = () => {
-    const { courses, loading } = useCourses();
+    const { courses, loading, refresh } = useCourses();
+    const db = useDB();
+    const navigate = useNavigate();
+
+    const handleDelete = async (id) => {
+        if (confirm('Are you sure you want to delete this course?')) {
+            // Delete from server
+            try {
+                await fetch(`/courses/${id}`, { method: 'DELETE' });
+            } catch (e) {
+                console.error("Failed to delete from server", e);
+            }
+
+            // Delete from local DB
+            if (db) {
+                await db.delete('courses', id);
+                refresh();
+            }
+        }
+    };
 
     if (loading) return <div className="p-6 text-center text-muted">Loading courses...</div>;
 
@@ -21,12 +41,12 @@ export const CourseList = () => {
 
             <div className="space-y-4">
                 {courses.map(course => (
-                    <Link
+                    <SwipeableItem
                         key={course.id}
-                        to={`/courses/${course.id}`}
-                        className="block bg-white p-5 rounded-2xl border border-stone-100 shadow-soft hover:shadow-card transition group"
+                        onDelete={() => handleDelete(course.id)}
+                        onClick={() => navigate(`/courses/${course.id}`)}
                     >
-                        <div className="flex justify-between items-start">
+                        <div className="p-5 flex justify-between items-start">
                             <div>
                                 <h3 className="font-bold text-xl text-dark group-hover:text-primary transition">{course.name}</h3>
                                 <div className="flex gap-4 mt-2 text-sm text-muted">
@@ -36,7 +56,7 @@ export const CourseList = () => {
                             </div>
                             <span className="text-stone-300 text-xl group-hover:text-primary transition">✎</span>
                         </div>
-                    </Link>
+                    </SwipeableItem>
                 ))}
                 {courses.length === 0 && (
                     <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-stone-200">

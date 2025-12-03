@@ -730,6 +730,24 @@ app.delete('/courses', async (req, res) => {
     }
 });
 
+app.delete('/courses/:id', async (req, res) => {
+    const id = req.params.id;
+    try {
+        const result = await db.execute({
+            sql: 'DELETE FROM courses WHERE id = ?',
+            args: [id]
+        });
+
+        if (result.rowsAffected > 0) {
+            res.json({ success: true, message: 'Course deleted' });
+        } else {
+            res.status(404).json({ error: 'Course not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- Leaderboard Routes ---
 
 app.get('/leaderboard/solo', async (req, res) => {
