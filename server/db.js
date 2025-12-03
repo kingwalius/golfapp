@@ -31,6 +31,9 @@ export const initDB = async () => {
       avatar TEXT,
       handicapMode TEXT DEFAULT 'AUTO', -- 'AUTO' or 'MANUAL'
       manualHandicap REAL,
+      avgScore REAL,
+      avgScoreChange REAL,
+      handicapChange REAL,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -44,6 +47,7 @@ export const initDB = async () => {
       score INTEGER,
       stableford INTEGER,
       hcpIndex REAL,
+      scores TEXT,
       FOREIGN KEY (userId) REFERENCES users(id)
     )
   `);
@@ -80,6 +84,9 @@ export const initDB = async () => {
     "ALTER TABLE users ADD COLUMN handicapMode TEXT DEFAULT 'AUTO'",
     "ALTER TABLE users ADD COLUMN manualHandicap REAL",
     "ALTER TABLE users ADD COLUMN password TEXT",
+    "ALTER TABLE users ADD COLUMN avgScore REAL",
+    "ALTER TABLE users ADD COLUMN avgScoreChange REAL",
+    "ALTER TABLE users ADD COLUMN handicapChange REAL",
     "ALTER TABLE matches ADD COLUMN scores TEXT",
     "ALTER TABLE rounds ADD COLUMN scores TEXT"
   ];
