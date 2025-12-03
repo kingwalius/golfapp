@@ -25,6 +25,10 @@ export const CourseList = () => {
         }
     };
 
+    const handleCopy = (course) => {
+        navigate('/courses/new', { state: { copyCourse: course } });
+    };
+
     if (loading) return <div className="p-6 text-center text-muted">Loading courses...</div>;
 
     return (
@@ -44,6 +48,7 @@ export const CourseList = () => {
                     <SwipeableItem
                         key={course.id}
                         onDelete={() => handleDelete(course.id)}
+                        onCopy={() => handleCopy(course)}
                         onClick={() => navigate(`/courses/${course.id}`)}
                     >
                         <div className="p-5 flex justify-between items-start">

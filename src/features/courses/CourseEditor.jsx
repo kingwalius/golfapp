@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useDB } from '../../lib/store';
 
 const initialHoles = Array.from({ length: 18 }, (_, i) => ({
@@ -13,6 +13,7 @@ export const CourseEditor = () => {
     const db = useDB();
     const navigate = useNavigate();
     const { id } = useParams();
+    const location = useLocation();
 
     const [course, setCourse] = useState({
         name: '',
@@ -26,8 +27,15 @@ export const CourseEditor = () => {
             db.get('courses', parseInt(id)).then(c => {
                 if (c) setCourse(c);
             });
+        } else if (location.state?.copyCourse) {
+            // Handle copied course
+            const { id: _, ...copiedData } = location.state.copyCourse;
+            setCourse({
+                ...copiedData,
+                name: `${copiedData.name} COPY`
+            });
         }
-    }, [db, id]);
+    }, [db, id, location.state]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();

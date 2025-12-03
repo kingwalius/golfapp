@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 
-export const SwipeableItem = ({ children, onDelete, onClick }) => {
+export const SwipeableItem = ({ children, onDelete, onCopy, onClick }) => {
     const [offset, setOffset] = useState(0);
     const startX = useRef(0);
     const currentOffset = useRef(0);
@@ -15,20 +15,27 @@ export const SwipeableItem = ({ children, onDelete, onClick }) => {
         const touchX = e.touches[0].clientX;
         const diff = touchX - startX.current;
 
-        // Only allow swiping left
-        if (diff < 0) {
+        // Allow swiping left (delete) or right (copy) if handlers exist
+        if (diff < 0 && onDelete) {
             isSwiping.current = true;
-            // Limit swipe to -100px
             const newOffset = Math.max(diff, -100);
+            setOffset(newOffset);
+            currentOffset.current = newOffset;
+        } else if (diff > 0 && onCopy) {
+            isSwiping.current = true;
+            const newOffset = Math.min(diff, 100);
             setOffset(newOffset);
             currentOffset.current = newOffset;
         }
     };
 
     const handleTouchEnd = () => {
-        if (currentOffset.current < -50) {
-            // Snap open
+        if (currentOffset.current < -50 && onDelete) {
+            // Snap open left (Delete)
             setOffset(-80);
+        } else if (currentOffset.current > 50 && onCopy) {
+            // Snap open right (Copy)
+            setOffset(80);
         } else {
             // Snap close
             setOffset(0);
@@ -49,16 +56,33 @@ export const SwipeableItem = ({ children, onDelete, onClick }) => {
     return (
         <div className="relative overflow-hidden mb-4 rounded-2xl">
             {/* Background / Actions */}
-            <div className="absolute inset-0 flex justify-end items-center bg-red-500 rounded-2xl pr-4">
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete();
-                    }}
-                    className="text-white font-bold flex items-center gap-2"
-                >
-                    Delete
-                </button>
+            <div className="absolute inset-0 flex justify-between items-center rounded-2xl">
+                {/* Copy Action (Left Side) */}
+                <div className={`flex-1 flex justify-start items-center pl-4 bg-blue-500 h-full transition-opacity ${offset > 0 ? 'opacity-100' : 'opacity-0'}`}>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onCopy();
+                            setOffset(0);
+                        }}
+                        className="text-white font-bold flex items-center gap-2"
+                    >
+                        Copy
+                    </button>
+                </div>
+
+                {/* Delete Action (Right Side) */}
+                <div className={`flex-1 flex justify-end items-center pr-4 bg-red-500 h-full transition-opacity ${offset < 0 ? 'opacity-100' : 'opacity-0'}`}>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete();
+                        }}
+                        className="text-white font-bold flex items-center gap-2"
+                    >
+                        Delete
+                    </button>
+                </div>
             </div>
 
             {/* Content */}
