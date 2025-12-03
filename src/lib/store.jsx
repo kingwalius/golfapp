@@ -461,11 +461,21 @@ export const UserProvider = ({ children }) => {
             if (user.handicapMode === 'AUTO' || user.handicapMode === 'auto') {
                 const newHandicap = calculateHandicapIndex(allDifferentials, finalCourses);
 
-                if (newHandicap !== user.handicap) {
-                    console.log(`Updating Handicap: ${user.handicap} -> ${newHandicap}`);
+                // Calculate change
+                let handicapChange = 0;
+                if (allDifferentials.length > 1) {
+                    // Calculate what handicap would be without the latest round
+                    // allDifferentials is sorted by date desc, so index 0 is latest
+                    const previousDifferentials = allDifferentials.slice(1);
+                    const previousHandicap = calculateHandicapIndex(previousDifferentials, finalCourses);
+                    handicapChange = newHandicap - previousHandicap;
+                }
+
+                if (newHandicap !== user.handicap || handicapChange !== user.handicapChange) {
+                    console.log(`Updating Handicap: ${user.handicap} -> ${newHandicap} (Change: ${handicapChange})`);
 
                     // Update local user
-                    const updatedUser = { ...user, handicap: newHandicap };
+                    const updatedUser = { ...user, handicap: newHandicap, handicapChange };
                     setUser(updatedUser);
                     saveToLocalStorage(updatedUser);
 
@@ -474,7 +484,7 @@ export const UserProvider = ({ children }) => {
                         await fetch('/api/user/update', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ id: user.id, handicap: newHandicap })
+                            body: JSON.stringify({ id: user.id, handicap: newHandicap, handicapChange })
                         });
                         console.log("Handicap synced to server.");
                     } catch (hcpError) {

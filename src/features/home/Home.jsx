@@ -111,10 +111,15 @@ export const Home = () => {
                     <div className="flex justify-between items-start mb-8">
                         <div>
                             <p className="text-emerald-100 font-medium text-sm">Current Handicap</p>
-                            <h2 className="text-5xl font-bold mt-1 tracking-tight text-white">
+                            <h2 className="text-5xl font-bold mt-1 tracking-tight text-white flex items-baseline gap-2">
                                 {user?.handicapMode === 'MANUAL' && user?.manualHandicap
                                     ? parseFloat(user.manualHandicap).toFixed(1)
                                     : (user?.handicap ? user.handicap.toFixed(1) : '54.0')}
+                                {user?.handicapChange && user.handicapChange !== 0 && (
+                                    <span className={`text-2xl font-semibold ${user.handicapChange < 0 ? 'text-secondary' : 'text-emerald-200'}`}>
+                                        {user.handicapChange > 0 ? '+' : ''}{user.handicapChange.toFixed(1)}
+                                    </span>
+                                )}
                             </h2>
                         </div>
                         <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
