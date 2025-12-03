@@ -9,7 +9,7 @@ import { ScoreSelector } from '../../components/ScoreSelector';
 export const Scorecard = () => {
     const { id } = useParams();
     const db = useDB();
-    const { sync } = useUser();
+    const { sync, recalculateHandicap } = useUser();
     const navigate = useNavigate();
     const [round, setRound] = useState(null);
     const [course, setCourse] = useState(null);
@@ -137,6 +137,9 @@ export const Scorecard = () => {
         };
 
         await db.put('rounds', finishedRound);
+
+        // Update handicap immediately (local)
+        await recalculateHandicap();
 
         // Trigger sync to upload round immediately
         sync();

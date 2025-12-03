@@ -8,7 +8,7 @@ export const MatchplayScorecard = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const db = useDB();
-    const { sync } = useUser();
+    const { sync, recalculateHandicap } = useUser();
     const [match, setMatch] = useState(null);
     const [course, setCourse] = useState(null);
 
@@ -293,6 +293,10 @@ export const MatchplayScorecard = () => {
                         };
 
                         await db.put('matches', completedMatch);
+
+                        // Update handicap immediately (local)
+                        await recalculateHandicap();
+
                         await sync();
                         navigate('/');
                     }}

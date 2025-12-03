@@ -6,7 +6,7 @@ import { calculatePlayingHcp, calculateStableford, calculateStrokesReceived, pre
 import { User, Trophy, Calendar, Swords, Flag, Plus, Star } from 'lucide-react';
 
 export const Home = () => {
-    const { user } = useUser();
+    const { user, recalculateHandicap } = useUser();
     const db = useDB();
     const navigate = useNavigate();
     const [countingRounds, setCountingRounds] = useState([]);
@@ -79,6 +79,7 @@ export const Home = () => {
             }
 
             await db.delete(storeName, id);
+            await recalculateHandicap(); // Update handicap after deletion
             loadData(); // Reload list
         }
     };
@@ -115,9 +116,9 @@ export const Home = () => {
                                 {user?.handicapMode === 'MANUAL' && user?.manualHandicap
                                     ? parseFloat(user.manualHandicap).toFixed(1)
                                     : (user?.handicap ? user.handicap.toFixed(1) : '54.0')}
-                                {user?.handicapChange && user.handicapChange !== 0 && (
-                                    <span className={`text-2xl font-semibold ${user.handicapChange < 0 ? 'text-secondary' : 'text-emerald-200'}`}>
-                                        {user.handicapChange > 0 ? '+' : ''}{user.handicapChange.toFixed(1)}
+                                {user?.handicapChange !== undefined && (
+                                    <span className={`text-2xl font-semibold ${user.handicapChange < 0 ? 'text-secondary' : 'text-white/80'}`}>
+                                        {user.handicapChange === 0 ? '-' : (user.handicapChange > 0 ? '+' : '') + user.handicapChange.toFixed(1)}
                                     </span>
                                 )}
                             </h2>
