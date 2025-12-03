@@ -51,14 +51,26 @@ export const MatchplaySetup = () => {
             .then(res => res.json())
             .then(users => {
                 if (Array.isArray(users)) {
-                    setOnlineUsers(users);
+                    // Sort users: Friends first, then alphabetical
+                    const friendIds = user?.friends ? (typeof user.friends === 'string' ? JSON.parse(user.friends) : user.friends) : [];
+
+                    const sortedUsers = users.sort((a, b) => {
+                        const aIsFriend = friendIds.includes(a.id.toString());
+                        const bIsFriend = friendIds.includes(b.id.toString());
+
+                        if (aIsFriend && !bIsFriend) return -1;
+                        if (!aIsFriend && bIsFriend) return 1;
+                        return a.username.localeCompare(b.username);
+                    });
+
+                    setOnlineUsers(sortedUsers);
                 } else {
                     console.error("Fetched users is not an array:", users);
                     setOnlineUsers([]);
                 }
             })
             .catch(err => console.error("Failed to fetch users", err));
-    }, [db]);
+    }, [db, user]);
 
     const startMatch = async () => {
         const course = courses.find(c => c.id === parseInt(setup.courseId));

@@ -3,16 +3,21 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useUser, useDB } from '../../lib/store';
 import { SwipeableItem } from '../../components/SwipeableItem';
 import { calculatePlayingHcp, calculateStableford, calculateStrokesReceived, prepareHandicapData, calculateHandicapDetails } from '../scoring/calculations';
-import { User, Trophy, Calendar, Swords, Flag, Plus, Star } from 'lucide-react';
+import { User, Trophy, Calendar, Swords, Flag, Plus, Star, Search } from 'lucide-react';
+import { FriendSearchModal } from '../../components/FriendSearchModal';
 
 export const Home = () => {
-    const { user, recalculateHandicap } = useUser();
+    const { user, recalculateHandicap, addFriend } = useUser();
     const db = useDB();
     const navigate = useNavigate();
     const [countingRounds, setCountingRounds] = useState([]);
     const [courses, setCourses] = useState([]);
+    const [friendsList, setFriendsList] = useState([]);
+    const [isFriendSearchOpen, setIsFriendSearchOpen] = useState(false);
 
     const loadData = async () => {
+        if (!db || !user) return;
+
         const r = await db.getAll('rounds');
         const m = await db.getAll('matches');
         let c = await db.getAll('courses');
@@ -46,6 +51,25 @@ export const Home = () => {
 
         setCountingRounds(includedRounds);
         setCourses(c);
+
+        // Load Friends
+        if (user.friends) {
+            try {
+                const friendIds = typeof user.friends === 'string' ? JSON.parse(user.friends) : user.friends;
+                if (friendIds.length > 0) {
+                    const res = await fetch('/users');
+                    const allUsers = await res.json();
+                    const myFriends = allUsers.filter(u => friendIds.includes(u.id.toString()));
+                    setFriendsList(myFriends);
+                } else {
+                    setFriendsList([]);
+                }
+            } catch (e) {
+                console.error("Failed to load friends", e);
+            }
+        } else {
+            setFriendsList([]);
+        }
     };
 
     useEffect(() => {
@@ -154,23 +178,60 @@ export const Home = () => {
                 </div>
             </div>
 
-            {/* Quick Actions */}
+            {/* Friends Section */}
             <div>
-                <h3 className="font-bold text-lg mb-4 text-dark">Quick Actions</h3>
-                <div className="grid grid-cols-2 gap-4">
-                    <Link to="/courses/new" className="card flex flex-col items-center justify-center py-6 gap-3 hover:border-primary/30 transition group">
-                        <div className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center group-hover:scale-110 transition">
-                            <Plus size={24} />
-                        </div>
-                        <span className="font-semibold text-sm">Add Course</span>
-                    </Link>
-                    <Link to="/league" className="card flex flex-col items-center justify-center py-6 gap-3 hover:border-primary/30 transition group">
-                        <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center group-hover:scale-110 transition">
-                            <Trophy size={24} />
-                        </div>
-                        <span className="font-semibold text-sm">League</span>
-                    </Link>
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-bold text-lg text-dark">Friends</h3>
+                    <button
+                        onClick={() => setIsFriendSearchOpen(true)}
+                        className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-dark hover:bg-primary hover:text-white transition"
+                    >
+                        <Search size={16} />
+                    </button>
                 </div>
+
+                <div className="space-y-3">
+                    {friendsList.length > 0 ? (
+                        friendsList.map(friend => (
+                            <div key={friend.id} className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100 flex justify-between items-center">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-stone-400 border border-stone-100">
+                                        {friend.avatar ? (
+                                            <img src={friend.avatar} alt={friend.username} className="w-full h-full rounded-full object-cover" />
+                                        ) : (
+                                            <User size={20} />
+                                        )}
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-dark leading-tight">{friend.username}</h4>
+                                        <div className="text-xs text-muted font-medium">HCP: {friend.handicap}</div>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-xs font-bold text-muted uppercase tracking-wider mb-0.5">Last Round</div>
+                                    <div className="font-bold text-dark">{friend.lastGrossScore || '-'}</div>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-center py-6 bg-stone-50 rounded-2xl border border-dashed border-stone-200">
+                            <p className="text-sm text-muted mb-2">No friends added yet</p>
+                            <button
+                                onClick={() => setIsFriendSearchOpen(true)}
+                                className="text-primary font-bold text-sm hover:underline"
+                            >
+                                Find Friends
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                <FriendSearchModal
+                    isOpen={isFriendSearchOpen}
+                    onClose={() => setIsFriendSearchOpen(false)}
+                    onAddFriend={(friend) => addFriend(friend.id.toString())}
+                    friends={user?.friends ? (typeof user.friends === 'string' ? JSON.parse(user.friends) : user.friends) : []}
+                />
             </div>
 
             {/* Counting Rounds */}
