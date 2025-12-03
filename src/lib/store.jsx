@@ -176,6 +176,53 @@ export const UserProvider = ({ children }) => {
         };
     }, [user, db]);
 
+    // Deduplicate Rounds on mount
+    useEffect(() => {
+        const cleanup = async () => {
+            if (!db) return;
+            try {
+                const tx = db.transaction('rounds', 'readwrite');
+                const store = tx.store;
+                const allRounds = await store.getAll();
+
+                const unique = new Map();
+                const toDelete = [];
+
+                for (const r of allRounds) {
+                    // Create a key based on course and fuzzy date (minute precision)
+                    const dateStr = new Date(r.date).toISOString().substring(0, 16);
+                    const key = `${r.courseId}-${dateStr}-${r.score || 0}`;
+
+                    if (unique.has(key)) {
+                        // If we have a duplicate, prefer the one with serverId or synced=true
+                        const existing = unique.get(key);
+                        if ((r.serverId || r.synced) && !existing.serverId && !existing.synced) {
+                            // Replace existing with this one (better quality)
+                            toDelete.push(existing.id);
+                            unique.set(key, r);
+                        } else {
+                            toDelete.push(r.id);
+                        }
+                    } else {
+                        unique.set(key, r);
+                    }
+                }
+
+                if (toDelete.length > 0) {
+                    console.log(`Removing ${toDelete.length} duplicate rounds.`);
+                    for (const id of toDelete) {
+                        await store.delete(id);
+                    }
+                }
+                await tx.done;
+            } catch (e) {
+                console.error("Deduplication failed", e);
+            }
+        };
+
+        if (db) cleanup();
+    }, [db]);
+
     const sync = async () => {
         console.log("Sync Called. State:", {
             hasUser: !!user,
@@ -235,35 +282,30 @@ export const UserProvider = ({ children }) => {
                     // Process Rounds
                     if (activityData.rounds && Array.isArray(activityData.rounds)) {
                         for (const serverRound of activityData.rounds) {
-                            // Check if exists locally (by date/course/score match? or just trust server ID if we had one?)
-                            // Server rounds don't have the same ID as local rounds necessarily if created elsewhere.
-                            // But if we just insert, we might duplicate if we don't have a unique ID strategy.
-                            // For now, let's check if we have a round with same date and courseId.
-                            // Ideally, we should use a UUID or server ID.
-                            // Current schema has auto-inc ID.
-                            // Let's just check if we have it by "synced" status? No.
-                            // Simple dedup: Check if we have a round with same date and courseId.
-                            // Better: The server round has an ID. We can store it? 
-                            // Local DB uses auto-inc ID.
-                            // We can't easily map server ID to local ID without a new column.
-                            // For MVP: Check if a round exists with same date (string match) and courseId.
+                            // Try to find by serverId first
+                            let existing = allRounds.find(r => r.serverId === serverRound.id);
 
-                            // Normalize dates for comparison
-                            const serverDate = new Date(serverRound.date).toISOString();
-
-                            const existing = allRounds.find(r => {
-                                const localDate = new Date(r.date).toISOString();
-                                return localDate === serverDate && r.courseId === serverRound.courseId;
-                            });
+                            if (!existing) {
+                                // Fallback: Fuzzy date match (within 1 minute)
+                                const serverTime = new Date(serverRound.date).getTime();
+                                existing = allRounds.find(r => {
+                                    const localTime = new Date(r.date).getTime();
+                                    return Math.abs(localTime - serverTime) < 60000 && r.courseId === serverRound.courseId;
+                                });
+                            }
 
                             if (!existing) {
                                 console.log("Down-syncing round:", serverRound);
-                                // Remove ID to avoid collision
                                 const { id, ...roundData } = serverRound;
                                 await tx.objectStore('rounds').add({
                                     ...roundData,
+                                    serverId: id, // Store server ID
                                     synced: true
                                 });
+                            } else if (!existing.serverId) {
+                                // Link local round to server ID if matched by date
+                                const updated = { ...existing, serverId: serverRound.id, synced: true };
+                                await tx.objectStore('rounds').put(updated);
                             }
                         }
                     }
@@ -274,10 +316,10 @@ export const UserProvider = ({ children }) => {
                             // Try to find by serverId first, then fallback to date/course
                             let existing = allMatches.find(m => m.serverId === serverMatch.id);
                             if (!existing) {
-                                const serverDate = new Date(serverMatch.date).toISOString();
+                                const serverTime = new Date(serverMatch.date).getTime();
                                 existing = allMatches.find(m => {
-                                    const localDate = new Date(m.date).toISOString();
-                                    return localDate === serverDate && m.courseId === serverMatch.courseId;
+                                    const localTime = new Date(m.date).getTime();
+                                    return Math.abs(localTime - serverTime) < 60000 && m.courseId === serverMatch.courseId;
                                 });
                             }
 
@@ -296,18 +338,11 @@ export const UserProvider = ({ children }) => {
                                 await tx.objectStore('matches').add(matchToSave);
                             } else if (existing.synced) {
                                 // Update existing match ONLY if we don't have local unsynced changes
-                                console.log("Updating existing match from server:", serverMatch);
                                 // Preserve local ID
-                                matchToSave.id = existing.id;
-                                await tx.objectStore('matches').put(matchToSave);
-                            } else {
-                                // Conflict: Local changes exist.
-                                // For now, we keep local changes.
-                                // Ideally, we should update serverId if it's missing on the local copy
-                                if (!existing.serverId) {
-                                    existing.serverId = id;
-                                    await tx.objectStore('matches').put(existing);
-                                }
+                                await tx.objectStore('matches').put({ ...matchToSave, id: existing.id });
+                            } else if (!existing.serverId) {
+                                // Link local match to server ID
+                                await tx.objectStore('matches').put({ ...existing, serverId: id, synced: true });
                             }
                         }
                     }
