@@ -3,17 +3,18 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useUser, useDB } from '../../lib/store';
 import { SwipeableItem } from '../../components/SwipeableItem';
 import { calculatePlayingHcp, calculateStableford, calculateStrokesReceived, prepareHandicapData, calculateHandicapDetails } from '../scoring/calculations';
-import { User, Trophy, Calendar, Swords, Flag, Plus, Star, Search } from 'lucide-react';
+import { User, Trophy, Calendar, Swords, Flag, Plus, Star, Search, RefreshCw } from 'lucide-react';
 import { FriendSearchModal } from '../../components/FriendSearchModal';
 
 export const Home = () => {
-    const { user, recalculateHandicap, addFriend, removeFriend } = useUser();
+    const { user, recalculateHandicap, sync, addFriend, removeFriend } = useUser();
     const db = useDB();
     const navigate = useNavigate();
     const [countingRounds, setCountingRounds] = useState([]);
     const [courses, setCourses] = useState([]);
     const [friendsList, setFriendsList] = useState([]);
     const [isFriendSearchOpen, setIsFriendSearchOpen] = useState(false);
+    const [isManualSyncing, setIsManualSyncing] = useState(false);
 
     const loadData = async () => {
         if (!db || !user) return;
@@ -78,6 +79,21 @@ export const Home = () => {
         }
     }, [db, user]);
 
+    const handleManualSync = async () => {
+        if (isManualSyncing) return;
+        setIsManualSyncing(true);
+        try {
+            await recalculateHandicap();
+            await sync();
+            await loadData(); // Reload UI
+        } catch (e) {
+            console.error("Manual sync failed", e);
+            alert("Sync failed. Please try again.");
+        } finally {
+            setIsManualSyncing(false);
+        }
+    };
+
     const handleDelete = async (id, type) => {
         if (confirm('Are you sure you want to delete this?')) {
             const storeName = type === 'round' ? 'rounds' : 'matches';
@@ -113,7 +129,16 @@ export const Home = () => {
             {/* Header */}
             <header className="flex justify-between items-center pt-4">
                 <div>
-                    <p className="text-muted text-sm font-medium uppercase tracking-wider">Welcome back</p>
+                    <div className="flex items-center gap-2">
+                        <p className="text-muted text-sm font-medium uppercase tracking-wider">Welcome back</p>
+                        <button
+                            onClick={handleManualSync}
+                            disabled={isManualSyncing}
+                            className="text-muted hover:text-primary transition disabled:opacity-50"
+                        >
+                            <RefreshCw size={14} className={isManualSyncing ? "animate-spin" : ""} />
+                        </button>
+                    </div>
                     <h1 className="text-3xl font-bold text-dark mt-1">
                         {user ? user.username : 'Golfer'}
                     </h1>
