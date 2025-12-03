@@ -58,7 +58,7 @@ export const SwipeableItem = ({ children, onDelete, onCopy, onClick }) => {
             {/* Background / Actions */}
             <div className="absolute inset-0 flex justify-between items-center rounded-2xl">
                 {/* Copy Action (Left Side) */}
-                <div className={`flex-1 flex justify-start items-center pl-4 bg-blue-500 h-full transition-opacity ${offset > 0 ? 'opacity-100' : 'opacity-0'}`}>
+                <div className={`flex-1 flex justify-start items-center pl-4 bg-blue-500 h-full rounded-l-2xl transition-opacity ${offset > 0 ? 'opacity-100' : 'opacity-0'}`}>
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -72,7 +72,7 @@ export const SwipeableItem = ({ children, onDelete, onCopy, onClick }) => {
                 </div>
 
                 {/* Delete Action (Right Side) */}
-                <div className={`flex-1 flex justify-end items-center pr-4 bg-red-500 h-full transition-opacity ${offset < 0 ? 'opacity-100' : 'opacity-0'}`}>
+                <div className={`flex-1 flex justify-end items-center pr-4 bg-red-500 h-full rounded-r-2xl transition-opacity ${offset < 0 ? 'opacity-100' : 'opacity-0'}`}>
                     <button
                         onClick={(e) => {
                             e.stopPropagation();

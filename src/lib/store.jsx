@@ -93,6 +93,18 @@ export const UserProvider = ({ children }) => {
         }
     };
 
+    // Load user from local storage on mount
+    useEffect(() => {
+        const storedUser = localStorage.getItem('golf_user');
+        if (storedUser) {
+            try {
+                setUser(JSON.parse(storedUser));
+            } catch (e) {
+                console.error("Failed to parse stored user", e);
+            }
+        }
+    }, []);
+
     const login = async (username, password, isRegistering = false) => {
         try {
             const endpoint = isRegistering ? '/auth/register' : '/auth/login';
