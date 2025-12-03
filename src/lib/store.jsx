@@ -74,6 +74,7 @@ export const UserProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     const db = useContext(DBContext);
+    const isSyncing = React.useRef(false);
 
     const saveToLocalStorage = (userData) => {
         try {
@@ -174,7 +175,7 @@ export const UserProvider = ({ children }) => {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
         };
-    }, [user, db]);
+    }, [user?.id, db]);
 
     // Deduplicate Rounds on mount
     useEffect(() => {
@@ -224,6 +225,11 @@ export const UserProvider = ({ children }) => {
     }, [db]);
 
     const sync = async () => {
+        if (isSyncing.current) {
+            console.log("Sync skipped: Already in progress.");
+            return;
+        }
+
         console.log("Sync Called. State:", {
             hasUser: !!user,
             hasDb: !!db,
@@ -235,6 +241,8 @@ export const UserProvider = ({ children }) => {
             console.log("Sync aborting: Missing prerequisites.");
             return;
         }
+
+        isSyncing.current = true;
 
         try {
             const allRounds = await db.getAll('rounds');
@@ -433,6 +441,8 @@ export const UserProvider = ({ children }) => {
 
         } catch (e) {
             console.error("Sync failed", e);
+        } finally {
+            isSyncing.current = false;
         }
     };
 
