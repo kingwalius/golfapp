@@ -471,11 +471,27 @@ export const UserProvider = ({ children }) => {
                     handicapChange = newHandicap - previousHandicap;
                 }
 
-                if (newHandicap !== user.handicap || handicapChange !== user.handicapChange) {
+                // Calculate Average Score (Last 5)
+                const scores = allDifferentials.filter(d => d.score > 0).map(d => d.score);
+                let avgScore = 0;
+                let avgScoreChange = 0;
+
+                if (scores.length > 0) {
+                    const currentWindow = scores.slice(0, 5);
+                    avgScore = currentWindow.reduce((a, b) => a + b, 0) / currentWindow.length;
+
+                    if (scores.length > 1) {
+                        const previousWindow = scores.slice(1, 6);
+                        const prevAvg = previousWindow.reduce((a, b) => a + b, 0) / previousWindow.length;
+                        avgScoreChange = avgScore - prevAvg;
+                    }
+                }
+
+                if (newHandicap !== user.handicap || handicapChange !== user.handicapChange || avgScore !== user.avgScore || avgScoreChange !== user.avgScoreChange) {
                     console.log(`Updating Handicap: ${user.handicap} -> ${newHandicap} (Change: ${handicapChange})`);
 
                     // Update local user
-                    const updatedUser = { ...user, handicap: newHandicap, handicapChange };
+                    const updatedUser = { ...user, handicap: newHandicap, handicapChange, avgScore, avgScoreChange };
                     setUser(updatedUser);
                     saveToLocalStorage(updatedUser);
 
@@ -484,7 +500,7 @@ export const UserProvider = ({ children }) => {
                         await fetch('/api/user/update', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ id: user.id, handicap: newHandicap, handicapChange })
+                            body: JSON.stringify({ id: user.id, handicap: newHandicap, handicapChange, avgScore, avgScoreChange })
                         });
                         console.log("Handicap synced to server.");
                     } catch (hcpError) {
