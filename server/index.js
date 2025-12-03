@@ -229,7 +229,11 @@ app.post('/auth/login', async (req, res) => {
             handicap: user.handicap,
             avatar: user.avatar,
             handicapMode: user.handicapMode,
-            manualHandicap: user.manualHandicap
+            manualHandicap: user.manualHandicap,
+            friends: user.friends,
+            avgScore: user.avgScore,
+            avgScoreChange: user.avgScoreChange,
+            handicapChange: user.handicapChange
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
