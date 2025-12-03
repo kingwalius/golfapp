@@ -48,7 +48,7 @@ export const Layout = () => {
             <div className="flex-1">
                 <Outlet />
             </div>
-            <nav className="sticky bottom-0 left-0 right-0 w-full bg-surface/90 backdrop-blur-lg border-t border-stone-100 flex justify-around items-center z-50 shadow-floating pb-safe pt-2">
+            <nav className="sticky bottom-0 left-0 right-0 w-full bg-surface/90 backdrop-blur-lg border-t border-stone-100 flex justify-around items-center z-50 shadow-floating pb-[calc(env(safe-area-inset-bottom)+20px)] pt-4">
                 <NavItem to="/" label="Home" icon={Home} />
                 <NavItem to="/courses" label="Courses" icon={Flag} />
                 <NavItem to="/play" label="Play" icon={PlayCircle} />
