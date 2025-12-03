@@ -54,6 +54,8 @@ export const useCourses = () => {
         }
 
         const all = await db.getAll('courses');
+        // Sort alphabetically by name
+        all.sort((a, b) => a.name.localeCompare(b.name));
         setCourses(all);
         setLoading(false);
     };
