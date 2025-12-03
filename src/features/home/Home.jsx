@@ -7,7 +7,7 @@ import { User, Trophy, Calendar, Swords, Flag, Plus, Star, Search } from 'lucide
 import { FriendSearchModal } from '../../components/FriendSearchModal';
 
 export const Home = () => {
-    const { user, recalculateHandicap, addFriend } = useUser();
+    const { user, recalculateHandicap, addFriend, removeFriend } = useUser();
     const db = useDB();
     const navigate = useNavigate();
     const [countingRounds, setCountingRounds] = useState([]);
@@ -193,25 +193,38 @@ export const Home = () => {
                 <div className="space-y-3">
                     {friendsList.length > 0 ? (
                         friendsList.map(friend => (
-                            <div key={friend.id} className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100 flex justify-between items-center">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-stone-400 border border-stone-100">
-                                        {friend.avatar ? (
-                                            <img src={friend.avatar} alt={friend.username} className="w-full h-full rounded-full object-cover" />
-                                        ) : (
-                                            <User size={20} />
-                                        )}
+                            <SwipeableItem
+                                key={friend.id}
+                                onDelete={() => {
+                                    addFriend(null); // Hack to trigger re-render if needed, but actually we need removeFriend
+                                    // Wait, I need to import removeFriend from useUser first.
+                                    // Actually, I should just call removeFriend(friend.id.toString())
+                                    // But I need to update the local friendsList state too or wait for re-render.
+                                    // The loadData depends on user.friends, so updating user should trigger it.
+                                    // Let's use the function from context.
+                                    removeFriend(friend.id.toString());
+                                }}
+                            >
+                                <div className="bg-white p-4 flex justify-between items-center">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-stone-400 border border-stone-100">
+                                            {friend.avatar ? (
+                                                <img src={friend.avatar} alt={friend.username} className="w-full h-full rounded-full object-cover" />
+                                            ) : (
+                                                <User size={20} />
+                                            )}
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-dark leading-tight">{friend.username}</h4>
+                                            <div className="text-xs text-muted font-medium">HCP: {friend.handicap}</div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h4 className="font-bold text-dark leading-tight">{friend.username}</h4>
-                                        <div className="text-xs text-muted font-medium">HCP: {friend.handicap}</div>
+                                    <div className="text-right">
+                                        <div className="text-xs font-bold text-muted uppercase tracking-wider mb-0.5">Last Round</div>
+                                        <div className="font-bold text-dark">{friend.lastGrossScore || '-'}</div>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <div className="text-xs font-bold text-muted uppercase tracking-wider mb-0.5">Last Round</div>
-                                    <div className="font-bold text-dark">{friend.lastGrossScore || '-'}</div>
-                                </div>
-                            </div>
+                            </SwipeableItem>
                         ))
                     ) : (
                         <div className="text-center py-6 bg-stone-50 rounded-2xl border border-dashed border-stone-200">

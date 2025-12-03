@@ -539,8 +539,29 @@ export const UserProvider = ({ children }) => {
         }
     };
 
+    const removeFriend = async (friendId) => {
+        if (!user) return;
+
+        const currentFriends = user.friends ? (typeof user.friends === 'string' ? JSON.parse(user.friends) : user.friends) : [];
+        const updatedFriends = currentFriends.filter(id => id !== friendId);
+
+        const updatedUser = { ...user, friends: updatedFriends };
+        setUser(updatedUser);
+        saveToLocalStorage(updatedUser);
+
+        try {
+            await fetch('/api/user/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: user.id, friends: JSON.stringify(updatedFriends) })
+            });
+        } catch (e) {
+            console.error("Failed to sync friends removal", e);
+        }
+    };
+
     return (
-        <UserContext.Provider value={{ user, setUser, logout, recalculateHandicap, addFriend }}>
+        <UserContext.Provider value={{ user, setUser, logout, recalculateHandicap, addFriend, removeFriend }}>
             {children}
         </UserContext.Provider>
     );
