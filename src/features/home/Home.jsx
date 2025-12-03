@@ -140,7 +140,7 @@ export const Home = () => {
                                 {user?.handicapMode === 'MANUAL' && user?.manualHandicap
                                     ? parseFloat(user.manualHandicap).toFixed(1)
                                     : (user?.handicap ? user.handicap.toFixed(1) : '54.0')}
-                                {user?.handicapChange !== undefined && (
+                                {user?.handicapChange != null && (
                                     <span className={`text-2xl font-semibold ${user.handicapChange < 0 ? 'text-secondary' : 'text-white/80'}`}>
                                         {user.handicapChange === 0 ? '-' : (user.handicapChange > 0 ? '+' : '') + user.handicapChange.toFixed(1)}
                                     </span>
@@ -157,7 +157,7 @@ export const Home = () => {
                                     <div className="text-2xl font-black text-secondary">
                                         {user?.avgScore ? user.avgScore.toFixed(1) : '-'}
                                     </div>
-                                    {user?.avgScoreChange !== undefined && (
+                                    {user?.avgScoreChange != null && (
                                         <div className={`text-lg font-bold ${user.avgScoreChange < 0 ? 'text-secondary' : 'text-secondary/80'}`}>
                                             {user.avgScoreChange === 0 ? '' : (user.avgScoreChange > 0 ? '+' : '') + user.avgScoreChange.toFixed(1)}
                                         </div>
