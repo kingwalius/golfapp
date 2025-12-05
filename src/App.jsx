@@ -12,6 +12,9 @@ import { MatchplayScorecard } from './features/matchplay/MatchplayScorecard';
 import Profile from './features/profile/Profile';
 import { LeagueDashboard } from './features/league/LeagueDashboard';
 
+import { CreateLeague } from './features/league/CreateLeague';
+import { LeagueDetails } from './features/league/LeagueDetails';
+
 // Placeholder components
 // Home component moved to features/home/Home.jsx
 
@@ -35,6 +38,8 @@ function App() {
               <Route path="matchplay/:id" element={<MatchplayScorecard />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="league" element={<LeagueDashboard />} />
+              <Route path="league/create" element={<CreateLeague />} />
+              <Route path="league/:id" element={<LeagueDetails />} />
             </Route>
           </Routes>
         </BrowserRouter>

@@ -219,12 +219,56 @@ export const initDB = async () => {
       sql: "INSERT OR IGNORE INTO users (id, username, handicap, handicapMode) VALUES (?, ?, ?, ?)",
       args: [9999, 'Guest', 18.0, 'MANUAL']
     });
-
   } catch (e) {
     console.error("Migration error:", e);
   }
 
-  console.log('Database initialized');
+  // Create Leagues table
+  await db.execute(`
+      CREATE TABLE IF NOT EXISTS leagues (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL, -- 'STROKE', 'MATCH', 'TEAM'
+        adminId INTEGER NOT NULL,
+        startDate TEXT,
+        endDate TEXT,
+        settings TEXT, -- JSON
+        status TEXT DEFAULT 'ACTIVE', -- 'ACTIVE', 'COMPLETED'
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+  // Create League Members table
+  await db.execute(`
+      CREATE TABLE IF NOT EXISTS league_members (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        leagueId INTEGER NOT NULL,
+        userId INTEGER NOT NULL,
+        team TEXT, -- 'GREEN', 'GOLD' for Ryder Cup
+        points REAL DEFAULT 0,
+        joinedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
+        FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+  // Create League Matches table (Phase 2/3 prep)
+  await db.execute(`
+      CREATE TABLE IF NOT EXISTS league_matches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        leagueId INTEGER NOT NULL,
+        roundNumber INTEGER, -- e.g. 1 for Round of 16, 2 for Quarters
+        matchId INTEGER,
+        player1Id INTEGER,
+        player2Id INTEGER,
+        winnerId INTEGER,
+        concedeDeadline DATETIME,
+        FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
+        FOREIGN KEY(matchId) REFERENCES matches(id) ON DELETE SET NULL
+      )
+    `);
+
+  console.log('Database initialized with League tables.');
 };
 
 export default db;

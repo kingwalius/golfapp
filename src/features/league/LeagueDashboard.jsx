@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { CompactScorecard } from './CompactScorecard';
+import { useUser } from '../../lib/store';
+import { Plus, Trophy, Activity } from 'lucide-react';
 
 const FeedItem = ({ item }) => {
     const isMatch = item.type === 'match';
@@ -44,101 +47,104 @@ const FeedItem = ({ item }) => {
 };
 
 export const LeagueDashboard = () => {
+    const { user } = useUser();
+    const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState('leagues'); // 'leagues' or 'feed'
     const [feed, setFeed] = useState([]);
+    const [leagues, setLeagues] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [bestOfWeek, setBestOfWeek] = useState(null);
 
     useEffect(() => {
-        const fetchFeed = async () => {
+        const fetchData = async () => {
+            setLoading(true);
             try {
-                const res = await fetch('/api/league/feed');
-                if (res.ok) {
-                    const data = await res.json();
-                    setFeed(data);
+                // Fetch Feed
+                const feedRes = await fetch('/api/league/feed');
+                if (feedRes.ok) {
+                    setFeed(await feedRes.json());
+                }
 
-                    // Calculate Best Score of the Week
-                    const now = new Date();
-                    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-                    const weekItems = data.filter(item => {
-                        const itemDate = new Date(item.date);
-                        return itemDate >= oneWeekAgo && itemDate <= now;
-                    });
-
-                    // Find best Stableford score (assuming higher is better)
-                    let best = null;
-                    weekItems.forEach(item => {
-                        // Check if item has stableford points
-                        if (item.stableford !== undefined && item.stableford !== null) {
-                            if (!best || item.stableford > best.stableford) {
-                                best = {
-                                    player: item.username || item.p1Name || 'Player',
-                                    stableford: item.stableford,
-                                    strokes: item.score,
-                                    date: new Date(item.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-                                    courseName: item.courseName,
-                                    avatar: item.avatar
-                                };
-                            }
-                        }
-                    });
-
-                    setBestOfWeek(best);
+                // Fetch User's Leagues
+                if (user) {
+                    const leaguesRes = await fetch(`/api/leagues?userId=${user.id}`);
+                    if (leaguesRes.ok) {
+                        setLeagues(await leaguesRes.json());
+                    }
                 }
             } catch (error) {
-                console.error("Failed to fetch league feed", error);
+                console.error("Failed to fetch league data", error);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchFeed();
-    }, []);
+        fetchData();
+    }, [user]);
 
     return (
-        <div className="p-4 pb-20">
-            <h1 className="text-2xl font-bold mb-6 text-primary">League Feed</h1>
+        <div className="p-4 pb-24 min-h-screen bg-stone-50">
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-3xl font-bold text-primary">League</h1>
+                <Link to="/league/create" className="bg-primary text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition">
+                    <Plus size={24} />
+                </Link>
+            </div>
 
-            {/* Best of the Week Banner */}
-            {bestOfWeek && (
-                <div className="bg-primary text-white rounded-2xl p-6 mb-8 shadow-lg relative overflow-hidden">
-                    <div className="relative z-10">
-                        <div className="text-sm font-medium opacity-80 mb-2 uppercase tracking-wider">Best of the Week</div>
+            {/* Tabs */}
+            <div className="flex p-1 bg-white rounded-xl shadow-sm mb-6">
+                <button
+                    onClick={() => setActiveTab('leagues')}
+                    className={`flex-1 py-3 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 ${activeTab === 'leagues' ? 'bg-primary text-white shadow-md' : 'text-muted hover:bg-stone-50'}`}
+                >
+                    <Trophy size={16} />
+                    My Leagues
+                </button>
+                <button
+                    onClick={() => setActiveTab('feed')}
+                    className={`flex-1 py-3 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 ${activeTab === 'feed' ? 'bg-primary text-white shadow-md' : 'text-muted hover:bg-stone-50'}`}
+                >
+                    <Activity size={16} />
+                    Activity Feed
+                </button>
+            </div>
 
-                        <div className="flex justify-between items-end">
+            {/* Content */}
+            {activeTab === 'leagues' ? (
+                <div className="space-y-4">
+                    {leagues.map(league => (
+                        <div
+                            key={league.id}
+                            onClick={() => navigate(`/league/${league.id}`)}
+                            className="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 flex justify-between items-center cursor-pointer hover:border-primary/30 transition"
+                        >
                             <div>
-                                <h2 className="text-3xl font-bold mb-1 text-white">{bestOfWeek.player}</h2>
-                                <div className="text-sm text-emerald-100 flex flex-col">
-                                    <span>{bestOfWeek.courseName}</span>
-                                    <span className="opacity-80">{bestOfWeek.date}</span>
-                                </div>
+                                <h3 className="font-bold text-lg text-dark">{league.name}</h3>
+                                <p className="text-xs text-muted font-medium uppercase tracking-wide mt-1">{league.type} League</p>
                             </div>
-
-                            <div className="text-right">
-                                <div className="flex flex-col items-end">
-                                    <div className="text-4xl font-black text-secondary leading-none">
-                                        {bestOfWeek.stableford} <span className="text-sm font-bold text-white/60">Pts</span>
-                                    </div>
-                                    <div className="text-lg font-bold text-white/90 mt-1">
-                                        {bestOfWeek.strokes} <span className="text-xs font-normal opacity-80">Strokes</span>
-                                    </div>
-                                </div>
+                            <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-stone-400">
+                                <span className="text-lg">→</span>
                             </div>
                         </div>
-                    </div>
-                    {/* Decorative background element */}
-                    <div className="absolute -right-4 -bottom-8 opacity-10 text-9xl">🏆</div>
-                </div>
-            )}
+                    ))}
 
-            {loading ? (
-                <div className="text-center py-10 text-stone-400">Loading feed...</div>
-            ) : feed.length === 0 ? (
-                <div className="text-center py-10 text-stone-400">No activity yet. Go play some golf!</div>
+                    {leagues.length === 0 && !loading && (
+                        <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-stone-200">
+                            <Trophy size={48} className="mx-auto text-stone-300 mb-4" />
+                            <p className="text-muted mb-4">You haven't joined any leagues yet.</p>
+                            <Link to="/league/create" className="text-primary font-bold hover:underline">Create your first league</Link>
+                        </div>
+                    )}
+                </div>
             ) : (
-                feed.map((item, index) => (
-                    <FeedItem key={`${item.type}-${item.id}-${index}`} item={item} />
-                ))
+                <div className="space-y-6">
+                    {feed.length === 0 && !loading ? (
+                        <div className="text-center py-10 text-stone-400">No activity yet. Go play some golf!</div>
+                    ) : (
+                        feed.map((item, index) => (
+                            <FeedItem key={`${item.type}-${item.id}-${index}`} item={item} />
+                        ))
+                    )}
+                </div>
             )}
         </div>
     );

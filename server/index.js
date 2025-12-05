@@ -797,8 +797,131 @@ app.get('/leaderboard/solo', async (req, res) => {
     }
 });
 
-// Export app for Vercel
-export default app;
+// --- League Routes ---
+
+// Create League
+app.post('/api/leagues', async (req, res) => {
+    const { name, type, adminId, startDate, endDate, settings } = req.body;
+    if (!name || !type || !adminId) return res.status(400).json({ error: 'Missing required fields' });
+
+    try {
+        const result = await db.execute({
+            sql: 'INSERT INTO leagues (name, type, adminId, startDate, endDate, settings) VALUES (?, ?, ?, ?, ?, ?)',
+            args: [name, type, adminId, startDate, endDate, JSON.stringify(settings || {})]
+        });
+
+        const leagueId = result.lastInsertRowid.toString();
+
+        // Admin automatically joins
+        await db.execute({
+            sql: 'INSERT INTO league_members (leagueId, userId) VALUES (?, ?)',
+            args: [leagueId, adminId]
+        });
+
+        res.json({ id: leagueId, success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// List User's Leagues
+app.get('/api/leagues', async (req, res) => {
+    const userId = req.query.userId;
+    if (!userId) return res.status(400).json({ error: 'User ID required' });
+
+    try {
+        const result = await db.execute({
+            sql: `
+                SELECT l.*, lm.joinedAt
+                FROM leagues l
+                JOIN league_members lm ON l.id = lm.leagueId
+                WHERE lm.userId = ?
+                ORDER BY l.createdAt DESC
+            `,
+            args: [userId]
+        });
+
+        const leagues = result.rows.map(l => ({
+            ...l,
+            settings: l.settings ? JSON.parse(l.settings) : {}
+        }));
+
+        res.json(leagues);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Join League
+app.post('/api/leagues/:id/join', async (req, res) => {
+    const leagueId = req.params.id;
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: 'User ID required' });
+
+    try {
+        // Check if already member
+        const existing = await db.execute({
+            sql: 'SELECT id FROM league_members WHERE leagueId = ? AND userId = ?',
+            args: [leagueId, userId]
+        });
+
+        if (existing.rows.length > 0) {
+            return res.status(409).json({ error: 'Already a member' });
+        }
+
+        await db.execute({
+            sql: 'INSERT INTO league_members (leagueId, userId) VALUES (?, ?)',
+            args: [leagueId, userId]
+        });
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get League Details & Standings (Strokeplay Logic)
+app.get('/api/leagues/:id/standings', async (req, res) => {
+    const leagueId = req.params.id;
+    try {
+        // Get League Info
+        const leagueRes = await db.execute({
+            sql: 'SELECT * FROM leagues WHERE id = ?',
+            args: [leagueId]
+        });
+        const league = leagueRes.rows[0];
+        if (!league) return res.status(404).json({ error: 'League not found' });
+
+        // Get Members
+        const membersRes = await db.execute({
+            sql: `
+                SELECT u.id, u.username, u.avatar, u.handicap, lm.points
+                FROM league_members lm
+                JOIN users u ON lm.userId = u.id
+                WHERE lm.leagueId = ?
+            `,
+            args: [leagueId]
+        });
+        const members = membersRes.rows;
+
+        // If Strokeplay, calculate points dynamically based on rounds
+        if (league.type === 'STROKE') {
+            // Fetch rounds for all members within date range
+            // This is a simplified implementation. Real-world would need more complex "Best of Week" logic.
+            // For MVP: Just sum up points stored in DB (which we need to update via a separate process or on-the-fly)
+            // Actually, let's just return the members sorted by points for now.
+            // The point calculation logic is complex and should probably be done when a round is synced or via a specific "Calculate" endpoint.
+            // For now, we'll rely on the `points` column in `league_members`.
+        }
+
+        res.json({
+            league: { ...league, settings: JSON.parse(league.settings || '{}') },
+            standings: members.sort((a, b) => b.points - a.points)
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => {
