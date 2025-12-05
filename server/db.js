@@ -228,12 +228,12 @@ export const initDB = async () => {
       CREATE TABLE IF NOT EXISTS leagues (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        type TEXT NOT NULL, -- 'STROKE', 'MATCH', 'TEAM'
+        type TEXT NOT NULL,
         adminId INTEGER NOT NULL,
         startDate TEXT,
         endDate TEXT,
-        settings TEXT, -- JSON
-        status TEXT DEFAULT 'ACTIVE', -- 'ACTIVE', 'COMPLETED'
+        settings TEXT,
+        status TEXT DEFAULT 'ACTIVE',
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -244,7 +244,7 @@ export const initDB = async () => {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         leagueId INTEGER NOT NULL,
         userId INTEGER NOT NULL,
-        team TEXT, -- 'GREEN', 'GOLD' for Ryder Cup
+        team TEXT,
         points REAL DEFAULT 0,
         joinedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
@@ -257,7 +257,7 @@ export const initDB = async () => {
       CREATE TABLE IF NOT EXISTS league_matches (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         leagueId INTEGER NOT NULL,
-        roundNumber INTEGER, -- e.g. 1 for Round of 16, 2 for Quarters
+        roundNumber INTEGER,
         matchId INTEGER,
         player1Id INTEGER,
         player2Id INTEGER,

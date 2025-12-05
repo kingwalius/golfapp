@@ -10,7 +10,7 @@ app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 
 // Initialize DB
-initDB();
+initDB().catch(err => console.error("Failed to initialize DB:", err));
 
 app.get('/api/debug', (req, res) => {
     res.json({
