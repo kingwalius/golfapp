@@ -333,7 +333,7 @@ app.post('/api/user/update', async (req, res) => {
         const args = [];
 
         // Whitelist allowed fields
-        const allowed = ['username', 'avatar', 'handicap', 'handicapMode', 'manualHandicap', 'password', 'friends', 'avgScore', 'avgScoreChange', 'handicapChange'];
+        const allowed = ['username', 'avatar', 'handicap', 'handicapMode', 'manualHandicap', 'password', 'friends', 'favoriteCourses', 'avgScore', 'avgScoreChange', 'handicapChange'];
 
         for (const key of Object.keys(updates)) {
             if (allowed.includes(key)) {

@@ -35,6 +35,7 @@ export const initDB = async () => {
       avgScoreChange REAL,
       handicapChange REAL,
       friends TEXT,
+      favoriteCourses TEXT,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -89,6 +90,7 @@ export const initDB = async () => {
     "ALTER TABLE users ADD COLUMN avgScoreChange REAL",
     "ALTER TABLE users ADD COLUMN handicapChange REAL",
     "ALTER TABLE users ADD COLUMN friends TEXT",
+    "ALTER TABLE users ADD COLUMN favoriteCourses TEXT",
     "ALTER TABLE matches ADD COLUMN scores TEXT",
     "ALTER TABLE rounds ADD COLUMN scores TEXT"
   ];

@@ -617,8 +617,35 @@ export const UserProvider = ({ children }) => {
         }
     };
 
+    const toggleFavoriteCourse = async (courseId) => {
+        if (!user) return;
+
+        const currentFavorites = user.favoriteCourses ? (typeof user.favoriteCourses === 'string' ? JSON.parse(user.favoriteCourses) : user.favoriteCourses) : [];
+        let updatedFavorites;
+
+        if (currentFavorites.includes(courseId)) {
+            updatedFavorites = currentFavorites.filter(id => id !== courseId);
+        } else {
+            updatedFavorites = [...currentFavorites, courseId];
+        }
+
+        const updatedUser = { ...user, favoriteCourses: updatedFavorites };
+        setUser(updatedUser);
+        saveToLocalStorage(updatedUser);
+
+        try {
+            await fetch('/api/user/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: user.id, favoriteCourses: JSON.stringify(updatedFavorites) })
+            });
+        } catch (e) {
+            console.error("Failed to sync favorite courses", e);
+        }
+    };
+
     return (
-        <UserContext.Provider value={{ user, setUser, login, logout, sync, updateProfile, isOnline, recalculateHandicap, addFriend, removeFriend }}>
+        <UserContext.Provider value={{ user, setUser, login, logout, sync, updateProfile, isOnline, recalculateHandicap, addFriend, removeFriend, toggleFavoriteCourse }}>
             {children}
         </UserContext.Provider>
     );
