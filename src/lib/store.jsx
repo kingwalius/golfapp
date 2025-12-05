@@ -439,6 +439,21 @@ export const UserProvider = ({ children }) => {
             // --- Recalculate Handicap (WHI) ---
             await recalculateHandicap();
 
+            // --- Refresh User Profile (Favorites, Friends, etc.) ---
+            try {
+                const userRes = await fetch(`/api/user/${user.id}`);
+                if (userRes.ok) {
+                    const latestUser = await userRes.json();
+                    // Merge with current user to preserve session state if any
+                    const updatedUser = { ...user, ...latestUser };
+                    setUser(updatedUser);
+                    saveToLocalStorage(updatedUser);
+                    console.log("User profile refreshed during sync.");
+                }
+            } catch (uErr) {
+                console.warn("Failed to refresh user profile during sync", uErr);
+            }
+
         } catch (e) {
             console.error("Sync failed", e);
         } finally {

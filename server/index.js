@@ -233,7 +233,8 @@ app.post('/auth/login', async (req, res) => {
             friends: user.friends,
             avgScore: user.avgScore,
             avgScoreChange: user.avgScoreChange,
-            handicapChange: user.handicapChange
+            handicapChange: user.handicapChange,
+            favoriteCourses: user.favoriteCourses
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
