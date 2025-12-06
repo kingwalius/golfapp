@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useDB, useUser } from '../../lib/store';
 import { calculateHandicapIndex, calculatePlayingHcp, calculateStableford, calculateStrokesReceived } from './calculations';
