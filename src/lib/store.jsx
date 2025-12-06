@@ -38,14 +38,44 @@ export const useCourses = () => {
 
     const refresh = async () => {
         setLoading(true);
-        // Try to fetch from server first to get latest
+        if (!db) return;
+
         try {
             const res = await fetch('/courses');
             if (res.ok) {
                 const serverCourses = await res.json();
                 const tx = db.transaction('courses', 'readwrite');
-                for (const course of serverCourses) {
-                    await tx.store.put(course);
+                const store = tx.store;
+                const localCourses = await store.getAll();
+
+                for (const sCourse of serverCourses) {
+                    // Try to find matching local course by Server ID or Name
+                    let existing = localCourses.find(c => c.serverId === sCourse.id);
+
+                    if (!existing) {
+                        existing = localCourses.find(c => c.name.trim().toLowerCase() === sCourse.name.trim().toLowerCase());
+                    }
+
+                    if (existing) {
+                        // Update existing local course with Server ID and latest data
+                        // Preserve local ID to avoid breaking FKs
+                        await store.put({
+                            ...sCourse,
+                            id: existing.id, // KEEP LOCAL ID
+                            serverId: sCourse.id,
+                            synced: true,
+                            holes: JSON.parse(sCourse.holes || '[]') // Ensure parsing
+                        });
+                    } else {
+                        // Insert new course from server
+                        await store.put({
+                            ...sCourse,
+                            id: undefined, // Let DB assign new local ID
+                            serverId: sCourse.id,
+                            synced: true,
+                            holes: JSON.parse(sCourse.holes || '[]')
+                        });
+                    }
                 }
                 await tx.done;
             }
@@ -54,9 +84,35 @@ export const useCourses = () => {
         }
 
         const all = await db.getAll('courses');
-        // Sort alphabetically by name
-        all.sort((a, b) => a.name.localeCompare(b.name));
-        setCourses(all);
+
+        // Deduplicate Display (Cleanup duplicates if they slipped in)
+        // This is a safety net: unique by Name
+        const uniqueMap = new Map();
+        const duplicates = [];
+
+        for (const c of all) {
+            const key = c.name.trim().toLowerCase();
+            if (uniqueMap.has(key)) {
+                // Keep the one with serverId, or the first one
+                const existing = uniqueMap.get(key);
+                if (c.serverId && !existing.serverId) {
+                    duplicates.push(existing.id); // Remove the unsynced one
+                    uniqueMap.set(key, c);
+                } else {
+                    duplicates.push(c.id);
+                }
+            } else {
+                uniqueMap.set(key, c);
+            }
+        }
+
+        // We can't safely delete duplicates here without rebinding rounds/matches
+        // So for now, we just SHOW unique ones.
+        // Actually, let's just filter list state. Safest.
+
+        const uniqueList = Array.from(uniqueMap.values());
+        uniqueList.sort((a, b) => a.name.localeCompare(b.name));
+        setCourses(uniqueList);
         setLoading(false);
     };
 
