@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useDB, useUser } from '../../lib/store';
 import { calculateHandicapIndex, calculatePlayingHcp, calculateStableford, calculateStrokesReceived } from './calculations';
-import { Flag, Swords, Calendar, ChevronRight, Search, Check } from 'lucide-react';
+import { Flag, Swords, Calendar, ChevronRight, Search, Check, Trophy } from 'lucide-react';
 
 import { SwipeableItem } from '../../components/SwipeableItem';
 import { CourseSelectionModal } from '../../components/CourseSelectionModal';
@@ -11,6 +10,7 @@ export const Play = () => {
     const db = useDB();
     const { user, recalculateHandicap } = useUser();
     const navigate = useNavigate();
+    const location = useLocation();
     const [activities, setActivities] = useState([]);
     const [courses, setCourses] = useState([]);
     const [showNewRound, setShowNewRound] = useState(false);
@@ -19,6 +19,15 @@ export const Play = () => {
     const [hcpIndex, setHcpIndex] = useState(54.0);
     const [holesToPlay, setHolesToPlay] = useState(18);
     const [startingHole, setStartingHole] = useState(1);
+
+    // Check for League Mode
+    const leagueId = location.state?.leagueId;
+
+    useEffect(() => {
+        if (leagueId) {
+            setShowNewRound(true);
+        }
+    }, [leagueId]);
 
     const loadData = async () => {
         const r = await db.getAll('rounds');
@@ -81,7 +90,8 @@ export const Play = () => {
             synced: false,
             userId: user.id,
             holesPlayed: holesToPlay,
-            startingHole: startingHole
+            startingHole: startingHole,
+            leagueId: leagueId || null // Link to league if present
         };
 
         const id = await db.add('rounds', newRound);
@@ -240,6 +250,15 @@ export const Play = () => {
                     <h2 className="font-bold text-2xl mb-6 text-dark">New Round Setup</h2>
 
                     <div className="space-y-6">
+                        {leagueId && (
+                            <div className="bg-secondary/10 border border-secondary text-secondary p-4 rounded-xl flex items-center gap-3">
+                                <Trophy size={24} />
+                                <div>
+                                    <h3 className="font-bold">League Round</h3>
+                                    <p className="text-xs text-dark/70">This round will count towards your league standings.</p>
+                                </div>
+                            </div>
+                        )}
                         <div>
                             <label className="block text-sm font-bold text-muted mb-4 uppercase tracking-wide">Select Course</label>
 

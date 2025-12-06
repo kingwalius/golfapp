@@ -89,6 +89,7 @@ export const initDB = async () => {
         stableford INTEGER,
         hcpIndex REAL,
         scores TEXT,
+        leagueId INTEGER,
         FOREIGN KEY (userId) REFERENCES users(id)
       )
     `);
@@ -137,7 +138,8 @@ export const initDB = async () => {
       "ALTER TABLE rounds ADD COLUMN scores TEXT",
       "ALTER TABLE matches ADD COLUMN player1Differential REAL",
       "ALTER TABLE matches ADD COLUMN player2Differential REAL",
-      "ALTER TABLE matches ADD COLUMN countForHandicap BOOLEAN"
+      "ALTER TABLE matches ADD COLUMN countForHandicap BOOLEAN",
+      "ALTER TABLE rounds ADD COLUMN leagueId INTEGER"
     ];
 
     for (const query of migrations) {

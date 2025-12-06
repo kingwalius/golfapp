@@ -40,6 +40,20 @@ app.get('/api/fix-db', async (req, res) => {
     try {
         log('Starting MINIMAL League DB fix...');
 
+        // 0. Ensure rounds.leagueId exists (for League Play)
+        try {
+            await db.execute("SELECT leagueId FROM rounds LIMIT 1");
+            log('✅ rounds.leagueId exists.');
+        } catch (e) {
+            log('❌ rounds.leagueId missing. Adding...');
+            try {
+                await db.execute("ALTER TABLE rounds ADD COLUMN leagueId INTEGER");
+                log('✅ Added leagueId to rounds.');
+            } catch (e2) {
+                log(`❌ Failed to add leagueId: ${e2.message}`);
+            }
+        }
+
         // ONLY Create League Tables - Minimal operations to avoid timeout
         const leagueTables = [
             `CREATE TABLE IF NOT EXISTS leagues (
@@ -585,15 +599,15 @@ app.post('/sync', async (req, res) => {
                     if (existing.rows.length > 0) {
                         // Update existing round
                         await db.execute({
-                            sql: 'UPDATE rounds SET score = ?, stableford = ?, hcpIndex = ?, scores = ? WHERE id = ?',
-                            args: [round.score, round.stableford, round.hcpIndex, scoresJson, existing.rows[0].id]
+                            sql: 'UPDATE rounds SET score = ?, stableford = ?, hcpIndex = ?, scores = ?, leagueId = ? WHERE id = ?',
+                            args: [round.score, round.stableford, round.hcpIndex, scoresJson, round.leagueId || null, existing.rows[0].id]
                         });
                     } else {
                         // Insert new round
                         await db.execute({
-                            sql: `INSERT INTO rounds (userId, courseId, date, score, stableford, hcpIndex, scores)
-                                  VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                            args: [userId, round.courseId, round.date, round.score, round.stableford, round.hcpIndex, scoresJson]
+                            sql: `INSERT INTO rounds (userId, courseId, date, score, stableford, hcpIndex, scores, leagueId)
+                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                            args: [userId, round.courseId, round.date, round.score, round.stableford, round.hcpIndex, scoresJson, round.leagueId || null]
                         });
                     }
                     results.rounds.success++;
@@ -883,13 +897,77 @@ app.get('/api/leagues/:id/standings', async (req, res) => {
         const members = membersRes.rows;
 
         // If Strokeplay, calculate points dynamically based on rounds
+        // If Strokeplay, calculate points dynamically based on rounds
         if (league.type === 'STROKE') {
-            // Fetch rounds for all members within date range
-            // This is a simplified implementation. Real-world would need more complex "Best of Week" logic.
-            // For MVP: Just sum up points stored in DB (which we need to update via a separate process or on-the-fly)
-            // Actually, let's just return the members sorted by points for now.
-            // The point calculation logic is complex and should probably be done when a round is synced or via a specific "Calculate" endpoint.
-            // For now, we'll rely on the `points` column in `league_members`.
+            // 1. Fetch all rounds for this league
+            const roundsRes = await db.execute({
+                sql: `SELECT r.*, u.username, u.avatar 
+                      FROM rounds r 
+                      JOIN users u ON r.userId = u.id 
+                      WHERE r.leagueId = ? AND r.score IS NOT NULL
+                      ORDER BY r.date DESC`,
+                args: [leagueId]
+            });
+            const rounds = roundsRes.rows;
+
+            // 2. Group rounds by "Event" (e.g. Week) or just treat each round as an event?
+            // User requirement: "The user will play a single round and the score will be linked to the Strokeplay league."
+            // Assumption: A league consists of multiple rounds. We need to rank players based on their performance.
+            // Simple approach: Rank by Total Stableford Points accumulated? Or Average?
+            // User mentioned points: 25, 18, 15, 12, 10, 8, 6, 4, 2, 1.
+            // This implies we need to group rounds into "Events" (e.g. Weekly) and assign points based on rank in that event.
+            // OR, does every round submitted count as a competition against everyone else who played that week?
+
+            // Let's assume "Weekly" buckets for now, based on ISO Week or similar.
+            // Or simpler: Just list the rounds and calculate a total score?
+            // "The user will play a single round... score linked to league."
+
+            // Let's implement a simple "Total Stableford Points" leaderboard for now, 
+            // but if the user wants the specific 25-18-15... system, we need to know WHEN the competition happens.
+            // Let's assume for now that we just sum up the stableford points of all rounds played in the league.
+            // Wait, the user explicitly mentioned the point distribution in a previous turn (I recall from context).
+            // "Points: 1st: 25, 2nd: 18..." implies a ranking per event.
+
+            // Let's try to group by Week (Monday-Sunday).
+            const roundsByWeek = {};
+            rounds.forEach(r => {
+                const date = new Date(r.date);
+                // Simple week key: Year-WeekNumber
+                const oneJan = new Date(date.getFullYear(), 0, 1);
+                const numberOfDays = Math.floor((date - oneJan) / (24 * 60 * 60 * 1000));
+                const weekNum = Math.ceil((date.getDay() + 1 + numberOfDays) / 7);
+                const key = `${date.getFullYear()}-W${weekNum}`;
+
+                if (!roundsByWeek[key]) roundsByWeek[key] = [];
+                roundsByWeek[key].push(r);
+            });
+
+            // Calculate points for each week
+            const playerPoints = {};
+            members.forEach(m => playerPoints[m.id] = 0);
+
+            Object.values(roundsByWeek).forEach(weekRounds => {
+                // Sort by Stableford (High is better)
+                // If Strokeplay usually means Gross, but for handicap leagues usually Stableford.
+                // Let's assume Stableford for now as it's safer for mixed handicaps.
+                weekRounds.sort((a, b) => (b.stableford || 0) - (a.stableford || 0));
+
+                // Assign points
+                const distribution = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
+                weekRounds.forEach((r, index) => {
+                    if (index < distribution.length) {
+                        if (!playerPoints[r.userId]) playerPoints[r.userId] = 0;
+                        playerPoints[r.userId] += distribution[index];
+                    }
+                });
+            });
+
+            // Update members array with calculated points
+            members.forEach(m => {
+                m.points = playerPoints[m.id] || 0;
+                // Also attach their rounds count or something?
+                m.roundsPlayed = rounds.filter(r => r.userId === m.id).length;
+            });
         }
 
         res.json({

@@ -73,6 +73,17 @@ export const LeagueDetails = () => {
                 <div className="absolute -right-8 -bottom-8 opacity-10 text-9xl">⛳</div>
             </div>
 
+            {/* Actions */}
+            <div className="mb-8">
+                <button
+                    onClick={() => navigate('/play', { state: { leagueId: league.id } })}
+                    className="w-full bg-secondary text-white py-4 rounded-2xl font-bold shadow-lg shadow-secondary/20 flex items-center justify-center gap-2 hover:bg-amber-500 transition active:scale-95"
+                >
+                    <Trophy size={20} />
+                    Play League Round
+                </button>
+            </div>
+
             {/* Standings */}
             <h2 className="text-lg font-bold text-dark mb-4 px-2">Standings</h2>
             <div className="bg-white rounded-3xl shadow-sm border border-stone-100 overflow-hidden">
