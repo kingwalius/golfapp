@@ -143,6 +143,18 @@ app.get('/api/nuke-db', async (req, res) => {
 app.get('/api/debug-sql', async (req, res) => {
     try {
         const leagueId = 1;
+
+        // 1. Check DB Connection Info (Masked)
+        const dbUrl = process.env.TURSO_DATABASE_URL || 'MISSING';
+        const maskedUrl = dbUrl.length > 10 ? dbUrl.substring(0, 15) + '...' : dbUrl;
+
+        // 2. Check League
+        const leagueRes = await db.execute({
+            sql: 'SELECT * FROM leagues WHERE id = ?',
+            args: [leagueId]
+        });
+
+        // 3. Check League Rounds
         const sql = `
             SELECT r.*, lr.points as leaguePoints, u.username, u.avatar 
             FROM league_rounds lr
@@ -152,7 +164,15 @@ app.get('/api/debug-sql', async (req, res) => {
             ORDER BY r.date DESC
         `;
         const result = await db.execute({ sql, args: [leagueId] });
-        res.json({ success: true, rows: result.rows });
+
+        res.json({
+            success: true,
+            dbUrl: maskedUrl,
+            leagueFound: leagueRes.rows.length > 0,
+            league: leagueRes.rows[0] || null,
+            standingsRows: result.rows.length,
+            rows: result.rows
+        });
     } catch (error) {
         res.status(500).json({ error: error.message, stack: error.stack });
     }
