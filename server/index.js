@@ -1643,6 +1643,67 @@ app.post('/api/debug/resolve-bracket', async (req, res) => {
     }
 });
 
+app.post('/api/debug/force-link', async (req, res) => {
+    const { matchId, leagueMatchId } = req.body;
+    try {
+        console.log(`Force Link: Linking Match ${matchId} to LeagueMatch ${leagueMatchId}`);
+
+        // 1. Update Match with Link
+        await db.execute({
+            sql: 'UPDATE matches SET leagueMatchId = ? WHERE id = ?',
+            args: [leagueMatchId, matchId]
+        });
+
+        // 2. Trigger Logic
+        const matchRes = await db.execute({
+            sql: 'SELECT * FROM matches WHERE id = ?',
+            args: [matchId]
+        });
+        const match = matchRes.rows[0];
+
+        if (match.winnerId) {
+            // 3. Update bracket
+            await db.execute({
+                sql: 'UPDATE league_matches SET matchId = ?, winnerId = ? WHERE id = ?',
+                args: [match.id, match.winnerId, leagueMatchId]
+            });
+
+            // 4. Advance
+            const bracketMatchRes = await db.execute({
+                sql: 'SELECT * FROM league_matches WHERE id = ?',
+                args: [leagueMatchId]
+            });
+
+            if (bracketMatchRes.rows.length > 0) {
+                const currentMatch = bracketMatchRes.rows[0];
+                const nextRound = currentMatch.roundNumber + 1;
+                const nextMatchNum = Math.ceil(currentMatch.matchNumber / 2);
+                const isPlayer1 = (currentMatch.matchNumber % 2) !== 0;
+                const field = isPlayer1 ? 'player1Id' : 'player2Id';
+
+                const nextMatchRes = await db.execute({
+                    sql: 'SELECT id FROM league_matches WHERE leagueId = ? AND roundNumber = ? AND matchNumber = ?',
+                    args: [currentMatch.leagueId, nextRound, nextMatchNum]
+                });
+
+                if (nextMatchRes.rows.length > 0) {
+                    await db.execute({
+                        sql: `UPDATE league_matches SET ${field} = ? WHERE id = ?`,
+                        args: [match.winnerId, nextMatchRes.rows[0].id]
+                    });
+                    return res.json({ success: true, message: `Linked & Advanced winner ${match.winnerId} to Round ${nextRound}` });
+                }
+                return res.json({ success: true, message: 'Linked & Updated, but next match not found' });
+            }
+        }
+        res.json({ success: true, message: 'Linked, but no winner yet.' });
+
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
