@@ -1591,6 +1591,56 @@ app.delete('/api/leagues/:id/tournament', async (req, res) => {
     }
 });
 
+// Manual Match Advance (Admin Only)
+app.post('/api/leagues/:id/advance-match', async (req, res) => {
+    const leagueId = req.params.id;
+    const { leagueMatchId, winnerId, userId } = req.body;
+
+    try {
+        // Verify Admin
+        const leagueRes = await db.execute({ sql: 'SELECT adminId FROM leagues WHERE id = ?', args: [leagueId] });
+        if (leagueRes.rows.length === 0) return res.status(404).json({ error: 'League not found' });
+        if (leagueRes.rows[0].adminId !== userId) return res.status(403).json({ error: 'Only admin can advance matches' });
+
+        // 1. Set Winner
+        await db.execute({
+            sql: 'UPDATE league_matches SET winnerId = ? WHERE id = ?',
+            args: [winnerId, leagueMatchId]
+        });
+
+        // 2. Advance to Next Round
+        const bracketMatchRes = await db.execute({
+            sql: 'SELECT * FROM league_matches WHERE id = ?',
+            args: [leagueMatchId]
+        });
+
+        if (bracketMatchRes.rows.length > 0) {
+            const currentMatch = bracketMatchRes.rows[0];
+            const nextRound = currentMatch.roundNumber + 1;
+            const nextMatchNum = Math.ceil(currentMatch.matchNumber / 2);
+            const isPlayer1 = (currentMatch.matchNumber % 2) !== 0;
+            const field = isPlayer1 ? 'player1Id' : 'player2Id';
+
+            const nextMatchRes = await db.execute({
+                sql: 'SELECT id FROM league_matches WHERE leagueId = ? AND roundNumber = ? AND matchNumber = ?',
+                args: [currentMatch.leagueId, nextRound, nextMatchNum]
+            });
+
+            if (nextMatchRes.rows.length > 0) {
+                await db.execute({
+                    sql: `UPDATE league_matches SET ${field} = ? WHERE id = ?`,
+                    args: [winnerId, nextMatchRes.rows[0].id]
+                });
+                return res.json({ success: true, message: `Manually advanced winner.` });
+            }
+            return res.json({ success: true, message: 'Winner set (Final match?)' });
+        }
+        res.status(404).json({ error: 'Match not found' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- Debug Endpoints ---
 app.get('/api/debug/users', async (req, res) => {
     const users = await db.execute('SELECT id, username FROM users ORDER BY id');

@@ -71,7 +71,7 @@ export const BracketView = ({ leagueId, isAdmin, onStartTournament, onResetTourn
                                 Round {roundNum}
                             </h3>
                             {rounds[roundNum].sort((a, b) => a.matchNumber - b.matchNumber).map(match => (
-                                <MatchCard key={match.id} match={match} currentUserId={user?.id} navigate={navigate} />
+                                <MatchCard key={match.id} match={match} currentUserId={user?.id} navigate={navigate} isAdmin={isAdmin} />
                             ))}
                         </div>
                     ))}
@@ -94,7 +94,7 @@ export const BracketView = ({ leagueId, isAdmin, onStartTournament, onResetTourn
     );
 };
 
-const MatchCard = ({ match, currentUserId, navigate }) => {
+const MatchCard = ({ match, currentUserId, navigate, isAdmin }) => {
     const isParticipant = match.player1Id === currentUserId || match.player2Id === currentUserId;
     const isWinner = match.winnerId === currentUserId;
 
@@ -130,7 +130,7 @@ const MatchCard = ({ match, currentUserId, navigate }) => {
 
             {/* Status / Action */}
             {!match.winnerId && match.player1Id && match.player2Id && (
-                <div className="bg-stone-50 p-2 text-center border-t border-stone-100">
+                <div className="bg-stone-50 p-2 text-center border-t border-stone-100 flex gap-2">
                     {isParticipant ? (
                         <button
                             onClick={() => navigate('/matchplay', {
@@ -140,14 +140,66 @@ const MatchCard = ({ match, currentUserId, navigate }) => {
                                     leagueMatchId: match.id
                                 }
                             })}
-                            className="text-xs font-bold text-primary uppercase tracking-wide w-full h-full block"
+                            className="bg-primary text-white text-xs font-bold uppercase tracking-wide flex-1 py-2 rounded-lg"
                         >
                             Play Match
                         </button>
                     ) : (
-                        <span className="text-xs font-bold text-muted uppercase tracking-wide">
+                        <span className="text-xs font-bold text-muted uppercase tracking-wide flex-1 self-center">
                             Pending
                         </span>
+                    )}
+
+                    {/* Admin Override */}
+                    {isAdmin && (
+                        <div className="flex gap-1">
+                            <button
+                                onClick={async () => {
+                                    if (!confirm(`Force advance ${match.p1Name} as winner?`)) return;
+                                    try {
+                                        const res = await fetch(`/api/leagues/${match.leagueId}/advance-match`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ userId: currentUserId, leagueMatchId: match.id, winnerId: match.player1Id })
+                                        });
+                                        if (res.ok) {
+                                            alert("Winner advanced!");
+                                            window.location.reload();
+                                        } else {
+                                            alert("Failed to advance winner");
+                                        }
+                                    } catch (e) {
+                                        console.error(e);
+                                    }
+                                }}
+                                className="bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-wide px-2 py-2 rounded-lg hover:bg-emerald-200"
+                            >
+                                Win: {match.p1Name}
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    if (!confirm(`Force advance ${match.p2Name} as winner?`)) return;
+                                    try {
+                                        const res = await fetch(`/api/leagues/${match.leagueId}/advance-match`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ userId: currentUserId, leagueMatchId: match.id, winnerId: match.player2Id })
+                                        });
+                                        if (res.ok) {
+                                            alert("Winner advanced!");
+                                            window.location.reload();
+                                        } else {
+                                            alert("Failed to advance winner");
+                                        }
+                                    } catch (e) {
+                                        console.error(e);
+                                    }
+                                }}
+                                className="bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-wide px-2 py-2 rounded-lg hover:bg-emerald-200"
+                            >
+                                Win: {match.p2Name}
+                            </button>
+                        </div>
                     )}
                 </div>
             )}
