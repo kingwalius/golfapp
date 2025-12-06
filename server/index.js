@@ -140,6 +140,24 @@ app.get('/api/nuke-db', async (req, res) => {
     }
 });
 
+app.get('/api/debug-sql', async (req, res) => {
+    try {
+        const leagueId = 1;
+        const sql = `
+            SELECT r.*, lr.points as leaguePoints, u.username, u.avatar 
+            FROM league_rounds lr
+            JOIN rounds r ON lr.roundId = r.id
+            JOIN users u ON r.userId = u.id 
+            WHERE lr.leagueId = ?
+            ORDER BY r.date DESC
+        `;
+        const result = await db.execute({ sql, args: [leagueId] });
+        res.json({ success: true, rows: result.rows });
+    } catch (error) {
+        res.status(500).json({ error: error.message, stack: error.stack });
+    }
+});
+
 // --- Auth Routes ---
 
 // Helper to hash passwords
