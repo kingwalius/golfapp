@@ -577,16 +577,31 @@ const ensureLeagueRoundsTable = async () => {
 
 const ensureLeagueMatchIdColumn = async () => {
     try {
-        await db.execute('SELECT leagueMatchId FROM matches LIMIT 1');
+        await db.execute("SELECT leagueMatchId FROM matches LIMIT 1");
     } catch (e) {
         if (e.message && (e.message.includes('no such column') || e.message.includes('column not found'))) {
             console.log("Adding missing 'leagueMatchId' column to matches...");
             try {
-                await db.execute('ALTER TABLE matches ADD COLUMN leagueMatchId INTEGER');
+                await db.execute("ALTER TABLE matches ADD COLUMN leagueMatchId INTEGER");
             } catch (alterError) {
                 console.error("Failed to add leagueMatchId column to matches:", alterError);
             }
         }
+    }
+};
+
+const ensureGuestUser = async () => {
+    try {
+        const res = await db.execute("SELECT id FROM users WHERE id = 9999");
+        if (res.rows.length === 0) {
+            console.log("Creating Guest User (9999)...");
+            await db.execute({
+                sql: "INSERT INTO users (id, username, password, handicap, isAdmin) VALUES (9999, 'Guest', 'guest', 18, 0)",
+                args: []
+            });
+        }
+    } catch (e) {
+        console.error("Failed to ensure guest user:", e);
     }
 };
 
@@ -1577,6 +1592,11 @@ app.delete('/api/leagues/:id/tournament', async (req, res) => {
 });
 
 // --- Debug Endpoints ---
+app.get('/api/debug/users', async (req, res) => {
+    const users = await db.execute('SELECT id, username FROM users ORDER BY id');
+    res.json(users.rows);
+});
+
 app.get('/api/debug/matches', async (req, res) => {
     try {
         const matches = await db.execute('SELECT * FROM matches ORDER BY id DESC LIMIT 10');
@@ -1705,12 +1725,18 @@ app.post('/api/debug/force-link', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+(async () => { // Wrap in an async IIFE to allow await calls before app.listen
+    await ensureLeagueMatchIdColumn();
+    await ensureGuestUser();
+
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+})(); // Immediately invoke the async function
 if (process.env.NODE_ENV !== 'production') {
     // The original console.log was here, but the new app.listen handles it.
     // Keeping the if block structure as per user's snippet, though it's now empty.
 }
 
 export default app;
+
