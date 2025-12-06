@@ -313,13 +313,31 @@ export const UserProvider = ({ children }) => {
 
             if (unsyncedCourses.length > 0) {
                 console.log(`Syncing ${unsyncedCourses.length} custom courses...`);
-                const tx = db.transaction('courses', 'readwrite');
 
                 for (const course of unsyncedCourses) {
                     try {
-                        // Check if we already have a serverId mapped (rare race condition)
+                        // Check if we already have a serverId mapped
                         if (course.serverId) {
                             courseIdMap.set(course.id, course.serverId);
+                            continue;
+                        }
+
+                        // Check if we found a duplicate locally that HAS a serverId (merge strategy)
+                        // This handles cases where user has "Course A" (synced) and "Course A" (unsynced)
+                        const duplicateSynced = allCourses.find(c =>
+                            c.id !== course.id &&
+                            c.serverId &&
+                            c.name.trim().toLowerCase() === course.name.trim().toLowerCase()
+                        );
+
+                        if (duplicateSynced) {
+                            console.log(`Merging duplicate course "${course.name}" (${course.id}) into ${duplicateSynced.id}`);
+                            const tx = db.transaction('courses', 'readwrite');
+                            // Mark local as synced but technically it should be deleted/aliased?
+                            // For safety, we upgrade it to point to the serverID of the duplicate.
+                            await tx.store.put({ ...course, serverId: duplicateSynced.serverId, synced: true });
+                            await tx.done;
+                            courseIdMap.set(course.id, duplicateSynced.serverId);
                             continue;
                         }
 
@@ -338,11 +356,13 @@ export const UserProvider = ({ children }) => {
 
                         if (res.ok) {
                             const data = await res.json();
-                            const serverId = parseInt(data.id); // Ensure int
+                            const serverId = parseInt(data.id);
 
-                            // Update local course with serverId
+                            // Open a NEW transaction for the write operation
+                            const tx = db.transaction('courses', 'readwrite');
                             const updated = { ...course, serverId: serverId, synced: true };
                             await tx.store.put(updated);
+                            await tx.done;
 
                             // Add to map
                             courseIdMap.set(course.id, serverId);
@@ -354,7 +374,6 @@ export const UserProvider = ({ children }) => {
                         console.error("Error syncing course:", course, e);
                     }
                 }
-                await tx.done;
             }
 
             const allRounds = await db.getAll('rounds');
