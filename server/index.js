@@ -913,6 +913,20 @@ app.post('/api/leagues', async (req, res) => {
     if (!name || !type || !adminId) return res.status(400).json({ error: 'Missing required fields' });
 
     try {
+        // Self-healing: Ensure roundFrequency column exists
+        try {
+            await db.execute("SELECT roundFrequency FROM leagues LIMIT 1");
+        } catch (e) {
+            if (e.message && (e.message.includes('no such column') || e.message.includes('column not found'))) {
+                console.log('Adding missing roundFrequency column to leagues...');
+                try {
+                    await db.execute("ALTER TABLE leagues ADD COLUMN roundFrequency TEXT DEFAULT 'WEEKLY'");
+                } catch (alterError) {
+                    console.error("Failed to add roundFrequency column:", alterError);
+                }
+            }
+        }
+
         const result = await db.execute({
             sql: 'INSERT INTO leagues (name, type, adminId, startDate, endDate, settings, roundFrequency) VALUES (?, ?, ?, ?, ?, ?, ?)',
             args: [name, type, adminId, startDate, endDate, JSON.stringify(settings || {}), roundFrequency || 'WEEKLY']
