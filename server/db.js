@@ -215,10 +215,24 @@ export const initDB = async () => {
     // 2. If player2Id is null, use Guest ID.
 
     // Let's insert a Guest user.
-    await db.execute({
-      sql: "INSERT OR IGNORE INTO users (id, username, handicap, handicapMode) VALUES (?, ?, ?, ?)",
-      args: [9999, 'Guest', 18.0, 'MANUAL']
-    });
+    // Verify Guest User (Safe Insert)
+    try {
+      await db.execute({
+        sql: "INSERT OR IGNORE INTO users (id, username, handicap, handicapMode) VALUES (?, ?, ?, ?)",
+        args: [9999, 'Guest', 18.0, 'MANUAL']
+      });
+    } catch (e) {
+      console.error("Failed to insert Guest user with full schema. Trying fallback...", e.message);
+      try {
+        // Fallback for old schema (missing handicapMode)
+        await db.execute({
+          sql: "INSERT OR IGNORE INTO users (id, username, handicap) VALUES (?, ?, ?)",
+          args: [9999, 'Guest', 18.0]
+        });
+      } catch (e2) {
+        console.error("Failed to insert Guest user (fallback):", e2.message);
+      }
+    }
   } catch (e) {
     console.error("Migration error:", e);
   }
