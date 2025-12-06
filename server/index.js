@@ -575,6 +575,21 @@ const ensureLeagueRoundsTable = async () => {
     }
 };
 
+const ensureLeagueMatchIdColumn = async () => {
+    try {
+        await db.execute('SELECT leagueMatchId FROM matches LIMIT 1');
+    } catch (e) {
+        if (e.message && (e.message.includes('no such column') || e.message.includes('column not found'))) {
+            console.log("Adding missing 'leagueMatchId' column to matches...");
+            try {
+                await db.execute('ALTER TABLE matches ADD COLUMN leagueMatchId INTEGER');
+            } catch (alterError) {
+                console.error("Failed to add leagueMatchId column to matches:", alterError);
+            }
+        }
+    }
+};
+
 // --- Sync Routes ---
 app.post('/sync', async (req, res) => {
     const { userId, rounds, matches } = req.body;
@@ -586,6 +601,7 @@ app.post('/sync', async (req, res) => {
         // 1. Ensure Schema (Self-healing)
         await ensureScoresColumn('rounds');
         await ensureScoresColumn('matches');
+        await ensureLeagueMatchIdColumn();
         await ensureLeagueRoundsTable();
 
         // Ensure differential columns for matches
@@ -800,19 +816,96 @@ app.post('/sync', async (req, res) => {
                         }
                     }
 
+
                     if (existing.rows.length > 0) {
                         // Update existing match
                         await db.execute({
-                            sql: 'UPDATE matches SET winnerId = ?, status = ?, scores = ?, player1Differential = ?, player2Differential = ?, countForHandicap = ? WHERE id = ?',
-                            args: [match.winnerId, match.status, scoresJson, match.player1Differential || null, match.player2Differential || null, match.countForHandicap, existing.rows[0].id]
+                            sql: 'UPDATE matches SET winnerId = ?, status = ?, scores = ?, player1Differential = ?, player2Differential = ?, countForHandicap = ?, leagueMatchId = ? WHERE id = ?',
+                            args: [match.winnerId, match.status, scoresJson, match.player1Differential || null, match.player2Differential || null, match.countForHandicap, match.leagueMatchId || null, existing.rows[0].id]
                         });
+
+                        // Tournament Bracket Update Logic
+                        if (match.leagueMatchId && match.winnerId && match.status !== 'AS') {
+                            console.log(`Advancing Tournament Bracket for League Match ${match.leagueMatchId}`);
+                            // 1. Update the bracket match with the result
+                            await db.execute({
+                                sql: 'UPDATE league_matches SET matchId = ?, winnerId = ? WHERE id = ?',
+                                args: [existing.rows[0].id, match.winnerId, match.leagueMatchId]
+                            });
+
+                            // 2. Advance Winner
+                            const bracketMatchRes = await db.execute({
+                                sql: 'SELECT * FROM league_matches WHERE id = ?',
+                                args: [match.leagueMatchId]
+                            });
+
+                            if (bracketMatchRes.rows.length > 0) {
+                                const currentMatch = bracketMatchRes.rows[0];
+                                const nextRound = currentMatch.roundNumber + 1;
+                                const nextMatchNum = Math.ceil(currentMatch.matchNumber / 2);
+                                const isPlayer1 = (currentMatch.matchNumber % 2) !== 0;
+                                const field = isPlayer1 ? 'player1Id' : 'player2Id';
+
+                                const nextMatchRes = await db.execute({
+                                    sql: 'SELECT id FROM league_matches WHERE leagueId = ? AND roundNumber = ? AND matchNumber = ?',
+                                    args: [currentMatch.leagueId, nextRound, nextMatchNum]
+                                });
+
+                                if (nextMatchRes.rows.length > 0) {
+                                    await db.execute({
+                                        sql: `UPDATE league_matches SET ${field} = ? WHERE id = ?`,
+                                        args: [match.winnerId, nextMatchRes.rows[0].id]
+                                    });
+                                    console.log(`Advanced winner ${match.winnerId} to Round ${nextRound}, Match ${nextMatchNum}`);
+                                }
+                            }
+                        }
+
                     } else {
                         // Insert new match
-                        await db.execute({
-                            sql: `INSERT INTO matches (player1Id, player2Id, courseId, date, winnerId, status, scores, player1Differential, player2Differential, countForHandicap)
-                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                            args: [match.player1Id, p2Id, courseId, matchDate, match.winnerId, match.status, scoresJson, match.player1Differential || null, match.player2Differential || null, match.countForHandicap]
+                        const newMatch = await db.execute({
+                            sql: `INSERT INTO matches (player1Id, player2Id, courseId, date, winnerId, status, scores, player1Differential, player2Differential, countForHandicap, leagueMatchId)
+                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                            args: [match.player1Id, p2Id, courseId, matchDate, match.winnerId, match.status, scoresJson, match.player1Differential || null, match.player2Differential || null, match.countForHandicap, match.leagueMatchId || null]
                         });
+
+                        // Tournament Bracket Update Logic (Same for Insert)
+                        if (match.leagueMatchId && match.winnerId && match.status !== 'AS') {
+                            console.log(`Advancing Tournament Bracket for League Match ${match.leagueMatchId}`);
+                            const matchId = newMatch.lastInsertRowid.toString();
+
+                            await db.execute({
+                                sql: 'UPDATE league_matches SET matchId = ?, winnerId = ? WHERE id = ?',
+                                args: [matchId, match.winnerId, match.leagueMatchId]
+                            });
+
+                            // 2. Advance Winner
+                            const bracketMatchRes = await db.execute({
+                                sql: 'SELECT * FROM league_matches WHERE id = ?',
+                                args: [match.leagueMatchId]
+                            });
+
+                            if (bracketMatchRes.rows.length > 0) {
+                                const currentMatch = bracketMatchRes.rows[0];
+                                const nextRound = currentMatch.roundNumber + 1;
+                                const nextMatchNum = Math.ceil(currentMatch.matchNumber / 2);
+                                const isPlayer1 = (currentMatch.matchNumber % 2) !== 0;
+                                const field = isPlayer1 ? 'player1Id' : 'player2Id';
+
+                                const nextMatchRes = await db.execute({
+                                    sql: 'SELECT id FROM league_matches WHERE leagueId = ? AND roundNumber = ? AND matchNumber = ?',
+                                    args: [currentMatch.leagueId, nextRound, nextMatchNum]
+                                });
+
+                                if (nextMatchRes.rows.length > 0) {
+                                    await db.execute({
+                                        sql: `UPDATE league_matches SET ${field} = ? WHERE id = ?`,
+                                        args: [match.winnerId, nextMatchRes.rows[0].id]
+                                    });
+                                    console.log(`Advanced winner ${match.winnerId} to Round ${nextRound}, Match ${nextMatchNum}`);
+                                }
+                            }
+                        }
                     }
                     results.matches.success++;
                 } catch (matchError) {

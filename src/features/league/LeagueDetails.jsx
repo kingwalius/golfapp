@@ -12,7 +12,6 @@ export const LeagueDetails = () => {
     const [standings, setStandings] = useState([]);
     const [recentRounds, setRecentRounds] = useState([]);
     const [events, setEvents] = useState([]);
-    const [activeTab, setActiveTab] = useState('standings'); // 'standings' or 'bracket'
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -176,174 +175,125 @@ export const LeagueDetails = () => {
             {/* Actions */}
 
 
-            {/* Tabs for Matchplay */}
-            {
-                league.type === 'MATCH' && (
-                    <div className="flex gap-2 mb-6">
-                        <button
-                            onClick={() => setActiveTab('standings')}
-                            className={`flex-1 py-3 rounded-xl font-bold transition ${activeTab === 'standings' ? 'bg-primary text-white shadow-lg' : 'bg-white text-muted shadow-sm'}`}
-                        >
-                            Standings
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('bracket')}
-                            className={`flex-1 py-3 rounded-xl font-bold transition ${activeTab === 'bracket' ? 'bg-primary text-white shadow-lg' : 'bg-white text-muted shadow-sm'}`}
-                        >
-                            Bracket
-                        </button>
-                    </div>
-                )
-            }
-
-            {/* Start Tournament Action (Admin Only, Matchplay, Pending) */}
-            {
-                league.type === 'MATCH' && league.adminId === user?.id && standings.length >= 2 && (
+            {/* Matchplay View (No Standings, No Tabs) */}
+            {league.type === 'MATCH' ? (
+                <BracketView
+                    leagueId={id}
+                    isAdmin={league.adminId === user?.id}
+                    onStartTournament={handleStartTournament}
+                    onResetTournament={handleResetTournament}
+                />
+            ) : (
+                <>
+                    {/* Actions */}
                     <div className="mb-8">
                         <button
-                            onClick={handleStartTournament}
-                            className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 hover:scale-[1.02] transition"
+                            onClick={() => navigate('/play', { state: { leagueId: league.id } })}
+                            className="w-full bg-secondary text-white py-4 rounded-2xl font-bold shadow-lg shadow-secondary/20 flex items-center justify-center gap-2 hover:bg-amber-500 transition active:scale-95"
                         >
-                            <Swords size={20} />
-                            Start Tournament
+                            <Trophy size={20} />
+                            Play League Round
                         </button>
                     </div>
-                )
-            }
 
-            {/* Reset Tournament Action (Admin Only, Matchplay, Started) - Panic Button */}
-            {
-                league.type === 'MATCH' && league.adminId === user?.id && activeTab === 'bracket' && (
-                    <div className="mb-6 flex justify-end">
-                        <button
-                            onClick={handleResetTournament}
-                            className="text-xs font-bold text-red-500 bg-red-50 px-3 py-2 rounded-lg flex items-center gap-1 hover:bg-red-100"
-                        >
-                            <RefreshCw size={12} />
-                            Reset Bracket
-                        </button>
-                    </div>
-                )
-            }
-
-            {/* Content */}
-            {
-                activeTab === 'bracket' && league.type === 'MATCH' ? (
-                    <BracketView leagueId={id} />
-                ) : (
-                    <>
-                        {/* Actions */}
-                        {league.type !== 'MATCH' && (
-                            <div className="mb-8">
-                                <button
-                                    onClick={() => navigate('/play', { state: { leagueId: league.id } })}
-                                    className="w-full bg-secondary text-white py-4 rounded-2xl font-bold shadow-lg shadow-secondary/20 flex items-center justify-center gap-2 hover:bg-amber-500 transition active:scale-95"
-                                >
-                                    <Trophy size={20} />
-                                    Play League Round
-                                </button>
+                    {/* Standings */}
+                    <h2 className="text-lg font-bold text-dark mb-4 px-2">Standings</h2>
+                    <div className="bg-white rounded-3xl shadow-sm border border-stone-100 overflow-hidden">
+                        {standings.map((member, index) => (
+                            <div key={member.id} className="flex items-center p-4 border-b border-stone-100 last:border-none">
+                                <div className="w-8 text-center font-bold text-muted text-lg mr-4">
+                                    {index + 1}
+                                </div>
+                                <div className="w-10 h-10 rounded-full bg-stone-200 overflow-hidden mr-4">
+                                    {member.avatar ? (
+                                        <img src={member.avatar} alt={member.username} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-stone-400 font-bold">
+                                            {member.username[0]}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex-1">
+                                    <div className="font-bold text-dark">{member.username}</div>
+                                    <div className="text-xs text-muted">HCP {member.handicap}</div>
+                                </div>
+                                <div className="font-black text-xl text-primary">
+                                    {member.points} <span className="text-xs font-normal text-muted">pts</span>
+                                </div>
+                            </div>
+                        ))}
+                        {standings.length === 0 && (
+                            <div className="p-8 text-center text-muted">
+                                No members yet. Invite friends!
                             </div>
                         )}
+                    </div>
 
-                        {/* Standings */}
-                        <h2 className="text-lg font-bold text-dark mb-4 px-2">Standings</h2>
-                        <div className="bg-white rounded-3xl shadow-sm border border-stone-100 overflow-hidden">
-                            {standings.map((member, index) => (
-                                <div key={member.id} className="flex items-center p-4 border-b border-stone-100 last:border-none">
-                                    <div className="w-8 text-center font-bold text-muted text-lg mr-4">
-                                        {index + 1}
-                                    </div>
-                                    <div className="w-10 h-10 rounded-full bg-stone-200 overflow-hidden mr-4">
-                                        {member.avatar ? (
-                                            <img src={member.avatar} alt={member.username} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-stone-400 font-bold">
-                                                {member.username[0]}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="font-bold text-dark">{member.username}</div>
-                                        <div className="text-xs text-muted">HCP {member.handicap}</div>
-                                    </div>
-                                    <div className="font-black text-xl text-primary">
-                                        {member.points} <span className="text-xs font-normal text-muted">pts</span>
-                                    </div>
-                                </div>
-                            ))}
-                            {standings.length === 0 && (
-                                <div className="p-8 text-center text-muted">
-                                    No members yet. Invite friends!
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Season Breakdown */}
-                        {events.length > 0 && (
-                            <>
-                                <h2 className="text-lg font-bold text-dark mb-4 px-2 mt-8">Season Breakdown</h2>
-                                <div className="space-y-4">
-                                    {events.map((event) => (
-                                        <div key={event.id} className="bg-white rounded-3xl shadow-sm border border-stone-100 overflow-hidden">
-                                            <div className="bg-stone-50 p-4 border-b border-stone-100 flex justify-between items-center">
-                                                <h3 className="font-bold text-dark">{event.name}</h3>
-                                                <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-lg">
-                                                    {event.results.length} Players
-                                                </span>
-                                            </div>
-                                            {event.results.map((result, idx) => (
-                                                <div key={result.userId} className="flex items-center p-4 border-b border-stone-100 last:border-none">
-                                                    <div className="w-8 text-center font-bold text-muted text-sm mr-2">
-                                                        #{result.rank}
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <div className="font-bold text-dark text-sm">{result.username}</div>
-                                                        <div className="text-xs text-muted">{result.rawScore} pts (Best Round)</div>
-                                                    </div>
-                                                    <div className="font-bold text-primary">
-                                                        +{result.points}
-                                                    </div>
-                                                </div>
-                                            ))}
+                    {/* Season Breakdown */}
+                    {events.length > 0 && (
+                        <>
+                            <h2 className="text-lg font-bold text-dark mb-4 px-2 mt-8">Season Breakdown</h2>
+                            <div className="space-y-4">
+                                {events.map((event) => (
+                                    <div key={event.id} className="bg-white rounded-3xl shadow-sm border border-stone-100 overflow-hidden">
+                                        <div className="bg-stone-50 p-4 border-b border-stone-100 flex justify-between items-center">
+                                            <h3 className="font-bold text-dark">{event.name}</h3>
+                                            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-lg">
+                                                {event.results.length} Players
+                                            </span>
                                         </div>
-                                    ))}
-                                </div>
-                            </>
-                        )}
-
-                        {/* Recent Rounds */}
-                        <h2 className="text-lg font-bold text-dark mb-4 px-2 mt-8">Recent Rounds</h2>
-                        <div className="bg-white rounded-3xl shadow-sm border border-stone-100 overflow-hidden">
-                            {recentRounds.map((round) => (
-                                <div key={round.id} className="flex items-center p-4 border-b border-stone-100 last:border-none">
-                                    <div className="w-10 h-10 rounded-full bg-stone-200 overflow-hidden mr-4">
-                                        {round.avatar ? (
-                                            <img src={round.avatar} alt={round.username} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-stone-400 font-bold">
-                                                {round.username[0]}
+                                        {event.results.map((result, idx) => (
+                                            <div key={result.userId} className="flex items-center p-4 border-b border-stone-100 last:border-none">
+                                                <div className="w-8 text-center font-bold text-muted text-sm mr-2">
+                                                    #{result.rank}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="font-bold text-dark text-sm">{result.username}</div>
+                                                    <div className="text-xs text-muted">{result.rawScore} pts (Best Round)</div>
+                                                </div>
+                                                <div className="font-bold text-primary">
+                                                    +{result.points}
+                                                </div>
                                             </div>
-                                        )}
+                                        ))}
                                     </div>
-                                    <div className="flex-1">
-                                        <div className="font-bold text-dark">{round.username}</div>
-                                        <div className="text-xs text-muted">{new Date(round.date).toLocaleDateString()}</div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="font-bold text-primary">{round.stableford} <span className="text-xs font-normal text-muted">pts</span></div>
-                                        <div className="text-xs text-muted">{round.score} strokes</div>
-                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
+
+                    {/* Recent Rounds */}
+                    <h2 className="text-lg font-bold text-dark mb-4 px-2 mt-8">Recent Rounds</h2>
+                    <div className="bg-white rounded-3xl shadow-sm border border-stone-100 overflow-hidden">
+                        {recentRounds.map((round) => (
+                            <div key={round.id} className="flex items-center p-4 border-b border-stone-100 last:border-none">
+                                <div className="w-10 h-10 rounded-full bg-stone-200 overflow-hidden mr-4">
+                                    {round.avatar ? (
+                                        <img src={round.avatar} alt={round.username} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-stone-400 font-bold">
+                                            {round.username[0]}
+                                        </div>
+                                    )}
                                 </div>
-                            ))}
-                            {recentRounds.length === 0 && (
-                                <div className="p-8 text-center text-muted">
-                                    No rounds played yet.
+                                <div className="flex-1">
+                                    <div className="font-bold text-dark">{round.username}</div>
+                                    <div className="text-xs text-muted">{new Date(round.date).toLocaleDateString()}</div>
                                 </div>
-                            )}
-                        </div>
-                    </>
-                )
-            }
-        </div>
+                                <div className="text-right">
+                                    <div className="font-bold text-primary">{round.stableford} <span className="text-xs font-normal text-muted">pts</span></div>
+                                    <div className="text-xs text-muted">{round.score} strokes</div>
+                                </div>
+                            </div>
+                        ))}
+                        {recentRounds.length === 0 && (
+                            <div className="p-8 text-center text-muted">
+                                No rounds played yet.
+                            </div>
+                        )}
+                    </div>
+                </>
+            )}
+        </div >
     );
 };

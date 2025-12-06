@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../lib/store';
-import { Trophy, User, Calendar } from 'lucide-react';
+import { Trophy, Swords, RefreshCw } from 'lucide-react';
 
-export const BracketView = ({ leagueId }) => {
+export const BracketView = ({ leagueId, isAdmin, onStartTournament, onResetTournament }) => {
     const { user } = useUser();
     const navigate = useNavigate();
     const [matches, setMatches] = useState([]);
@@ -36,8 +36,18 @@ export const BracketView = ({ leagueId }) => {
         return (
             <div className="p-8 text-center bg-white rounded-3xl border border-stone-100">
                 <Trophy size={48} className="mx-auto text-stone-200 mb-4" />
-                <h3 className="text-lg font-bold text-dark">Tournament Not Started</h3>
-                <p className="text-muted">Waiting for admin to start the tournament.</p>
+                <h3 className="text-lg font-bold text-dark mb-2">Tournament Not Started</h3>
+                {isAdmin ? (
+                    <button
+                        onClick={onStartTournament}
+                        className="bg-emerald-600 text-white py-3 px-6 rounded-xl font-bold shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 hover:scale-[1.02] transition mx-auto mt-4"
+                    >
+                        <Swords size={20} />
+                        Start Tournament
+                    </button>
+                ) : (
+                    <p className="text-muted">Waiting for admin to start the tournament.</p>
+                )}
             </div>
         );
     }
@@ -52,20 +62,35 @@ export const BracketView = ({ leagueId }) => {
     const roundNumbers = Object.keys(rounds).sort((a, b) => a - b);
 
     return (
-        <div className="overflow-x-auto pb-8">
-            <div className="flex gap-8 min-w-max px-4">
-                {roundNumbers.map(roundNum => (
-                    <div key={roundNum} className="w-72 flex flex-col justify-around gap-4">
-                        <h3 className="text-center font-bold text-muted uppercase tracking-wider mb-2">
-                            Round {roundNum}
-                        </h3>
-                        {rounds[roundNum].sort((a, b) => a.matchNumber - b.matchNumber).map(match => (
-                            <MatchCard key={match.id} match={match} currentUserId={user?.id} navigate={navigate} />
-                        ))}
-                    </div>
-                ))}
+        <>
+            <div className="overflow-x-auto pb-8">
+                <div className="flex gap-8 min-w-max px-4">
+                    {roundNumbers.map(roundNum => (
+                        <div key={roundNum} className="w-72 flex flex-col justify-around gap-4">
+                            <h3 className="text-center font-bold text-muted uppercase tracking-wider mb-2">
+                                Round {roundNum}
+                            </h3>
+                            {rounds[roundNum].sort((a, b) => a.matchNumber - b.matchNumber).map(match => (
+                                <MatchCard key={match.id} match={match} currentUserId={user?.id} navigate={navigate} />
+                            ))}
+                        </div>
+                    ))}
+                </div>
             </div>
-        </div>
+
+            {/* Reset Tournament Action (Admin Only, Panic Button) */}
+            {isAdmin && (
+                <div className="mt-8 flex justify-end px-4">
+                    <button
+                        onClick={onResetTournament}
+                        className="text-xs font-bold text-red-500 bg-red-50 px-3 py-2 rounded-lg flex items-center gap-1 hover:bg-red-100 transition"
+                    >
+                        <RefreshCw size={12} />
+                        Reset Bracket
+                    </button>
+                </div>
+            )}
+        </>
     );
 };
 
