@@ -992,12 +992,12 @@ app.get('/api/leagues/:id/standings', async (req, res) => {
         });
         const members = membersRes.rows;
 
-        // If Strokeplay, calculate points dynamically based on rounds
+        let rounds = [];
+
         // If Strokeplay, calculate points dynamically based on rounds
         if (league.type === 'STROKE') {
             await ensureLeagueRoundsTable(); // Ensure table exists before querying
 
-            // 1. Fetch all rounds for this league via league_rounds table
             // 1. Fetch all rounds for this league via league_rounds table
             // We join rounds to get the score details, and users to get player info
             const roundsRes = await db.execute({
@@ -1009,7 +1009,7 @@ app.get('/api/leagues/:id/standings', async (req, res) => {
                       ORDER BY r.date DESC`,
                 args: [leagueId]
             });
-            const rounds = roundsRes.rows;
+            rounds = roundsRes.rows;
 
             // 2. Group rounds by "Event" (e.g. Week) or just treat each round as an event?
             // User requirement: "The user will play a single round and the score will be linked to the Strokeplay league."
