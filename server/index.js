@@ -617,6 +617,20 @@ app.post('/sync', async (req, res) => {
             }
         }
 
+        // Ensure matchNumber column for league_matches (Tournament Bracket)
+        try {
+            await db.execute("SELECT matchNumber FROM league_matches LIMIT 1");
+        } catch (e) {
+            if (e.message && (e.message.includes('no such column') || e.message.includes('column not found'))) {
+                console.log('Adding missing matchNumber column to league_matches...');
+                try {
+                    await db.execute("ALTER TABLE league_matches ADD COLUMN matchNumber INTEGER");
+                } catch (alterError) {
+                    console.error("Failed to add matchNumber column:", alterError);
+                }
+            }
+        }
+
         // 2. Ensure User Exists (Self-healing for FK constraints)
         // If the DB was wiped, the client might still have a user ID that doesn't exist on server.
         const userCheck = await db.execute({
@@ -1059,6 +1073,181 @@ app.post('/api/leagues/:id/leave', async (req, res) => {
 
         res.json({ success: true });
     } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Start Tournament (Matchplay)
+app.post('/api/leagues/:id/start-tournament', async (req, res) => {
+    const leagueId = req.params.id;
+    const { userId } = req.body;
+
+    try {
+        // 1. Verify Admin & League Type
+        const leagueRes = await db.execute({
+            sql: 'SELECT * FROM leagues WHERE id = ?',
+            args: [leagueId]
+        });
+        if (leagueRes.rows.length === 0) return res.status(404).json({ error: 'League not found' });
+        const league = leagueRes.rows[0];
+        if (league.adminId !== userId) return res.status(403).json({ error: 'Only admin can start tournament' });
+        if (league.type !== 'MATCH') return res.status(400).json({ error: 'League is not Matchplay' });
+
+        // Check if already started
+        const existingMatches = await db.execute({
+            sql: 'SELECT id FROM league_matches WHERE leagueId = ?',
+            args: [leagueId]
+        });
+        if (existingMatches.rows.length > 0) return res.status(400).json({ error: 'Tournament already started' });
+
+        // 2. Fetch Members
+        const membersRes = await db.execute({
+            sql: 'SELECT userId FROM league_members WHERE leagueId = ?',
+            args: [leagueId]
+        });
+        let players = membersRes.rows.map(r => r.userId);
+
+        if (players.length < 2) return res.status(400).json({ error: 'Need at least 2 players' });
+
+        // 3. Shuffle Players
+        for (let i = players.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [players[i], players[j]] = [players[j], players[i]];
+        }
+
+        // 4. Generate Bracket
+        // Calculate next power of 2
+        let powerOf2 = 2;
+        while (powerOf2 < players.length) powerOf2 *= 2;
+
+        const totalRounds = Math.log2(powerOf2);
+        const byes = powerOf2 - players.length;
+
+        // Round 1 Matches
+        // We have 'powerOf2' slots. 
+        // The first 'byes' slots will have a player vs NULL (Bye).
+        // The rest will be player vs player.
+        // Actually, standard seeding puts byes at the top/bottom, but random is fine.
+
+        // Let's create the slots for Round 1
+        let round1Matches = [];
+        let playerIdx = 0;
+
+        // We need 'powerOf2 / 2' matches in Round 1
+        const numMatchesR1 = powerOf2 / 2;
+
+        for (let i = 1; i <= numMatchesR1; i++) {
+            let p1 = null;
+            let p2 = null;
+            let winner = null;
+
+            // Logic: If we have byes left, we give a bye to this match?
+            // A bye means 1 player advances automatically.
+            // So P1 = player, P2 = null, Winner = P1.
+
+            // Wait, we need to distribute byes.
+            // If we have N players and B byes.
+            // We can just fill the slots.
+            // Slot 1: P1 vs P2 (or Bye)
+
+            // Simpler approach:
+            // Fill the bracket with players + 'BYE' placeholders.
+            // Then pair them up.
+
+            // Create full roster with BYEs
+            let roster = [...players];
+            for (let b = 0; b < byes; b++) {
+                roster.push(null); // NULL represents a BYE
+            }
+
+            // Re-shuffle to randomize who gets the bye? 
+            // Usually byes are seeded, but here random is requested.
+            // But we already shuffled players.
+            // If we append BYEs at the end, the last players get byes?
+            // Let's distribute BYEs evenly or just random.
+            // Let's shuffle the roster again to randomize byes.
+            for (let k = roster.length - 1; k > 0; k--) {
+                const j = Math.floor(Math.random() * (k + 1));
+                [roster[k], roster[j]] = [roster[j], roster[k]];
+            }
+
+            // Now pair them up
+            // Match 1: roster[0] vs roster[1]
+            // Match 2: roster[2] vs roster[3]
+            // ...
+        }
+
+        // Re-implementing generation loop
+        let roster = [...players];
+        for (let b = 0; b < byes; b++) roster.push(null); // Add BYEs
+        // Shuffle roster to randomize byes
+        for (let k = roster.length - 1; k > 0; k--) {
+            const j = Math.floor(Math.random() * (k + 1));
+            [roster[k], roster[j]] = [roster[j], roster[k]];
+        }
+
+        // Create Round 1
+        for (let i = 0; i < numMatchesR1; i++) {
+            const p1 = roster[i * 2];
+            const p2 = roster[i * 2 + 1];
+            let winner = null;
+
+            // If both are NULL (Bye vs Bye) -> shouldn't happen if logic is correct (unless 0 players?)
+            // If one is NULL, the other wins immediately.
+            if (p1 && !p2) winner = p1;
+            if (!p1 && p2) winner = p2;
+            if (!p1 && !p2) winner = null; // Double bye? Advances null?
+
+            await db.execute({
+                sql: `INSERT INTO league_matches (leagueId, roundNumber, matchNumber, player1Id, player2Id, winnerId) 
+                      VALUES (?, ?, ?, ?, ?, ?)`,
+                args: [leagueId, 1, i + 1, p1, p2, winner]
+            });
+        }
+
+        // Create Future Rounds (Placeholders)
+        let currentRoundMatches = numMatchesR1;
+        for (let r = 2; r <= totalRounds; r++) {
+            currentRoundMatches /= 2;
+            for (let m = 1; m <= currentRoundMatches; m++) {
+                await db.execute({
+                    sql: `INSERT INTO league_matches (leagueId, roundNumber, matchNumber, player1Id, player2Id, winnerId) 
+                          VALUES (?, ?, ?, ?, ?, ?)`,
+                    args: [leagueId, r, m, null, null, null]
+                });
+            }
+        }
+
+        // Auto-Advance Byes
+        // We need to propagate the winners of Round 1 to Round 2 immediately
+        // This logic needs to be recursive or iterative.
+        // Since we just inserted them, we can run a "Propagate Winners" function.
+        // But for now, let's just return success and let the client refresh.
+        // The client or a separate call can handle propagation, OR we do it here.
+
+        // Let's do a quick propagation for Round 1 winners (Byes)
+        const r1Matches = await db.execute({
+            sql: 'SELECT * FROM league_matches WHERE leagueId = ? AND roundNumber = 1 AND winnerId IS NOT NULL',
+            args: [leagueId]
+        });
+
+        for (const match of r1Matches.rows) {
+            const nextRound = 2;
+            const nextMatchNum = Math.ceil(match.matchNumber / 2);
+            const isPlayer1 = (match.matchNumber % 2) !== 0; // Odd match number -> Player 1 in next match
+
+            const field = isPlayer1 ? 'player1Id' : 'player2Id';
+
+            await db.execute({
+                sql: `UPDATE league_matches SET ${field} = ? WHERE leagueId = ? AND roundNumber = ? AND matchNumber = ?`,
+                args: [match.winnerId, leagueId, nextRound, nextMatchNum]
+            });
+        }
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error(error);
         res.status(500).json({ error: error.message });
     }
 });
