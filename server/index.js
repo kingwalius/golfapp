@@ -988,7 +988,67 @@ app.post('/api/leagues/:id/join', async (req, res) => {
     }
 });
 
-// Get League Details & Standings (Strokeplay Logic)
+// Delete League (Admin Only)
+app.delete('/api/leagues/:id', async (req, res) => {
+    const leagueId = req.params.id;
+    const { userId } = req.body; // Pass userId in body to verify admin
+
+    try {
+        // Verify Admin
+        const leagueRes = await db.execute({
+            sql: 'SELECT adminId FROM leagues WHERE id = ?',
+            args: [leagueId]
+        });
+
+        if (leagueRes.rows.length === 0) return res.status(404).json({ error: 'League not found' });
+        if (leagueRes.rows[0].adminId !== userId) return res.status(403).json({ error: 'Only admin can delete league' });
+
+        // Delete League (Cascading deletes should handle members and rounds if configured, but let's be safe)
+        // Note: SQLite FKs need to be enabled for cascade. We'll do manual cleanup to be sure.
+
+        // 1. Delete League Rounds
+        await db.execute({ sql: 'DELETE FROM league_rounds WHERE leagueId = ?', args: [leagueId] });
+
+        // 2. Delete Members
+        await db.execute({ sql: 'DELETE FROM league_members WHERE leagueId = ?', args: [leagueId] });
+
+        // 3. Delete League
+        await db.execute({ sql: 'DELETE FROM leagues WHERE id = ?', args: [leagueId] });
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Leave League
+app.post('/api/leagues/:id/leave', async (req, res) => {
+    const leagueId = req.params.id;
+    const { userId } = req.body;
+
+    try {
+        // Remove from members
+        await db.execute({
+            sql: 'DELETE FROM league_members WHERE leagueId = ? AND userId = ?',
+            args: [leagueId, userId]
+        });
+
+        // Remove their rounds from league_rounds (so they don't show in standings)
+        // We need to find rounds by this user in this league
+        // Complex query: Delete from league_rounds where leagueId = ? AND roundId IN (SELECT id FROM rounds WHERE userId = ?)
+        await db.execute({
+            sql: `DELETE FROM league_rounds 
+                  WHERE leagueId = ? 
+                  AND roundId IN (SELECT id FROM rounds WHERE userId = ?)`,
+            args: [leagueId, userId]
+        });
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.get('/api/leagues/:id/standings', async (req, res) => {
     const leagueId = req.params.id;
     try {

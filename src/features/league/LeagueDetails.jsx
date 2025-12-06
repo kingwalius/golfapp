@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Users, Calendar, Trophy, Share2 } from 'lucide-react';
+import { ArrowLeft, Users, Calendar, Trophy, Share2, Trash2, LogOut } from 'lucide-react';
 import { useUser } from '../../lib/store';
 
 export const LeagueDetails = () => {
@@ -43,6 +43,44 @@ export const LeagueDetails = () => {
         });
     };
 
+    const handleDelete = async () => {
+        if (!confirm("Are you sure you want to DELETE this league? This cannot be undone.")) return;
+
+        try {
+            const res = await fetch(`/api/leagues/${id}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.id })
+            });
+            if (res.ok) {
+                navigate('/league');
+            } else {
+                alert("Failed to delete league");
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const handleLeave = async () => {
+        if (!confirm("Are you sure you want to LEAVE this league? Your scores will be removed.")) return;
+
+        try {
+            const res = await fetch(`/api/leagues/${id}/leave`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.id })
+            });
+            if (res.ok) {
+                navigate('/league');
+            } else {
+                alert("Failed to leave league");
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     if (loading) return <div className="p-6 text-center text-muted">Loading League...</div>;
     if (!league) return <div className="p-6 text-center text-muted">League not found</div>;
 
@@ -53,9 +91,20 @@ export const LeagueDetails = () => {
                 <button onClick={() => navigate('/league')} className="p-2 bg-white rounded-full shadow-sm">
                     <ArrowLeft size={20} />
                 </button>
-                <button onClick={handleShare} className="p-2 bg-white rounded-full shadow-sm text-primary">
-                    <Share2 size={20} />
-                </button>
+                <div className="flex gap-2">
+                    {league.adminId === user?.id ? (
+                        <button onClick={handleDelete} className="p-2 bg-white rounded-full shadow-sm text-red-500">
+                            <Trash2 size={20} />
+                        </button>
+                    ) : (
+                        <button onClick={handleLeave} className="p-2 bg-white rounded-full shadow-sm text-stone-400 hover:text-red-500">
+                            <LogOut size={20} />
+                        </button>
+                    )}
+                    <button onClick={handleShare} className="p-2 bg-white rounded-full shadow-sm text-primary">
+                        <Share2 size={20} />
+                    </button>
+                </div>
             </div>
 
             {/* League Card */}
