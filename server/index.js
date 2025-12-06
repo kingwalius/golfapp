@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import db, { initDB } from './db.js';
+import crypto from 'crypto';
 
 const app = express();
 const PORT = 3000;
@@ -111,7 +112,7 @@ app.get('/api/nuke-db', async (req, res) => {
 
 // --- Auth Routes ---
 
-import crypto from 'crypto';
+// Helper to hash passwords
 
 // Helper to hash passwords
 const hashPassword = (password) => {
