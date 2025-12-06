@@ -37,71 +37,9 @@ app.get('/api/fix-db', async (req, res) => {
     const log = (msg) => report.push(msg);
 
     try {
-        log('Starting comprehensive DB fix...');
+        log('Starting MINIMAL League DB fix...');
 
-        // 0. Core Tables (Users, Rounds, Matches, Courses)
-        const coreTables = [
-            `CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE,
-                password TEXT,
-                handicap REAL,
-                avatar TEXT,
-                handicapMode TEXT DEFAULT 'AUTO',
-                manualHandicap REAL,
-                avgScore REAL,
-                avgScoreChange REAL,
-                handicapChange REAL,
-                friends TEXT,
-                favoriteCourses TEXT,
-                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-            )`,
-            `CREATE TABLE IF NOT EXISTS rounds (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                userId INTEGER NOT NULL,
-                courseId INTEGER NOT NULL,
-                date TEXT NOT NULL,
-                score INTEGER,
-                stableford INTEGER,
-                hcpIndex REAL,
-                scores TEXT,
-                FOREIGN KEY (userId) REFERENCES users(id)
-            )`,
-            `CREATE TABLE IF NOT EXISTS matches (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                player1Id INTEGER NOT NULL,
-                player2Id INTEGER NOT NULL,
-                courseId INTEGER NOT NULL,
-                date TEXT NOT NULL,
-                winnerId INTEGER,
-                status TEXT,
-                scores TEXT,
-                player1Differential REAL,
-                player2Differential REAL,
-                countForHandicap BOOLEAN,
-                FOREIGN KEY (player1Id) REFERENCES users(id),
-                FOREIGN KEY (player2Id) REFERENCES users(id)
-            )`,
-            `CREATE TABLE IF NOT EXISTS courses (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                holes TEXT NOT NULL,
-                rating REAL,
-                slope INTEGER,
-                par INTEGER
-            )`
-        ];
-
-        for (const sql of coreTables) {
-            try {
-                await db.execute(sql);
-                log('✅ Verified core table.');
-            } catch (e) {
-                log(`❌ Failed core table: ${e.message}`);
-            }
-        }
-
-        // 1. Create League Tables
+        // ONLY Create League Tables - Minimal operations to avoid timeout
         const leagueTables = [
             `CREATE TABLE IF NOT EXISTS leagues (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -141,38 +79,10 @@ app.get('/api/fix-db', async (req, res) => {
         for (const sql of leagueTables) {
             try {
                 await db.execute(sql);
-                log('✅ Verified league table.');
+                log('✅ Executed CREATE TABLE for league entity.');
             } catch (e) {
-                log(`❌ Failed league table: ${e.message}`);
+                log(`❌ Failed to create table: ${e.message}`);
             }
-        }
-
-        // 2. Fix Critical User Columns (Friends, Favorites)
-        const criticalColumns = ['friends', 'favoriteCourses', 'avatar', 'handicapMode'];
-        for (const col of criticalColumns) {
-            try {
-                await db.execute(`SELECT ${col} FROM users LIMIT 1`);
-                log(`✅ users.${col} exists.`);
-            } catch (e) {
-                log(`❌ users.${col} missing. Adding...`);
-                try {
-                    await db.execute(`ALTER TABLE users ADD COLUMN ${col} TEXT`);
-                    log(`✅ Added ${col} to users.`);
-                } catch (e2) {
-                    log(`❌ Failed to add ${col}: ${e2.message}`);
-                }
-            }
-        }
-
-        // 3. Verify Guest User
-        try {
-            await db.execute({
-                sql: "INSERT OR IGNORE INTO users (id, username, handicap, handicapMode) VALUES (?, ?, ?, ?)",
-                args: [9999, 'Guest', 18.0, 'MANUAL']
-            });
-            log('✅ Guest user verified.');
-        } catch (e) {
-            log(`❌ Guest user check failed: ${e.message}`);
         }
 
         res.json({ status: 'Complete', report });
