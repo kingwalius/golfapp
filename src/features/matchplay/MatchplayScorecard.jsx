@@ -133,6 +133,7 @@ export const MatchplayScorecard = () => {
                             <h1 className="font-bold text-lg text-dark leading-tight">{course?.name}</h1>
                             <div className="text-xs text-muted font-medium uppercase tracking-wider mt-1">
                                 {match.holesPlayed === 9 ? '9 Holes' : '18 Holes'} Match
+                                {match.leagueMatchId && <span className="text-emerald-600 font-bold ml-1">• Tournament</span>}
                             </div>
                         </div>
                         <div className="w-10" />

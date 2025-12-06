@@ -49,17 +49,13 @@ export const MatchplaySetup = () => {
     useEffect(() => {
         if (location.state) {
             const { opponentId, opponentName, opponentHcp, leagueMatchId } = location.state;
-            if (opponentId || leagueMatchId) {
-                setSetup(prev => ({
-                    ...prev,
-                    player2: {
-                        name: opponentName || 'Opponent',
-                        hcp: opponentHcp || 18,
-                        id: opponentId
-                    },
-                    leagueMatchId: leagueMatchId
-                }));
-            }
+            console.log("MatchplaySetup initialized with state:", location.state);
+
+            setSetup(prev => ({
+                ...prev,
+                player2: opponentId ? { id: opponentId, name: opponentName, hcp: opponentHcp || 0 } : prev.player2,
+                leagueMatchId: leagueMatchId || prev.leagueMatchId // Ensure we capture it
+            }));
         }
     }, [location.state]);
 
@@ -127,19 +123,23 @@ export const MatchplaySetup = () => {
 
     return (
         <div className="p-4">
-            <header className="mb-8 flex justify-between items-center">
-                <div>
-                    <h1 className="text-3xl font-bold text-primary">Matchplay</h1>
-                    <p className="text-muted">Challenge a friend</p>
+            {/* Header */}
+            <div className="bg-white p-6 sticky top-0 z-10 shadow-sm border-b border-stone-100">
+                <div className="flex justify-between items-center mb-8">
+                    <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-stone-400 hover:text-dark">
+                        <ChevronLeft size={24} />
+                    </button>
+                    <div className="text-center">
+                        <h1 className="text-xl font-bold text-dark">New Match</h1>
+                        {setup.leagueMatchId && (
+                            <span className="inline-block mt-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-full">
+                                Tournament Match
+                            </span>
+                        )}
+                    </div>
+                    <div className="w-10"></div>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20 overflow-hidden">
-                    {user?.avatar ? (
-                        <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
-                    ) : (
-                        <User size={24} />
-                    )}
-                </div>
-            </header>
+            </div>
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-4">
                 <div>
                     <label className="block text-sm font-bold text-muted mb-4 uppercase tracking-wide">Select Course</label>
