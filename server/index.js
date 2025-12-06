@@ -37,9 +37,71 @@ app.get('/api/fix-db', async (req, res) => {
     const log = (msg) => report.push(msg);
 
     try {
-        log('Starting lightweight DB fix...');
+        log('Starting comprehensive DB fix...');
 
-        // 1. Create League Tables (Priority)
+        // 0. Core Tables (Users, Rounds, Matches, Courses)
+        const coreTables = [
+            `CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE,
+                password TEXT,
+                handicap REAL,
+                avatar TEXT,
+                handicapMode TEXT DEFAULT 'AUTO',
+                manualHandicap REAL,
+                avgScore REAL,
+                avgScoreChange REAL,
+                handicapChange REAL,
+                friends TEXT,
+                favoriteCourses TEXT,
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`,
+            `CREATE TABLE IF NOT EXISTS rounds (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                userId INTEGER NOT NULL,
+                courseId INTEGER NOT NULL,
+                date TEXT NOT NULL,
+                score INTEGER,
+                stableford INTEGER,
+                hcpIndex REAL,
+                scores TEXT,
+                FOREIGN KEY (userId) REFERENCES users(id)
+            )`,
+            `CREATE TABLE IF NOT EXISTS matches (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player1Id INTEGER NOT NULL,
+                player2Id INTEGER NOT NULL,
+                courseId INTEGER NOT NULL,
+                date TEXT NOT NULL,
+                winnerId INTEGER,
+                status TEXT,
+                scores TEXT,
+                player1Differential REAL,
+                player2Differential REAL,
+                countForHandicap BOOLEAN,
+                FOREIGN KEY (player1Id) REFERENCES users(id),
+                FOREIGN KEY (player2Id) REFERENCES users(id)
+            )`,
+            `CREATE TABLE IF NOT EXISTS courses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                holes TEXT NOT NULL,
+                rating REAL,
+                slope INTEGER,
+                par INTEGER
+            )`
+        ];
+
+        for (const sql of coreTables) {
+            try {
+                await db.execute(sql);
+                log('✅ Verified core table.');
+            } catch (e) {
+                log(`❌ Failed core table: ${e.message}`);
+            }
+        }
+
+        // 1. Create League Tables
         const leagueTables = [
             `CREATE TABLE IF NOT EXISTS leagues (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -79,9 +141,9 @@ app.get('/api/fix-db', async (req, res) => {
         for (const sql of leagueTables) {
             try {
                 await db.execute(sql);
-                log('✅ Created/Verified a league table.');
+                log('✅ Verified league table.');
             } catch (e) {
-                log(`❌ Failed to create table: ${e.message}`);
+                log(`❌ Failed league table: ${e.message}`);
             }
         }
 
@@ -89,7 +151,6 @@ app.get('/api/fix-db', async (req, res) => {
         const criticalColumns = ['friends', 'favoriteCourses', 'avatar', 'handicapMode'];
         for (const col of criticalColumns) {
             try {
-                // Try to select. If fails, add it.
                 await db.execute(`SELECT ${col} FROM users LIMIT 1`);
                 log(`✅ users.${col} exists.`);
             } catch (e) {
