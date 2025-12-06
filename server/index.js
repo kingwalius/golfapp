@@ -502,7 +502,7 @@ app.get('/api/league/feed', async (req, res) => {
             SELECT r.*, u.username, c.name as courseName, c.holes as courseHoles
             FROM rounds r
             JOIN users u ON r.userId = u.id
-            LEFT JOIN courses c ON r.courseId = c.id
+            JOIN courses c ON r.courseId = c.id
             ORDER BY r.date DESC LIMIT 50
         `);
 
@@ -512,7 +512,7 @@ app.get('/api/league/feed', async (req, res) => {
             FROM matches m
             LEFT JOIN users u1 ON m.player1Id = u1.id
             LEFT JOIN users u2 ON m.player2Id = u2.id
-            LEFT JOIN courses c ON m.courseId = c.id
+            JOIN courses c ON m.courseId = c.id
             ORDER BY m.date DESC LIMIT 50
         `);
 
