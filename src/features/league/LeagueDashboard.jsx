@@ -85,9 +85,34 @@ export const LeagueDashboard = () => {
         <div className="p-4 pb-24 min-h-screen bg-stone-50">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-primary">League</h1>
-                <Link to="/league/create" className="bg-primary text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition">
-                    <Plus size={24} />
-                </Link>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => {
+                            const id = prompt("Enter League Invite Code:");
+                            if (id) {
+                                fetch(`/api/leagues/${id}/join`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ userId: user.id })
+                                }).then(async res => {
+                                    if (res.ok) {
+                                        alert("Joined successfully!");
+                                        window.location.reload();
+                                    } else {
+                                        const err = await res.json();
+                                        alert(err.error || "Failed to join");
+                                    }
+                                });
+                            }
+                        }}
+                        className="bg-white text-primary w-10 h-10 rounded-full flex items-center justify-center shadow-sm border border-stone-100 hover:scale-105 transition"
+                    >
+                        <Plus size={24} className="rotate-45" />
+                    </button>
+                    <Link to="/league/create" className="bg-primary text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition">
+                        <Plus size={24} />
+                    </Link>
+                </div>
             </div>
 
             {/* Tabs */}

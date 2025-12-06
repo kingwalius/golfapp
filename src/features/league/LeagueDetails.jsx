@@ -10,6 +10,7 @@ export const LeagueDetails = () => {
     const [league, setLeague] = useState(null);
     const [standings, setStandings] = useState([]);
     const [recentRounds, setRecentRounds] = useState([]);
+    const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -20,7 +21,8 @@ export const LeagueDetails = () => {
                     const data = await res.json();
                     setLeague(data.league);
                     setStandings(data.standings);
-                    setRecentRounds(data.rounds || []); // Expecting rounds in response now
+                    setRecentRounds(data.rounds || []);
+                    setEvents(data.events || []);
                 }
             } catch (error) {
                 console.error("Failed to fetch league details", error);
@@ -33,8 +35,12 @@ export const LeagueDetails = () => {
     }, [id]);
 
     const handleShare = () => {
-        // In a real app, this would copy a link or open a share sheet
-        alert(`Invite Code: ${id} (Share this ID with friends to join)`);
+        navigator.clipboard.writeText(id).then(() => {
+            alert(`Invite Code Copied: ${id}`);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            alert(`Invite Code: ${id}`);
+        });
     };
 
     if (loading) return <div className="p-6 text-center text-muted">Loading League...</div>;
@@ -118,6 +124,39 @@ export const LeagueDetails = () => {
                     </div>
                 )}
             </div>
+
+            {/* Season Breakdown */}
+            {events.length > 0 && (
+                <>
+                    <h2 className="text-lg font-bold text-dark mb-4 px-2 mt-8">Season Breakdown</h2>
+                    <div className="space-y-4">
+                        {events.map((event) => (
+                            <div key={event.id} className="bg-white rounded-3xl shadow-sm border border-stone-100 overflow-hidden">
+                                <div className="bg-stone-50 p-4 border-b border-stone-100 flex justify-between items-center">
+                                    <h3 className="font-bold text-dark">{event.name}</h3>
+                                    <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-lg">
+                                        {event.results.length} Players
+                                    </span>
+                                </div>
+                                {event.results.map((result, idx) => (
+                                    <div key={result.userId} className="flex items-center p-4 border-b border-stone-100 last:border-none">
+                                        <div className="w-8 text-center font-bold text-muted text-sm mr-2">
+                                            #{result.rank}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="font-bold text-dark text-sm">{result.username}</div>
+                                            <div className="text-xs text-muted">{result.rawScore} pts (Best Round)</div>
+                                        </div>
+                                        <div className="font-bold text-primary">
+                                            +{result.points}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ))}
+                    </div>
+                </>
+            )}
 
             {/* Recent Rounds */}
             <h2 className="text-lg font-bold text-dark mb-4 px-2 mt-8">Recent Rounds</h2>

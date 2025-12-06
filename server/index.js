@@ -909,13 +909,13 @@ app.get('/leaderboard/solo', async (req, res) => {
 
 // Create League
 app.post('/api/leagues', async (req, res) => {
-    const { name, type, adminId, startDate, endDate, settings } = req.body;
+    const { name, type, adminId, startDate, endDate, settings, roundFrequency } = req.body;
     if (!name || !type || !adminId) return res.status(400).json({ error: 'Missing required fields' });
 
     try {
         const result = await db.execute({
-            sql: 'INSERT INTO leagues (name, type, adminId, startDate, endDate, settings) VALUES (?, ?, ?, ?, ?, ?)',
-            args: [name, type, adminId, startDate, endDate, JSON.stringify(settings || {})]
+            sql: 'INSERT INTO leagues (name, type, adminId, startDate, endDate, settings, roundFrequency) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            args: [name, type, adminId, startDate, endDate, JSON.stringify(settings || {}), roundFrequency || 'WEEKLY']
         });
 
         const leagueId = result.lastInsertRowid.toString();
@@ -1031,65 +1031,123 @@ app.get('/api/leagues/:id/standings', async (req, res) => {
             });
             rounds = roundsRes.rows;
 
-            // 2. Group rounds by "Event" (e.g. Week) or just treat each round as an event?
-            // User requirement: "The user will play a single round and the score will be linked to the Strokeplay league."
-            // Assumption: A league consists of multiple rounds. We need to rank players based on their performance.
-            // Simple approach: Rank by Total Stableford Points accumulated? Or Average?
-            // User mentioned points: 25, 18, 15, 12, 10, 8, 6, 4, 2, 1.
-            // This implies we need to group rounds into "Events" (e.g. Weekly) and assign points based on rank in that event.
-            // OR, does every round submitted count as a competition against everyone else who played that week?
+            // 2. Group rounds by Frequency (Weekly vs Monthly)
+            const frequency = league.roundFrequency || 'WEEKLY';
+            const roundsByPeriod = {};
 
-            // Let's assume "Weekly" buckets for now, based on ISO Week or similar.
-            // Or simpler: Just list the rounds and calculate a total score?
-            // "The user will play a single round... score linked to league."
-
-            // Let's implement a simple "Total Stableford Points" leaderboard for now, 
-            // but if the user wants the specific 25-18-15... system, we need to know WHEN the competition happens.
-            // Let's assume for now that we just sum up the stableford points of all rounds played in the league.
-            // Wait, the user explicitly mentioned the point distribution in a previous turn (I recall from context).
-            // "Points: 1st: 25, 2nd: 18..." implies a ranking per event.
-
-            // Let's try to group by Week (Monday-Sunday).
-            const roundsByWeek = {};
             rounds.forEach(r => {
                 const date = new Date(r.date);
-                // Simple week key: Year-WeekNumber
-                const oneJan = new Date(date.getFullYear(), 0, 1);
-                const numberOfDays = Math.floor((date - oneJan) / (24 * 60 * 60 * 1000));
-                const weekNum = Math.ceil((date.getDay() + 1 + numberOfDays) / 7);
-                const key = `${date.getFullYear()}-W${weekNum}`;
+                let key;
 
-                if (!roundsByWeek[key]) roundsByWeek[key] = [];
-                roundsByWeek[key].push(r);
+                if (frequency === 'MONTHLY') {
+                    // Key: YYYY-MM
+                    key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                } else {
+                    // Key: YYYY-Www (ISO Week)
+                    const oneJan = new Date(date.getFullYear(), 0, 1);
+                    const numberOfDays = Math.floor((date - oneJan) / (24 * 60 * 60 * 1000));
+                    const weekNum = Math.ceil((date.getDay() + 1 + numberOfDays) / 7);
+                    key = `${date.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+                }
+
+                if (!roundsByPeriod[key]) roundsByPeriod[key] = [];
+                roundsByPeriod[key].push(r);
             });
 
-            // Calculate points for each week
-            const playerPoints = {};
+            // 3. Calculate Points per Period (Best Score Counts)
+            const playerPoints = {}; // Total points
+            const periodResults = []; // For "Season Breakdown" UI
+
             members.forEach(m => playerPoints[m.id] = 0);
 
-            Object.values(roundsByWeek).forEach(weekRounds => {
-                // Sort by Stableford (High is better)
-                // If Strokeplay usually means Gross, but for handicap leagues usually Stableford.
-                // Let's assume Stableford for now as it's safer for mixed handicaps.
-                weekRounds.sort((a, b) => (b.stableford || 0) - (a.stableford || 0));
+            // Sort periods chronologically
+            const sortedPeriods = Object.keys(roundsByPeriod).sort();
 
-                // Assign points
-                const distribution = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
-                weekRounds.forEach((r, index) => {
-                    if (index < distribution.length) {
-                        if (!playerPoints[r.userId]) playerPoints[r.userId] = 0;
-                        playerPoints[r.userId] += distribution[index];
-                    }
+            sortedPeriods.forEach(periodKey => {
+                const periodRounds = roundsByPeriod[periodKey];
+                const periodStandings = {}; // userId -> points
+
+                // Group by User within this period
+                const userRounds = {};
+                periodRounds.forEach(r => {
+                    if (!userRounds[r.userId]) userRounds[r.userId] = [];
+                    userRounds[r.userId].push(r);
                 });
+
+                // For each user, find BEST round (Highest Stableford Points)
+                Object.keys(userRounds).forEach(userId => {
+                    const rounds = userRounds[userId];
+                    // Sort by points desc
+                    rounds.sort((a, b) => (b.leaguePoints || 0) - (a.leaguePoints || 0));
+                    const bestRound = rounds[0];
+
+                    // Assign points for this period based on the best round
+                    // Note: The "leaguePoints" stored in DB is the raw stableford score.
+                    // If we want to assign 25-18-15 based on rank *within the period*, we do it here.
+                    // OR if we just sum the stableford points, we use bestRound.leaguePoints.
+
+                    // User said: "Within one round the points (F1-distribution) are distributed... The App shows the distribution... users can see how the leaderboard sums up each round."
+                    // This implies we rank users per period and assign F1 points.
+
+                    periodStandings[userId] = {
+                        rawPoints: bestRound.leaguePoints || 0,
+                        bestRoundId: bestRound.id,
+                        user: members.find(m => m.id == userId)
+                    };
+                });
+
+                // Rank users in this period
+                const rankedUsers = Object.keys(periodStandings).sort((a, b) =>
+                    periodStandings[b].rawPoints - periodStandings[a].rawPoints
+                );
+
+                // Assign F1 Points
+                const distribution = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
+                const periodBreakdown = {
+                    id: periodKey,
+                    name: frequency === 'MONTHLY' ? periodKey : `Week ${periodKey.split('-W')[1]}`,
+                    results: []
+                };
+
+                rankedUsers.forEach((userId, index) => {
+                    let pointsEarned = 0;
+                    if (index < distribution.length) {
+                        pointsEarned = distribution[index];
+                    }
+
+                    // Add to total
+                    playerPoints[userId] = (playerPoints[userId] || 0) + pointsEarned;
+
+                    // Add to breakdown
+                    periodBreakdown.results.push({
+                        userId,
+                        username: periodStandings[userId].user?.username || 'Unknown',
+                        avatar: periodStandings[userId].user?.avatar,
+                        rawScore: periodStandings[userId].rawPoints,
+                        points: pointsEarned,
+                        rank: index + 1
+                    });
+                });
+
+                periodResults.push(periodBreakdown);
             });
 
-            // Update members array with calculated points
+            // Update members array with calculated total points
             members.forEach(m => {
                 m.points = playerPoints[m.id] || 0;
-                // Also attach their rounds count or something?
                 m.roundsPlayed = rounds.filter(r => r.userId === m.id).length;
             });
+
+            // Attach periodResults to response
+            res.json({
+                league: { ...league, settings: JSON.parse(league.settings || '{}') },
+                standings: members.sort((a, b) => b.points - a.points),
+                rounds: (league.type === 'STROKE' ? rounds : []),
+                events: periodResults.reverse() // Newest first
+            });
+            return; // Exit early as we sent response
         }
+
 
         res.json({
             league: { ...league, settings: JSON.parse(league.settings || '{}') },

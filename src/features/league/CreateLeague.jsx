@@ -103,37 +103,63 @@ export const CreateLeague = () => {
                             </button>
                         </div>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-bold text-muted mb-2 uppercase tracking-wider">Start Date</label>
-                            <input
-                                type="date"
-                                value={formData.startDate}
-                                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                                className="w-full bg-stone-50 p-3 rounded-xl font-medium text-dark outline-none"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-bold text-muted mb-2 uppercase tracking-wider">End Date (Opt)</label>
-                            <input
-                                type="date"
-                                value={formData.endDate}
-                                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                                className="w-full bg-stone-50 p-3 rounded-xl font-medium text-dark outline-none"
-                            />
-                        </div>
-                    </div>
-
-                    <button
-                        onClick={handleSubmit}
-                        disabled={loading || !formData.name}
-                        className="w-full bg-primary text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:scale-[1.02] transition disabled:opacity-50 disabled:hover:scale-100"
-                    >
-                        {loading ? 'Creating...' : 'Create League'}
-                    </button>
                 </div>
+
+                {formData.type === 'STROKE' && (
+                    <div>
+                        <label className="block text-sm font-bold text-muted mb-2 uppercase tracking-wider">Round Frequency</label>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setFormData({ ...formData, roundFrequency: 'WEEKLY' })}
+                                className={`flex-1 p-4 rounded-xl border-2 text-center transition ${formData.roundFrequency !== 'MONTHLY' ? 'border-primary bg-primary/5 text-primary font-bold' : 'border-stone-100 bg-stone-50 text-muted'}`}
+                            >
+                                Weekly
+                            </button>
+                            <button
+                                onClick={() => setFormData({ ...formData, roundFrequency: 'MONTHLY' })}
+                                className={`flex-1 p-4 rounded-xl border-2 text-center transition ${formData.roundFrequency === 'MONTHLY' ? 'border-primary bg-primary/5 text-primary font-bold' : 'border-stone-100 bg-stone-50 text-muted'}`}
+                            >
+                                Monthly
+                            </button>
+                        </div>
+                        <p className="text-xs text-muted mt-2">
+                            {formData.roundFrequency === 'MONTHLY'
+                                ? "Points are awarded based on the best round played each month."
+                                : "Points are awarded based on the best round played each week (Mon-Sun)."}
+                        </p>
+                    </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-bold text-muted mb-2 uppercase tracking-wider">Start Date</label>
+                        <input
+                            type="date"
+                            value={formData.startDate}
+                            onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                            className="w-full bg-stone-50 p-3 rounded-xl font-medium text-dark outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-muted mb-2 uppercase tracking-wider">End Date (Opt)</label>
+                        <input
+                            type="date"
+                            value={formData.endDate}
+                            onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                            className="w-full bg-stone-50 p-3 rounded-xl font-medium text-dark outline-none"
+                        />
+                    </div>
+                </div>
+
+                <button
+                    onClick={handleSubmit}
+                    disabled={loading || !formData.name}
+                    className="w-full bg-primary text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:scale-[1.02] transition disabled:opacity-50 disabled:hover:scale-100"
+                >
+                    {loading ? 'Creating...' : 'Create League'}
+                </button>
             </div>
         </div>
+
     );
 };

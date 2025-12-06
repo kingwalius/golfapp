@@ -139,7 +139,8 @@ export const initDB = async () => {
       "ALTER TABLE matches ADD COLUMN player1Differential REAL",
       "ALTER TABLE matches ADD COLUMN player2Differential REAL",
       "ALTER TABLE matches ADD COLUMN countForHandicap BOOLEAN",
-      "ALTER TABLE rounds ADD COLUMN leagueId INTEGER"
+      "ALTER TABLE rounds ADD COLUMN leagueId INTEGER",
+      "ALTER TABLE leagues ADD COLUMN roundFrequency TEXT DEFAULT 'WEEKLY'"
     ];
 
     for (const query of migrations) {
