@@ -518,6 +518,25 @@ const ensureScoresColumn = async (table) => {
     }
 };
 
+// Helper to ensure league_rounds table exists (Self-healing)
+const ensureLeagueRoundsTable = async () => {
+    try {
+        await db.execute(`
+            CREATE TABLE IF NOT EXISTS league_rounds (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                leagueId INTEGER NOT NULL,
+                roundId INTEGER NOT NULL,
+                points REAL DEFAULT 0,
+                date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
+                FOREIGN KEY(roundId) REFERENCES rounds(id) ON DELETE CASCADE
+            )
+        `);
+    } catch (e) {
+        console.error("Failed to ensure league_rounds table:", e);
+    }
+};
+
 // --- Sync Routes ---
 app.post('/sync', async (req, res) => {
     const { userId, rounds, matches } = req.body;
@@ -529,6 +548,7 @@ app.post('/sync', async (req, res) => {
         // 1. Ensure Schema (Self-healing)
         await ensureScoresColumn('rounds');
         await ensureScoresColumn('matches');
+        await ensureLeagueRoundsTable();
 
         // Ensure differential columns for matches
         try {
@@ -957,6 +977,9 @@ app.get('/api/leagues/:id/standings', async (req, res) => {
         // If Strokeplay, calculate points dynamically based on rounds
         // If Strokeplay, calculate points dynamically based on rounds
         if (league.type === 'STROKE') {
+            await ensureLeagueRoundsTable(); // Ensure table exists before querying
+
+            // 1. Fetch all rounds for this league via league_rounds table
             // 1. Fetch all rounds for this league via league_rounds table
             // We join rounds to get the score details, and users to get player info
             const roundsRes = await db.execute({
