@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDB, useUser } from '../../lib/store';
 import { calculatePlayingHcp } from '../scoring/calculations';
-import { User, Search, Check } from 'lucide-react';
+import { User, Search, Check, ChevronLeft } from 'lucide-react';
 import { CourseSelectionModal } from '../../components/CourseSelectionModal';
 import { PlayerSelectionModal } from '../../components/PlayerSelectionModal';
 
