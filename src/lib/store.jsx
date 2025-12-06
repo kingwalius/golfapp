@@ -377,7 +377,8 @@ export const UserProvider = ({ children }) => {
                     score: r.totalStrokes || 0,
                     stableford: r.totalStableford || 0,
                     hcpIndex: r.hcpIndex,
-                    scores: r.scores || {}
+                    scores: r.scores || {},
+                    leagueId: r.leagueId || null
                 })),
                 matches: validMatches.map(m => ({
                     player1Id: m.player1?.id || user.id,
