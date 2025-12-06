@@ -3,22 +3,41 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const url = process.env.TURSO_DATABASE_URL || 'file:golf.db';
+const url = process.env.TURSO_DATABASE_URL;
 const authToken = process.env.TURSO_AUTH_TOKEN;
 
-console.log(`Initializing DB with URL: ${url.startsWith('file:') ? 'Local File' : 'Turso Cloud'} (${url.substring(0, 15)}...)`);
+console.log(`DB Init: URL=${url ? 'Set' : 'Missing'}, Token=${authToken ? 'Set' : 'Missing'}`);
 
-const db = createClient({
-  url,
-  authToken,
-  // Force HTTP strategy to avoid native binding issues on Vercel
-  // unless we are using a local file
-  ...(url.startsWith('file:') ? {} : {
-    strategy: 'http',
-    // LibSQL http strategy requires https:// protocol
-    url: url.replace('libsql://', 'https://')
-  })
-});
+let db;
+
+if (!url) {
+  console.error("CRITICAL: TURSO_DATABASE_URL is not defined. Using dummy DB client.");
+  // Dummy DB client to prevent startup crash
+  db = {
+    execute: async () => {
+      throw new Error("Database not configured. Please set TURSO_DATABASE_URL.");
+    },
+    batch: async () => {
+      throw new Error("Database not configured. Please set TURSO_DATABASE_URL.");
+    }
+  };
+} else {
+  try {
+    db = createClient({
+      url,
+      authToken,
+      // Force HTTP strategy for Turso/Vercel
+      strategy: 'http',
+      // LibSQL http strategy requires https:// protocol
+      url: url.replace('libsql://', 'https://')
+    });
+  } catch (e) {
+    console.error("Failed to create LibSQL client:", e);
+    db = {
+      execute: async () => { throw new Error(`DB Client Init Failed: ${e.message}`); }
+    };
+  }
+}
 
 // Initialize Database
 export const initDB = async () => {
