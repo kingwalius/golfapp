@@ -1083,6 +1083,20 @@ app.post('/api/leagues/:id/start-tournament', async (req, res) => {
     const { userId } = req.body;
 
     try {
+        // Self-healing: Ensure matchNumber column exists
+        try {
+            await db.execute("SELECT matchNumber FROM league_matches LIMIT 1");
+        } catch (e) {
+            if (e.message && (e.message.includes('no such column') || e.message.includes('column not found'))) {
+                console.log('Adding missing matchNumber column to league_matches...');
+                try {
+                    await db.execute("ALTER TABLE league_matches ADD COLUMN matchNumber INTEGER");
+                } catch (alterError) {
+                    console.error("Failed to add matchNumber column:", alterError);
+                }
+            }
+        }
+
         // 1. Verify Admin & League Type
         const leagueRes = await db.execute({
             sql: 'SELECT * FROM leagues WHERE id = ?',
