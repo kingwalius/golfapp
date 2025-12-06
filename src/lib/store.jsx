@@ -245,6 +245,62 @@ export const UserProvider = ({ children }) => {
         isSyncing.current = true;
 
         try {
+            // --- PHASE 0: Sync Courses (Fix FK Errors) ---
+            const allCourses = await db.getAll('courses');
+            const unsyncedCourses = allCourses.filter(c => !c.synced && !c.serverId);
+            const courseIdMap = new Map(); // Map localId -> serverId
+
+            // Build map from existing synced courses
+            allCourses.forEach(c => {
+                if (c.serverId) courseIdMap.set(c.id, c.serverId);
+            });
+
+            if (unsyncedCourses.length > 0) {
+                console.log(`Syncing ${unsyncedCourses.length} custom courses...`);
+                const tx = db.transaction('courses', 'readwrite');
+
+                for (const course of unsyncedCourses) {
+                    try {
+                        // Check if we already have a serverId mapped (rare race condition)
+                        if (course.serverId) {
+                            courseIdMap.set(course.id, course.serverId);
+                            continue;
+                        }
+
+                        console.log("Uploading course:", course.name);
+                        const res = await fetch('/courses', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                name: course.name,
+                                holes: typeof course.holes === 'string' ? JSON.parse(course.holes) : course.holes,
+                                rating: course.rating,
+                                slope: course.slope,
+                                par: course.par
+                            })
+                        });
+
+                        if (res.ok) {
+                            const data = await res.json();
+                            const serverId = parseInt(data.id); // Ensure int
+
+                            // Update local course with serverId
+                            const updated = { ...course, serverId: serverId, synced: true };
+                            await tx.store.put(updated);
+
+                            // Add to map
+                            courseIdMap.set(course.id, serverId);
+                            console.log(`Course ${course.id} synced. Mapped to Server ID ${serverId}`);
+                        } else {
+                            console.error("Failed to upload course:", course.name);
+                        }
+                    } catch (e) {
+                        console.error("Error syncing course:", course, e);
+                    }
+                }
+                await tx.done;
+            }
+
             const allRounds = await db.getAll('rounds');
             const allMatches = await db.getAll('matches');
 
@@ -252,33 +308,13 @@ export const UserProvider = ({ children }) => {
             const unsyncedRounds = allRounds.filter(r => !r.synced);
             const unsyncedMatches = allMatches.filter(m => !m.synced);
 
-            // Filter matches that are valid for server (must have player2 ID)
+            // Filter matches that are valid for server
             const validMatches = unsyncedMatches.filter(m => m.player2 && m.player2.id);
             const skippedMatches = unsyncedMatches.length - validMatches.length;
 
-            console.log("Sync Processing:", {
-                unsyncedRounds: unsyncedRounds.length,
-                unsyncedMatches: unsyncedMatches.length,
-                validMatches: validMatches.length
-            });
-
-            if (unsyncedMatches.length > 0) {
-                console.log("Unsynced Matches Details:", unsyncedMatches);
-                unsyncedMatches.forEach(m => {
-                    if (!m.player2 || !m.player2.id) {
-                        console.warn("Skipping match due to missing player2 ID:", m);
-                    }
-                });
-            }
-
             if (skippedMatches > 0) {
-                console.warn(`Skipping ${skippedMatches} matches due to missing opponent ID (cannot sync to server).`);
+                console.warn(`Skipping ${skippedMatches} matches due to missing opponent ID.`);
             }
-
-            // if (unsyncedRounds.length === 0 && validMatches.length === 0) {
-            //     console.log("Nothing to sync.");
-            //     return;
-            // }
 
             // --- DOWN-SYNC: Fetch latest activity from server ---
             try {
@@ -290,11 +326,9 @@ export const UserProvider = ({ children }) => {
                     // Process Rounds
                     if (activityData.rounds && Array.isArray(activityData.rounds)) {
                         for (const serverRound of activityData.rounds) {
-                            // Try to find by serverId first
                             let existing = allRounds.find(r => r.serverId === serverRound.id);
 
                             if (!existing) {
-                                // Fallback: Fuzzy date match (within 1 minute)
                                 const serverTime = new Date(serverRound.date).getTime();
                                 existing = allRounds.find(r => {
                                     const localTime = new Date(r.date).getTime();
@@ -303,15 +337,13 @@ export const UserProvider = ({ children }) => {
                             }
 
                             if (!existing) {
-                                console.log("Down-syncing round:", serverRound);
                                 const { id, ...roundData } = serverRound;
                                 await tx.objectStore('rounds').add({
                                     ...roundData,
-                                    serverId: id, // Store server ID
+                                    serverId: id,
                                     synced: true
                                 });
                             } else if (!existing.serverId) {
-                                // Link local round to server ID if matched by date
                                 const updated = { ...existing, serverId: serverRound.id, synced: true };
                                 await tx.objectStore('rounds').put(updated);
                             }
@@ -321,7 +353,6 @@ export const UserProvider = ({ children }) => {
                     // Process Matches
                     if (activityData.matches && Array.isArray(activityData.matches)) {
                         for (const serverMatch of activityData.matches) {
-                            // Try to find by serverId first, then fallback to date/course
                             let existing = allMatches.find(m => m.serverId === serverMatch.id);
                             if (!existing) {
                                 const serverTime = new Date(serverMatch.date).getTime();
@@ -331,25 +362,20 @@ export const UserProvider = ({ children }) => {
                                 });
                             }
 
-                            // Destructure to remove ID (let local DB assign it) and get names
                             const { id, p1Name, p2Name, ...matchData } = serverMatch;
                             const matchToSave = {
                                 ...matchData,
-                                serverId: id, // Store the server ID
+                                serverId: id,
                                 player1: { id: serverMatch.player1Id, name: p1Name || 'Player 1' },
                                 player2: { id: serverMatch.player2Id, name: p2Name || 'Player 2' },
                                 synced: true
                             };
 
                             if (!existing) {
-                                console.log("Down-syncing new match:", serverMatch);
                                 await tx.objectStore('matches').add(matchToSave);
                             } else if (existing.synced) {
-                                // Update existing match ONLY if we don't have local unsynced changes
-                                // Preserve local ID
                                 await tx.objectStore('matches').put({ ...matchToSave, id: existing.id });
                             } else if (!existing.serverId) {
-                                // Link local match to server ID
                                 await tx.objectStore('matches').put({ ...existing, serverId: id, synced: true });
                             }
                         }
@@ -361,7 +387,7 @@ export const UserProvider = ({ children }) => {
                 console.error("Down-sync failed", e);
             }
 
-            // --- UP-SYNC (Existing Logic) ---
+            // --- UP-SYNC (Existing Logic with ID Mapping) ---
             if (unsyncedRounds.length === 0 && validMatches.length === 0) {
                 console.log("Nothing to up-sync.");
                 return;
@@ -372,7 +398,7 @@ export const UserProvider = ({ children }) => {
             const payload = {
                 userId: user.id,
                 rounds: unsyncedRounds.map(r => ({
-                    courseId: r.courseId,
+                    courseId: courseIdMap.get(r.courseId) || r.courseId, // Use mapped Server ID if available
                     date: r.date,
                     score: r.totalStrokes || 0,
                     stableford: r.totalStableford || 0,
@@ -383,18 +409,17 @@ export const UserProvider = ({ children }) => {
                 matches: validMatches.map(m => ({
                     player1Id: m.player1?.id || user.id,
                     player2Id: m.player2?.id || null,
-                    courseId: m.courseId,
+                    courseId: courseIdMap.get(m.courseId) || m.courseId, // Use mapped Server ID if available
                     date: m.date,
                     winnerId: m.winnerId || null,
                     status: m.status || 'AS',
                     scores: m.scores || {},
                     player1Differential: m.player1Differential,
                     player2Differential: m.player2Differential,
-                    countForHandicap: m.countForHandicap
+                    countForHandicap: m.countForHandicap,
+                    leagueMatchId: m.leagueMatchId || null
                 }))
             };
-
-            console.log("Up-sync Payload:", JSON.stringify(payload, null, 2));
 
             const res = await fetch('/sync', {
                 method: 'POST',
@@ -406,14 +431,12 @@ export const UserProvider = ({ children }) => {
                 const responseData = await res.json();
                 console.log("Up-sync completed successfully", responseData);
 
-                // Check for failures
                 const matchFailures = responseData.results?.matches?.failed > 0;
                 const roundFailures = responseData.results?.rounds?.failed > 0;
 
                 if (matchFailures) console.error("Matches sync errors:", responseData.results.matches.errors);
                 if (roundFailures) console.error("Rounds sync errors:", responseData.results.rounds.errors);
 
-                // Mark items as synced in local DB (only if no failures for that type)
                 const tx = db.transaction(['rounds', 'matches'], 'readwrite');
 
                 if (!roundFailures) {
@@ -439,19 +462,15 @@ export const UserProvider = ({ children }) => {
                 console.error("Up-sync failed with status:", res.status, errorDetails);
             }
 
-            // --- Recalculate Handicap (WHI) ---
             await recalculateHandicap();
 
-            // --- Refresh User Profile (Favorites, Friends, etc.) ---
             try {
                 const userRes = await fetch(`/api/user/${user.id}`);
                 if (userRes.ok) {
                     const latestUser = await userRes.json();
-                    // Merge with current user to preserve session state if any
                     const updatedUser = { ...user, ...latestUser };
                     setUser(updatedUser);
                     saveToLocalStorage(updatedUser);
-                    console.log("User profile refreshed during sync.");
                 }
             } catch (uErr) {
                 console.warn("Failed to refresh user profile during sync", uErr);
