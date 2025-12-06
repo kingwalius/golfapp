@@ -1051,7 +1051,7 @@ app.post('/api/leagues', async (req, res) => {
 
         const result = await db.execute({
             sql: 'INSERT INTO leagues (name, type, adminId, startDate, endDate, settings, roundFrequency) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            args: [name, type, adminId, startDate, endDate, JSON.stringify(settings || {}), roundFrequency || 'WEEKLY']
+            args: [name, type, adminId, startDate || null, endDate || null, JSON.stringify(settings || {}), roundFrequency || 'WEEKLY']
         });
 
         const leagueId = result.lastInsertRowid.toString();
