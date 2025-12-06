@@ -133,13 +133,15 @@ const MatchCard = ({ match, currentUserId, navigate, isAdmin }) => {
                 <div className="bg-stone-50 p-2 text-center border-t border-stone-100 flex gap-2">
                     {isParticipant ? (
                         <button
-                            onClick={() => navigate('/matchplay', {
-                                state: {
+                            onClick={() => {
+                                const params = new URLSearchParams({
                                     opponentId: match.player1Id === currentUserId ? match.player2Id : match.player1Id,
                                     opponentName: match.player1Id === currentUserId ? match.p2Name : match.p1Name,
-                                    leagueMatchId: match.id
-                                }
-                            })}
+                                    leagueMatchId: match.id,
+                                    // Pass HCP if needed, but Setup fetches updated user list anyway
+                                }).toString();
+                                navigate(`/matchplay?${params}`);
+                            }}
                             className="bg-primary text-white text-xs font-bold uppercase tracking-wide flex-1 py-2 rounded-lg"
                         >
                             Play Match

@@ -45,19 +45,28 @@ export const MatchplaySetup = () => {
         }
     }, [user]);
 
-    // Pre-fill from location state (League Tournament)
+    // Pre-fill from location state OR Query Params (League Tournament)
     useEffect(() => {
-        if (location.state) {
-            const { opponentId, opponentName, opponentHcp, leagueMatchId } = location.state;
-            console.log("MatchplaySetup initialized with state:", location.state);
+        const params = new URLSearchParams(location.search);
+        const qOpponentId = params.get('opponentId');
+        const qOpponentName = params.get('opponentName');
+        const qLeagueMatchId = params.get('leagueMatchId');
+
+        if (location.state || qLeagueMatchId) {
+            const state = location.state || {};
+            const opponentId = state.opponentId || qOpponentId;
+            const opponentName = state.opponentName || qOpponentName;
+            const leagueMatchId = state.leagueMatchId || qLeagueMatchId;
+
+            console.log("MatchplaySetup initialized:", { opponentId, leagueMatchId });
 
             setSetup(prev => ({
                 ...prev,
-                player2: opponentId ? { id: opponentId, name: opponentName, hcp: opponentHcp || 0 } : prev.player2,
+                player2: opponentId ? { id: opponentId, name: opponentName || 'Opponent', hcp: 0 } : prev.player2, // HCP will be fetched by onlineUsers effect if valid ID
                 leagueMatchId: leagueMatchId || prev.leagueMatchId // Ensure we capture it
             }));
         }
-    }, [location.state]);
+    }, [location.state, location.search]);
 
     useEffect(() => {
         db.getAll('courses').then(setCourses);
