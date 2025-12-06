@@ -295,6 +295,26 @@ export const MatchplayScorecard = () => {
 
                         await db.put('matches', completedMatch);
 
+                        // Tournament Tie-Breaker Logic
+                        if (match.leagueMatchId && !winnerId) {
+                            // It's a tournament match and it's a tie. We must have a winner.
+                            const p1WonPlayoff = confirm(`Match ended in a tie. Did ${match.player1.name} win the playoff?`);
+                            if (p1WonPlayoff) {
+                                completedMatch.winnerId = match.player1.id;
+                                completedMatch.status = '1 UP (Playoff)';
+                            } else {
+                                const p2WonPlayoff = confirm(`Did ${match.player2.name} win the playoff?`);
+                                if (p2WonPlayoff) {
+                                    completedMatch.winnerId = match.player2.id;
+                                    completedMatch.status = '1 UP (Playoff)';
+                                } else {
+                                    return; // Cancel finish if no winner selected
+                                }
+                            }
+                            // Save updated match with playoff winner
+                            await db.put('matches', completedMatch);
+                        }
+
                         // Update handicap immediately (local)
                         await recalculateHandicap();
 
