@@ -18,7 +18,6 @@ export const LeagueDetails = () => {
                 const res = await fetch(`/api/leagues/${id}/standings`);
                 if (res.ok) {
                     const data = await res.json();
-                    const data = await res.json();
                     setLeague(data.league);
                     setStandings(data.standings);
                     setRecentRounds(data.rounds || []); // Expecting rounds in response now
