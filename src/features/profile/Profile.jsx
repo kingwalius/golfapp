@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { RefreshCw } from 'lucide-react';
 import { useUser } from '../../lib/store';
 
 export default function Profile() {
-    const { user, updateProfile, logout } = useUser();
+    const { user, updateProfile, logout, forceResync } = useUser();
     const navigate = useNavigate();
     const fileInputRef = useRef(null);
 
@@ -196,17 +197,35 @@ export default function Profile() {
                         Cancel
                     </button>
 
-                    <button
-                        onClick={() => {
-                            if (confirm('This will clear all local data and log you out. Are you sure?')) {
-                                logout();
-                                navigate('/');
-                            }
-                        }}
-                        className="w-full py-3 rounded-xl font-bold text-red-500 bg-red-50 hover:bg-red-100 transition-colors mt-2"
-                    >
-                        Clear Data & Log Out
-                    </button>
+                    <div className="pt-6 border-t border-gray-200 mt-2">
+                        <h3 className="text-sm font-bold text-gray-400 mb-2 uppercase tracking-wider">Troubleshooting</h3>
+                        <button
+                            onClick={async () => {
+                                if (confirm('This will attempt to re-upload all unsynced data. Continue?')) {
+                                    setIsSaving(true);
+                                    await forceResync();
+                                    setIsSaving(false);
+                                    alert('Resync complete. Check activity feed.');
+                                }
+                            }}
+                            className="w-full py-3 rounded-xl font-bold text-amber-600 bg-amber-50 hover:bg-amber-100 transition-colors mb-2 flex items-center justify-center gap-2"
+                        >
+                            <RefreshCw size={18} />
+                            Fix Sync Issues (Force Upload)
+                        </button>
+
+                        <button
+                            onClick={() => {
+                                if (confirm('This will clear all local data and log you out. Are you sure?')) {
+                                    logout();
+                                    navigate('/');
+                                }
+                            }}
+                            className="w-full py-3 rounded-xl font-bold text-red-500 bg-red-50 hover:bg-red-100 transition-colors"
+                        >
+                            Clear Data & Log Out
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

@@ -406,24 +406,26 @@ export const UserProvider = ({ children }) => {
                 const responseData = await res.json();
                 console.log("Up-sync completed successfully", responseData);
 
-                if (responseData.results) {
-                    if (responseData.results.matches.failed > 0) {
-                        console.error("Some matches failed to sync:", responseData.results.matches.errors);
-                    }
-                    if (responseData.results.rounds.failed > 0) {
-                        console.error("Some rounds failed to sync:", responseData.results.rounds.errors);
-                    }
-                }
+                // Check for failures
+                const matchFailures = responseData.results?.matches?.failed > 0;
+                const roundFailures = responseData.results?.rounds?.failed > 0;
 
-                // Mark items as synced in local DB
+                if (matchFailures) console.error("Matches sync errors:", responseData.results.matches.errors);
+                if (roundFailures) console.error("Rounds sync errors:", responseData.results.rounds.errors);
+
+                // Mark items as synced in local DB (only if no failures for that type)
                 const tx = db.transaction(['rounds', 'matches'], 'readwrite');
 
-                for (const r of unsyncedRounds) {
-                    await tx.objectStore('rounds').put({ ...r, synced: true });
+                if (!roundFailures) {
+                    for (const r of unsyncedRounds) {
+                        await tx.objectStore('rounds').put({ ...r, synced: true });
+                    }
                 }
 
-                for (const m of validMatches) {
-                    await tx.objectStore('matches').put({ ...m, synced: true });
+                if (!matchFailures) {
+                    for (const m of validMatches) {
+                        await tx.objectStore('matches').put({ ...m, synced: true });
+                    }
                 }
 
                 await tx.done;
@@ -660,8 +662,32 @@ export const UserProvider = ({ children }) => {
         }
     };
 
+    const forceResync = async () => {
+        if (!db) return;
+        console.log("Force Resync initiated...");
+        const tx = db.transaction(['rounds', 'matches'], 'readwrite');
+
+        let cursor = await tx.objectStore('rounds').openCursor();
+        while (cursor) {
+            const update = { ...cursor.value, synced: false };
+            cursor.update(update);
+            cursor = await cursor.continue();
+        }
+
+        let mCursor = await tx.objectStore('matches').openCursor();
+        while (mCursor) {
+            const update = { ...mCursor.value, synced: false };
+            mCursor.update(update);
+            mCursor = await mCursor.continue();
+        }
+
+        await tx.done;
+        console.log("All items marked unsynced. Triggering sync.");
+        await sync();
+    };
+
     return (
-        <UserContext.Provider value={{ user, setUser, login, logout, sync, updateProfile, isOnline, recalculateHandicap, addFriend, removeFriend, toggleFavoriteCourse }}>
+        <UserContext.Provider value={{ user, setUser, login, logout, sync, forceResync, updateProfile, isOnline, recalculateHandicap, addFriend, removeFriend, toggleFavoriteCourse }}>
             {children}
         </UserContext.Provider>
     );
