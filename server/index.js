@@ -9,8 +9,8 @@ const PORT = 3000;
 app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 
-// Initialize DB
-initDB().catch(err => console.error("Failed to initialize DB:", err));
+// Initialize DB (Lazy or Manual)
+// initDB().catch(err => console.error("Failed to initialize DB:", err));
 
 app.get('/api/debug', (req, res) => {
     res.json({
@@ -37,24 +37,65 @@ app.get('/api/fix-db', async (req, res) => {
     const log = (msg) => report.push(msg);
 
     try {
-        log('Starting manual DB fix...');
+        log('Starting lightweight DB fix...');
 
-        // 1. Fix Users Table Columns
-        const userColumns = [
-            'avatar', 'handicapMode', 'manualHandicap', 'password',
-            'avgScore', 'avgScoreChange', 'handicapChange', 'friends', 'favoriteCourses'
+        // 1. Create League Tables (Priority)
+        const leagueTables = [
+            `CREATE TABLE IF NOT EXISTS leagues (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                type TEXT NOT NULL,
+                adminId INTEGER NOT NULL,
+                startDate TEXT,
+                endDate TEXT,
+                settings TEXT,
+                status TEXT DEFAULT 'ACTIVE',
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`,
+            `CREATE TABLE IF NOT EXISTS league_members (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                leagueId INTEGER NOT NULL,
+                userId INTEGER NOT NULL,
+                team TEXT,
+                points REAL DEFAULT 0,
+                joinedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
+                FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
+            )`,
+            `CREATE TABLE IF NOT EXISTS league_matches (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                leagueId INTEGER NOT NULL,
+                roundNumber INTEGER,
+                matchId INTEGER,
+                player1Id INTEGER,
+                player2Id INTEGER,
+                winnerId INTEGER,
+                concedeDeadline DATETIME,
+                FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
+                FOREIGN KEY(matchId) REFERENCES matches(id) ON DELETE SET NULL
+            )`
         ];
 
-        for (const col of userColumns) {
+        for (const sql of leagueTables) {
             try {
+                await db.execute(sql);
+                log('✅ Created/Verified a league table.');
+            } catch (e) {
+                log(`❌ Failed to create table: ${e.message}`);
+            }
+        }
+
+        // 2. Fix Critical User Columns (Friends, Favorites)
+        const criticalColumns = ['friends', 'favoriteCourses', 'avatar', 'handicapMode'];
+        for (const col of criticalColumns) {
+            try {
+                // Try to select. If fails, add it.
                 await db.execute(`SELECT ${col} FROM users LIMIT 1`);
                 log(`✅ users.${col} exists.`);
             } catch (e) {
                 log(`❌ users.${col} missing. Adding...`);
                 try {
-                    // Determine type
-                    const type = ['handicapMode', 'avatar', 'password', 'friends', 'favoriteCourses'].includes(col) ? 'TEXT' : 'REAL';
-                    await db.execute(`ALTER TABLE users ADD COLUMN ${col} ${type}`);
+                    await db.execute(`ALTER TABLE users ADD COLUMN ${col} TEXT`);
                     log(`✅ Added ${col} to users.`);
                 } catch (e2) {
                     log(`❌ Failed to add ${col}: ${e2.message}`);
@@ -62,91 +103,7 @@ app.get('/api/fix-db', async (req, res) => {
             }
         }
 
-        // 2. Fix Rounds Table
-        try {
-            await db.execute("SELECT scores FROM rounds LIMIT 1");
-            log('✅ rounds.scores column exists.');
-        } catch (e) {
-            log('❌ rounds.scores column missing. Adding...');
-            try {
-                await db.execute("ALTER TABLE rounds ADD COLUMN scores TEXT");
-                log('✅ Successfully added scores column to rounds.');
-            } catch (e2) {
-                log(`❌ Failed to add scores to rounds: ${e2.message}`);
-            }
-        }
-
-        // 3. Fix Matches Table
-        const matchColumns = ['scores', 'player1Differential', 'player2Differential', 'countForHandicap'];
-        for (const col of matchColumns) {
-            try {
-                await db.execute(`SELECT ${col} FROM matches LIMIT 1`);
-                log(`✅ matches.${col} exists.`);
-            } catch (e) {
-                log(`❌ matches.${col} missing. Adding...`);
-                try {
-                    const type = col === 'countForHandicap' ? 'BOOLEAN' : (col === 'scores' ? 'TEXT' : 'REAL');
-                    await db.execute(`ALTER TABLE matches ADD COLUMN ${col} ${type}`);
-                    log(`✅ Added ${col} to matches.`);
-                } catch (e2) {
-                    log(`❌ Failed to add ${col}: ${e2.message}`);
-                }
-            }
-        }
-
-        // 4. Create League Tables (if missing)
-        try {
-            await db.execute(`
-                CREATE TABLE IF NOT EXISTS leagues (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    adminId INTEGER NOT NULL,
-                    startDate TEXT,
-                    endDate TEXT,
-                    settings TEXT,
-                    status TEXT DEFAULT 'ACTIVE',
-                    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            `);
-            log('✅ Checked/Created leagues table.');
-        } catch (e) { log(`❌ Failed leagues table: ${e.message}`); }
-
-        try {
-            await db.execute(`
-                CREATE TABLE IF NOT EXISTS league_members (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    leagueId INTEGER NOT NULL,
-                    userId INTEGER NOT NULL,
-                    team TEXT,
-                    points REAL DEFAULT 0,
-                    joinedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
-                    FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
-                )
-            `);
-            log('✅ Checked/Created league_members table.');
-        } catch (e) { log(`❌ Failed league_members table: ${e.message}`); }
-
-        try {
-            await db.execute(`
-                CREATE TABLE IF NOT EXISTS league_matches (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    leagueId INTEGER NOT NULL,
-                    roundNumber INTEGER,
-                    matchId INTEGER,
-                    player1Id INTEGER,
-                    player2Id INTEGER,
-                    winnerId INTEGER,
-                    concedeDeadline DATETIME,
-                    FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
-                    FOREIGN KEY(matchId) REFERENCES matches(id) ON DELETE SET NULL
-                )
-            `);
-            log('✅ Checked/Created league_matches table.');
-        } catch (e) { log(`❌ Failed league_matches table: ${e.message}`); }
-
-        // 5. Verify Guest User
+        // 3. Verify Guest User
         try {
             await db.execute({
                 sql: "INSERT OR IGNORE INTO users (id, username, handicap, handicapMode) VALUES (?, ?, ?, ?)",
