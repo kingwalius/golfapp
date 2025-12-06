@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../lib/store';
 import { Trophy, User, Calendar } from 'lucide-react';
 
 export const BracketView = ({ leagueId }) => {
     const { user } = useUser();
+    const navigate = useNavigate();
     const [matches, setMatches] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -58,7 +60,7 @@ export const BracketView = ({ leagueId }) => {
                             Round {roundNum}
                         </h3>
                         {rounds[roundNum].sort((a, b) => a.matchNumber - b.matchNumber).map(match => (
-                            <MatchCard key={match.id} match={match} currentUserId={user?.id} />
+                            <MatchCard key={match.id} match={match} currentUserId={user?.id} navigate={navigate} />
                         ))}
                     </div>
                 ))}
@@ -67,7 +69,7 @@ export const BracketView = ({ leagueId }) => {
     );
 };
 
-const MatchCard = ({ match, currentUserId }) => {
+const MatchCard = ({ match, currentUserId, navigate }) => {
     const isParticipant = match.player1Id === currentUserId || match.player2Id === currentUserId;
     const isWinner = match.winnerId === currentUserId;
 
@@ -105,7 +107,16 @@ const MatchCard = ({ match, currentUserId }) => {
             {!match.winnerId && match.player1Id && match.player2Id && (
                 <div className="bg-stone-50 p-2 text-center border-t border-stone-100">
                     {isParticipant ? (
-                        <button className="text-xs font-bold text-primary uppercase tracking-wide">
+                        <button
+                            onClick={() => navigate('/matchplay', {
+                                state: {
+                                    opponentId: match.player1Id === currentUserId ? match.player2Id : match.player1Id,
+                                    opponentName: match.player1Id === currentUserId ? match.p2Name : match.p1Name,
+                                    leagueMatchId: match.id
+                                }
+                            })}
+                            className="text-xs font-bold text-primary uppercase tracking-wide w-full h-full block"
+                        >
                             Play Match
                         </button>
                     ) : (

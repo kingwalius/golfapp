@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useDB, useUser } from '../../lib/store';
 import { calculatePlayingHcp } from '../scoring/calculations';
 import { User, Search, Check } from 'lucide-react';
@@ -10,6 +10,7 @@ export const MatchplaySetup = () => {
     const db = useDB();
     const { user } = useUser();
     const navigate = useNavigate();
+    const location = useLocation();
     const [courses, setCourses] = useState([]);
     const [onlineUsers, setOnlineUsers] = useState([]);
     const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
@@ -22,7 +23,8 @@ export const MatchplaySetup = () => {
         hcpAllowance: 0.75,
         matchType: 'NET',
         manualStrokes: 0,
-        manualStrokesPlayer: 'p1'
+        manualStrokesPlayer: 'p1',
+        leagueMatchId: null // New field
     });
 
     // Initialize Player 1 with User Data
@@ -42,6 +44,24 @@ export const MatchplaySetup = () => {
             }));
         }
     }, [user]);
+
+    // Pre-fill from location state (League Tournament)
+    useEffect(() => {
+        if (location.state) {
+            const { opponentId, opponentName, opponentHcp, leagueMatchId } = location.state;
+            if (opponentId || leagueMatchId) {
+                setSetup(prev => ({
+                    ...prev,
+                    player2: {
+                        name: opponentName || 'Opponent',
+                        hcp: opponentHcp || 18,
+                        id: opponentId
+                    },
+                    leagueMatchId: leagueMatchId
+                }));
+            }
+        }
+    }, [location.state]);
 
     useEffect(() => {
         db.getAll('courses').then(setCourses);
@@ -95,7 +115,8 @@ export const MatchplaySetup = () => {
             manualStrokesPlayer: setup.manualStrokesPlayer || 'p1',
             synced: false,
             holesPlayed: setup.holesToPlay || 18,
-            startingHole: setup.startingHole || 1
+            startingHole: setup.startingHole || 1,
+            leagueMatchId: setup.leagueMatchId // Save link to league match
         };
 
         const id = await db.add('matches', match);

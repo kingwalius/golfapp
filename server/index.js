@@ -5,7 +5,7 @@ import db, { initDB } from './db.js';
 import crypto from 'crypto';
 
 const app = express();
-const PORT = 3000;
+
 
 app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
@@ -1436,10 +1436,60 @@ app.get('/api/leagues/:id/standings', async (req, res) => {
     }
 });
 
+// Get League Matches (Bracket)
+app.get('/api/leagues/:id/matches', async (req, res) => {
+    const leagueId = req.params.id;
+    try {
+        const result = await db.execute({
+            sql: `
+                SELECT lm.*, 
+                       u1.username as p1Name, 
+                       u2.username as p2Name
+                FROM league_matches lm
+                LEFT JOIN users u1 ON lm.player1Id = u1.id
+                LEFT JOIN users u2 ON lm.player2Id = u2.id
+                WHERE lm.leagueId = ?
+                ORDER BY lm.roundNumber, lm.matchNumber
+            `,
+            args: [leagueId]
+        });
+        res.json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Reset Tournament (Admin Only) - Panic Button
+app.delete('/api/leagues/:id/tournament', async (req, res) => {
+    const leagueId = req.params.id;
+    const { userId } = req.body;
+
+    try {
+        // Verify Admin
+        const leagueRes = await db.execute({ sql: 'SELECT adminId FROM leagues WHERE id = ?', args: [leagueId] });
+        if (leagueRes.rows.length === 0) return res.status(404).json({ error: 'League not found' });
+        if (leagueRes.rows[0].adminId !== userId) return res.status(403).json({ error: 'Only admin can reset tournament' });
+
+        // Delete matches
+        await db.execute({
+            sql: 'DELETE FROM league_matches WHERE leagueId = ?',
+            args: [leagueId]
+        });
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
 if (process.env.NODE_ENV !== 'production') {
-    app.listen(PORT, () => {
-        console.log(`Server running on http://localhost:${PORT}`);
-    });
+    // The original console.log was here, but the new app.listen handles it.
+    // Keeping the if block structure as per user's snippet, though it's now empty.
 }
 
 export default app;

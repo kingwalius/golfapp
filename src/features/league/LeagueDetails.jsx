@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Users, Calendar, Trophy, Share2, Trash2, LogOut, Swords } from 'lucide-react';
+import { ArrowLeft, Users, Calendar, Trophy, Share2, Trash2, LogOut, Swords, RefreshCw } from 'lucide-react';
 import { useUser } from '../../lib/store';
 import { BracketView } from './BracketView';
 
@@ -103,6 +103,27 @@ export const LeagueDetails = () => {
         }
     };
 
+    const handleResetTournament = async () => {
+        if (!confirm("RESET TOURNAMENT? This will DELETE all matches and bracket progress! Only do this if it's broken.")) return;
+
+        try {
+            const res = await fetch(`/api/leagues/${id}/tournament`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.id })
+            });
+            if (res.ok) {
+                alert("Tournament Reset!");
+                window.location.reload();
+            } else {
+                const err = await res.json();
+                alert(err.error || "Failed to reset tournament");
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     if (loading) return <div className="p-6 text-center text-muted">Loading League...</div>;
     if (!league) return <div className="p-6 text-center text-muted">League not found</div>;
 
@@ -185,6 +206,21 @@ export const LeagueDetails = () => {
                         >
                             <Swords size={20} />
                             Start Tournament
+                        </button>
+                    </div>
+                )
+            }
+
+            {/* Reset Tournament Action (Admin Only, Matchplay, Started) - Panic Button */}
+            {
+                league.type === 'MATCH' && league.adminId === user?.id && activeTab === 'bracket' && (
+                    <div className="mb-6 flex justify-end">
+                        <button
+                            onClick={handleResetTournament}
+                            className="text-xs font-bold text-red-500 bg-red-50 px-3 py-2 rounded-lg flex items-center gap-1 hover:bg-red-100"
+                        >
+                            <RefreshCw size={12} />
+                            Reset Bracket
                         </button>
                     </div>
                 )
