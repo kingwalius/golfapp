@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CompactScorecard } from './CompactScorecard';
 import { useUser } from '../../lib/store';
-import { Plus, Trophy, Activity } from 'lucide-react';
+import { Plus, Trophy, Activity, Ticket } from 'lucide-react';
 
 const FeedItem = ({ item }) => {
     const isMatch = item.type === 'match';
@@ -107,7 +107,7 @@ export const LeagueDashboard = () => {
                         }}
                         className="bg-white text-primary w-10 h-10 rounded-full flex items-center justify-center shadow-sm border border-stone-100 hover:scale-105 transition"
                     >
-                        <Plus size={24} className="rotate-45" />
+                        <Ticket size={24} />
                     </button>
                     <Link to="/league/create" className="bg-primary text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition">
                         <Plus size={24} />
