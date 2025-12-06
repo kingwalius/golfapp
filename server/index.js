@@ -1576,6 +1576,73 @@ app.delete('/api/leagues/:id/tournament', async (req, res) => {
     }
 });
 
+// --- Debug Endpoints ---
+app.get('/api/debug/matches', async (req, res) => {
+    try {
+        const matches = await db.execute('SELECT * FROM matches ORDER BY id DESC LIMIT 10');
+        const leagueMatches = await db.execute('SELECT * FROM league_matches WHERE matchId IS NOT NULL OR winnerId IS NOT NULL');
+        res.json({ matches: matches.rows, leagueMatches: leagueMatches.rows });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/debug/resolve-bracket', async (req, res) => {
+    const { matchId } = req.body;
+    try {
+        const matchRes = await db.execute({
+            sql: 'SELECT * FROM matches WHERE id = ?',
+            args: [matchId]
+        });
+
+        if (matchRes.rows.length === 0) return res.status(404).json({ error: 'Match not found' });
+
+        const match = matchRes.rows[0];
+        console.log(`Manual Resolve for Match ${match.id}, LeagueMatchId: ${match.leagueMatchId}`);
+
+        if (match.leagueMatchId && match.winnerId) {
+            // 1. Update the bracket match with the result
+            await db.execute({
+                sql: 'UPDATE league_matches SET matchId = ?, winnerId = ? WHERE id = ?',
+                args: [match.id, match.winnerId, match.leagueMatchId]
+            });
+
+            // 2. Advance Winner
+            const bracketMatchRes = await db.execute({
+                sql: 'SELECT * FROM league_matches WHERE id = ?',
+                args: [match.leagueMatchId]
+            });
+
+            if (bracketMatchRes.rows.length > 0) {
+                const currentMatch = bracketMatchRes.rows[0];
+                const nextRound = currentMatch.roundNumber + 1;
+                const nextMatchNum = Math.ceil(currentMatch.matchNumber / 2);
+                const isPlayer1 = (currentMatch.matchNumber % 2) !== 0;
+                const field = isPlayer1 ? 'player1Id' : 'player2Id';
+
+                const nextMatchRes = await db.execute({
+                    sql: 'SELECT id FROM league_matches WHERE leagueId = ? AND roundNumber = ? AND matchNumber = ?',
+                    args: [currentMatch.leagueId, nextRound, nextMatchNum]
+                });
+
+                if (nextMatchRes.rows.length > 0) {
+                    await db.execute({
+                        sql: `UPDATE league_matches SET ${field} = ? WHERE id = ?`,
+                        args: [match.winnerId, nextMatchRes.rows[0].id]
+                    });
+                    return res.json({ success: true, message: `Advanced winner ${match.winnerId} to Round ${nextRound}, Match ${nextMatchNum}` });
+                }
+                return res.json({ success: true, message: 'Bracket updated, but next match not found (Final?)' });
+            }
+        }
+        res.json({ success: false, message: 'Match missing leagueMatchId or winnerId' });
+
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
