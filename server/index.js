@@ -619,6 +619,30 @@ app.post('/sync', async (req, res) => {
                             args: [round.score, round.stableford, round.hcpIndex, scoresJson, round.leagueId || null, existing.rows[0].id]
                         });
 
+                        // If it's a league round, ensure it's in league_rounds table (Upsert logic)
+                        if (round.leagueId) {
+                            const roundId = existing.rows[0].id;
+                            // Check if already exists in league_rounds
+                            const lrCheck = await db.execute({
+                                sql: 'SELECT id FROM league_rounds WHERE leagueId = ? AND roundId = ?',
+                                args: [round.leagueId, roundId]
+                            });
+
+                            if (lrCheck.rows.length > 0) {
+                                // Update points
+                                await db.execute({
+                                    sql: 'UPDATE league_rounds SET points = ? WHERE id = ?',
+                                    args: [round.stableford || 0, lrCheck.rows[0].id]
+                                });
+                            } else {
+                                // Insert
+                                await db.execute({
+                                    sql: 'INSERT INTO league_rounds (leagueId, roundId, points, date) VALUES (?, ?, ?, ?)',
+                                    args: [round.leagueId, roundId, round.stableford || 0, round.date]
+                                });
+                            }
+                        }
+
                     } else {
                         // Insert new round
                         const roundRes = await db.execute({
