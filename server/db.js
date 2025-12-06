@@ -193,6 +193,18 @@ export const initDB = async () => {
         )
       `);
 
+    await db.execute(`
+        CREATE TABLE IF NOT EXISTS league_rounds (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          leagueId INTEGER NOT NULL,
+          roundId INTEGER NOT NULL,
+          points REAL DEFAULT 0,
+          date DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
+          FOREIGN KEY(roundId) REFERENCES rounds(id) ON DELETE CASCADE
+        )
+      `);
+
     // Guest User
     try {
       await db.execute({

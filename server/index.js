@@ -88,6 +88,15 @@ app.get('/api/fix-db', async (req, res) => {
                 concedeDeadline DATETIME,
                 FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
                 FOREIGN KEY(matchId) REFERENCES matches(id) ON DELETE SET NULL
+            )`,
+            `CREATE TABLE IF NOT EXISTS league_rounds (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                leagueId INTEGER NOT NULL,
+                roundId INTEGER NOT NULL,
+                points REAL DEFAULT 0,
+                date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
+                FOREIGN KEY(roundId) REFERENCES rounds(id) ON DELETE CASCADE
             )`
         ];
 
@@ -602,102 +611,120 @@ app.post('/sync', async (req, res) => {
                             sql: 'UPDATE rounds SET score = ?, stableford = ?, hcpIndex = ?, scores = ?, leagueId = ? WHERE id = ?',
                             args: [round.score, round.stableford, round.hcpIndex, scoresJson, round.leagueId || null, existing.rows[0].id]
                         });
+                    });
                     } else {
-                        // Insert new round
-                        await db.execute({
-                            sql: `INSERT INTO rounds (userId, courseId, date, score, stableford, hcpIndex, scores, leagueId)
+    // Insert new round
+    const roundRes = await db.execute({
+        sql: `INSERT INTO rounds (userId, courseId, date, score, stableford, hcpIndex, scores, leagueId)
                                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                            args: [userId, round.courseId, round.date, round.score, round.stableford, round.hcpIndex, scoresJson, round.leagueId || null]
-                        });
-                    }
-                    results.rounds.success++;
-                } catch (roundError) {
-                    console.error("Failed to sync round:", round, roundError);
-                    results.rounds.failed++;
-                    results.rounds.errors.push({ round, error: roundError.message });
-                }
-            }
+        args: [userId, round.courseId, round.date, round.score, round.stableford, round.hcpIndex, scoresJson, round.leagueId || null]
+    });
+
+    // If it's a league round, ensure it's in league_rounds table
+    if (round.leagueId) {
+        const roundId = roundRes.lastInsertRowid.toString();
+        // Check if already exists in league_rounds (idempotency)
+        const lrCheck = await db.execute({
+            sql: 'SELECT id FROM league_rounds WHERE leagueId = ? AND roundId = ?',
+            args: [round.leagueId, roundId]
+        });
+
+        if (lrCheck.rows.length === 0) {
+            await db.execute({
+                sql: 'INSERT INTO league_rounds (leagueId, roundId, points, date) VALUES (?, ?, ?, ?)',
+                args: [round.leagueId, roundId, round.stableford || 0, round.date] // Default points to stableford score for now
+            });
         }
-
-        // 5. Process Matches
-        if (matches && matches.length) {
-            for (const match of matches) {
-                try {
-                    // Validation & Defaults
-                    const p2Id = match.player2Id || guestId;
-                    const scoresJson = JSON.stringify(match.scores || {});
-                    const matchDate = match.date || new Date().toISOString();
-                    const courseId = match.courseId || 1; // Default to course 1 if missing
-
-                    if (!match.date) console.warn(`Match missing date, using ${matchDate}`);
-                    if (!match.courseId) console.warn(`Match missing courseId, using ${courseId}`);
-
-                    // Ensure Player 2 exists (Self-healing for FK constraints)
-                    // Explicitly check if p2Id exists, even if it is guestId (just to be safe)
-                    const p2Check = await db.execute({
-                        sql: 'SELECT id FROM users WHERE id = ?',
-                        args: [p2Id]
-                    });
-
-                    if (p2Check.rows.length === 0) {
-                        console.log(`Player 2 (${p2Id}) missing on server. Auto-restoring...`);
-                        await db.execute({
-                            sql: "INSERT INTO users (id, username, handicap, handicapMode) VALUES (?, ?, ?, ?)",
-                            args: [p2Id, p2Id == 9999 ? 'Guest' : `Restored_User_${p2Id}`, 18.0, 'MANUAL']
-                        });
-                    }
-
-                    // Check if match exists (Upsert Logic)
-                    let existing = await db.execute({
-                        sql: 'SELECT id FROM matches WHERE player1Id = ? AND player2Id = ? AND courseId = ? AND date = ?',
-                        args: [match.player1Id, p2Id, courseId, matchDate]
-                    });
-
-                    // If not found, check if it's a Guest match we should claim
-                    if (existing.rows.length === 0 && p2Id !== guestId) {
-                        const guestMatch = await db.execute({
-                            sql: 'SELECT id FROM matches WHERE player1Id = ? AND player2Id = ? AND courseId = ? AND date = ?',
-                            args: [match.player1Id, guestId, courseId, matchDate]
-                        });
-
-                        if (guestMatch.rows.length > 0) {
-                            console.log(`Linking Guest match ${guestMatch.rows[0].id} to Real User ${p2Id}`);
-                            existing = guestMatch;
-                            await db.execute({
-                                sql: 'UPDATE matches SET player2Id = ? WHERE id = ?',
-                                args: [p2Id, existing.rows[0].id]
-                            });
-                        }
-                    }
-
-                    if (existing.rows.length > 0) {
-                        // Update existing match
-                        await db.execute({
-                            sql: 'UPDATE matches SET winnerId = ?, status = ?, scores = ?, player1Differential = ?, player2Differential = ?, countForHandicap = ? WHERE id = ?',
-                            args: [match.winnerId, match.status, scoresJson, match.player1Differential || null, match.player2Differential || null, match.countForHandicap, existing.rows[0].id]
-                        });
-                    } else {
-                        // Insert new match
-                        await db.execute({
-                            sql: `INSERT INTO matches (player1Id, player2Id, courseId, date, winnerId, status, scores, player1Differential, player2Differential, countForHandicap)
-                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                            args: [match.player1Id, p2Id, courseId, matchDate, match.winnerId, match.status, scoresJson, match.player1Differential || null, match.player2Differential || null, match.countForHandicap]
-                        });
-                    }
-                    results.matches.success++;
-                } catch (matchError) {
-                    console.error("Failed to sync match:", match, matchError);
-                    results.matches.failed++;
-                    results.matches.errors.push({ match, error: matchError.message });
-                }
-            }
-        }
-
-        res.json({ success: true, message: 'Synced successfully', results });
-    } catch (error) {
-        console.error("Sync Error:", error);
-        res.status(500).json({ error: error.message, stack: error.stack });
     }
+}
+results.rounds.success++;
+                } catch (roundError) {
+    console.error("Failed to sync round:", round, roundError);
+    results.rounds.failed++;
+    results.rounds.errors.push({ round, error: roundError.message });
+}
+            }
+        }
+
+// 5. Process Matches
+if (matches && matches.length) {
+    for (const match of matches) {
+        try {
+            // Validation & Defaults
+            const p2Id = match.player2Id || guestId;
+            const scoresJson = JSON.stringify(match.scores || {});
+            const matchDate = match.date || new Date().toISOString();
+            const courseId = match.courseId || 1; // Default to course 1 if missing
+
+            if (!match.date) console.warn(`Match missing date, using ${matchDate}`);
+            if (!match.courseId) console.warn(`Match missing courseId, using ${courseId}`);
+
+            // Ensure Player 2 exists (Self-healing for FK constraints)
+            // Explicitly check if p2Id exists, even if it is guestId (just to be safe)
+            const p2Check = await db.execute({
+                sql: 'SELECT id FROM users WHERE id = ?',
+                args: [p2Id]
+            });
+
+            if (p2Check.rows.length === 0) {
+                console.log(`Player 2 (${p2Id}) missing on server. Auto-restoring...`);
+                await db.execute({
+                    sql: "INSERT INTO users (id, username, handicap, handicapMode) VALUES (?, ?, ?, ?)",
+                    args: [p2Id, p2Id == 9999 ? 'Guest' : `Restored_User_${p2Id}`, 18.0, 'MANUAL']
+                });
+            }
+
+            // Check if match exists (Upsert Logic)
+            let existing = await db.execute({
+                sql: 'SELECT id FROM matches WHERE player1Id = ? AND player2Id = ? AND courseId = ? AND date = ?',
+                args: [match.player1Id, p2Id, courseId, matchDate]
+            });
+
+            // If not found, check if it's a Guest match we should claim
+            if (existing.rows.length === 0 && p2Id !== guestId) {
+                const guestMatch = await db.execute({
+                    sql: 'SELECT id FROM matches WHERE player1Id = ? AND player2Id = ? AND courseId = ? AND date = ?',
+                    args: [match.player1Id, guestId, courseId, matchDate]
+                });
+
+                if (guestMatch.rows.length > 0) {
+                    console.log(`Linking Guest match ${guestMatch.rows[0].id} to Real User ${p2Id}`);
+                    existing = guestMatch;
+                    await db.execute({
+                        sql: 'UPDATE matches SET player2Id = ? WHERE id = ?',
+                        args: [p2Id, existing.rows[0].id]
+                    });
+                }
+            }
+
+            if (existing.rows.length > 0) {
+                // Update existing match
+                await db.execute({
+                    sql: 'UPDATE matches SET winnerId = ?, status = ?, scores = ?, player1Differential = ?, player2Differential = ?, countForHandicap = ? WHERE id = ?',
+                    args: [match.winnerId, match.status, scoresJson, match.player1Differential || null, match.player2Differential || null, match.countForHandicap, existing.rows[0].id]
+                });
+            } else {
+                // Insert new match
+                await db.execute({
+                    sql: `INSERT INTO matches (player1Id, player2Id, courseId, date, winnerId, status, scores, player1Differential, player2Differential, countForHandicap)
+                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    args: [match.player1Id, p2Id, courseId, matchDate, match.winnerId, match.status, scoresJson, match.player1Differential || null, match.player2Differential || null, match.countForHandicap]
+                });
+            }
+            results.matches.success++;
+        } catch (matchError) {
+            console.error("Failed to sync match:", match, matchError);
+            results.matches.failed++;
+            results.matches.errors.push({ match, error: matchError.message });
+        }
+    }
+}
+
+res.json({ success: true, message: 'Synced successfully', results });
+    } catch (error) {
+    console.error("Sync Error:", error);
+    res.status(500).json({ error: error.message, stack: error.stack });
+}
 });
 
 // --- Course Routes ---
@@ -899,12 +926,14 @@ app.get('/api/leagues/:id/standings', async (req, res) => {
         // If Strokeplay, calculate points dynamically based on rounds
         // If Strokeplay, calculate points dynamically based on rounds
         if (league.type === 'STROKE') {
-            // 1. Fetch all rounds for this league
+            // 1. Fetch all rounds for this league via league_rounds table
+            // We join rounds to get the score details, and users to get player info
             const roundsRes = await db.execute({
-                sql: `SELECT r.*, u.username, u.avatar 
-                      FROM rounds r 
+                sql: `SELECT r.*, lr.points as leaguePoints, u.username, u.avatar 
+                      FROM league_rounds lr
+                      JOIN rounds r ON lr.roundId = r.id
                       JOIN users u ON r.userId = u.id 
-                      WHERE r.leagueId = ? AND r.score IS NOT NULL
+                      WHERE lr.leagueId = ?
                       ORDER BY r.date DESC`,
                 args: [leagueId]
             });
@@ -972,7 +1001,8 @@ app.get('/api/leagues/:id/standings', async (req, res) => {
 
         res.json({
             league: { ...league, settings: JSON.parse(league.settings || '{}') },
-            standings: members.sort((a, b) => b.points - a.points)
+            standings: members.sort((a, b) => b.points - a.points),
+            rounds: (league.type === 'STROKE' ? rounds : []) // Return rounds for display
         });
     } catch (error) {
         res.status(500).json({ error: error.message });

@@ -9,6 +9,7 @@ export const LeagueDetails = () => {
     const { user } = useUser();
     const [league, setLeague] = useState(null);
     const [standings, setStandings] = useState([]);
+    const [recentRounds, setRecentRounds] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -17,8 +18,10 @@ export const LeagueDetails = () => {
                 const res = await fetch(`/api/leagues/${id}/standings`);
                 if (res.ok) {
                     const data = await res.json();
+                    const data = await res.json();
                     setLeague(data.league);
                     setStandings(data.standings);
+                    setRecentRounds(data.rounds || []); // Expecting rounds in response now
                 }
             } catch (error) {
                 console.error("Failed to fetch league details", error);
@@ -113,6 +116,37 @@ export const LeagueDetails = () => {
                 {standings.length === 0 && (
                     <div className="p-8 text-center text-muted">
                         No members yet. Invite friends!
+                    </div>
+                )}
+            </div>
+
+            {/* Recent Rounds */}
+            <h2 className="text-lg font-bold text-dark mb-4 px-2 mt-8">Recent Rounds</h2>
+            <div className="bg-white rounded-3xl shadow-sm border border-stone-100 overflow-hidden">
+                {recentRounds.map((round) => (
+                    <div key={round.id} className="flex items-center p-4 border-b border-stone-100 last:border-none">
+                        <div className="w-10 h-10 rounded-full bg-stone-200 overflow-hidden mr-4">
+                            {round.avatar ? (
+                                <img src={round.avatar} alt={round.username} className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-stone-400 font-bold">
+                                    {round.username[0]}
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex-1">
+                            <div className="font-bold text-dark">{round.username}</div>
+                            <div className="text-xs text-muted">{new Date(round.date).toLocaleDateString()}</div>
+                        </div>
+                        <div className="text-right">
+                            <div className="font-bold text-primary">{round.stableford} <span className="text-xs font-normal text-muted">pts</span></div>
+                            <div className="text-xs text-muted">{round.score} strokes</div>
+                        </div>
+                    </div>
+                ))}
+                {recentRounds.length === 0 && (
+                    <div className="p-8 text-center text-muted">
+                        No rounds played yet.
                     </div>
                 )}
             </div>
