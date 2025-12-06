@@ -836,7 +836,7 @@ app.post('/sync', async (req, res) => {
                         // Update existing match
                         await db.execute({
                             sql: 'UPDATE matches SET winnerId = ?, status = ?, scores = ?, player1Differential = ?, player2Differential = ?, countForHandicap = ?, leagueMatchId = ? WHERE id = ?',
-                            args: [match.winnerId, match.status, scoresJson, match.player1Differential || null, match.player2Differential || null, match.countForHandicap, match.leagueMatchId || null, existing.rows[0].id]
+                            args: [match.winnerId, match.status, scoresJson, match.player1Differential || null, match.player2Differential || null, match.countForHandicap || 0, match.leagueMatchId || null, existing.rows[0].id]
                         });
 
                         // Tournament Bracket Update Logic
@@ -881,7 +881,7 @@ app.post('/sync', async (req, res) => {
                         const newMatch = await db.execute({
                             sql: `INSERT INTO matches (player1Id, player2Id, courseId, date, winnerId, status, scores, player1Differential, player2Differential, countForHandicap, leagueMatchId)
                                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                            args: [match.player1Id, p2Id, courseId, matchDate, match.winnerId, match.status, scoresJson, match.player1Differential || null, match.player2Differential || null, match.countForHandicap, match.leagueMatchId || null]
+                            args: [match.player1Id, p2Id, courseId, matchDate, match.winnerId, match.status, scoresJson, match.player1Differential || null, match.player2Differential || null, match.countForHandicap || 0, match.leagueMatchId || null]
                         });
 
                         // Tournament Bracket Update Logic (Same for Insert)
