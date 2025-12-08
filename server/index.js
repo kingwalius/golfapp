@@ -956,6 +956,17 @@ app.get('/courses', async (req, res) => {
 app.post('/courses', async (req, res) => {
     const { name, holes, rating, slope, par } = req.body;
     try {
+        // Check for existing course by name (Case Insensitive)
+        const existing = await db.execute({
+            sql: 'SELECT id FROM courses WHERE name = ? COLLATE NOCASE',
+            args: [name]
+        });
+
+        if (existing.rows.length > 0) {
+            console.log(`Course exists: ${name} (${existing.rows[0].id}). Returning existing ID.`);
+            return res.json({ id: existing.rows[0].id.toString(), success: true, message: 'Course already exists' });
+        }
+
         const result = await db.execute({
             sql: 'INSERT INTO courses (name, holes, rating, slope, par) VALUES (?, ?, ?, ?, ?)',
             args: [name, JSON.stringify(holes), rating, slope, par]
@@ -1374,6 +1385,195 @@ app.post('/api/leagues/:id/start-tournament', async (req, res) => {
     }
 });
 
+
+// Start Team Tournament (Ryder Cup Style)
+app.post('/api/leagues/:id/start-team-tournament', async (req, res) => {
+    const leagueId = req.params.id;
+    const { userId } = req.body;
+
+    try {
+        // Self-healing: Ensure team column exists in league_members
+        try {
+            await db.execute("SELECT team FROM league_members LIMIT 1");
+        } catch (e) {
+            if (e.message && (e.message.includes('no such column') || e.message.includes('column not found'))) {
+                console.log('Adding missing team column to league_members...');
+                try {
+                    await db.execute("ALTER TABLE league_members ADD COLUMN team TEXT");
+                } catch (alterError) {
+                    console.error("Failed to add team column:", alterError);
+                }
+            }
+        }
+
+        // 1. Verify Admin & League Type
+        const leagueRes = await db.execute({
+            sql: 'SELECT * FROM leagues WHERE id = ?',
+            args: [leagueId]
+        });
+        if (leagueRes.rows.length === 0) return res.status(404).json({ error: 'League not found' });
+        const league = leagueRes.rows[0];
+
+        // Parse settings safe
+        let settings = {};
+        try { settings = JSON.parse(league.settings || '{}'); } catch (e) { }
+
+        if (league.adminId !== userId) return res.status(403).json({ error: 'Only admin can start tournament' });
+        if (league.type !== 'TEAM') return res.status(400).json({ error: 'League is not Team Cup format' });
+
+        if (settings.tournamentStatus && settings.tournamentStatus !== 'SETUP') {
+            return res.status(400).json({ error: 'Tournament already started' });
+        }
+
+        // 2. Fetch Members with Handicaps
+        // We need accurate handicaps for balancing. Use users table.
+        const membersRes = await db.execute({
+            sql: `
+                SELECT lm.userId, u.handicap, u.username
+                FROM league_members lm
+                JOIN users u ON lm.userId = u.id
+                WHERE lm.leagueId = ?
+            `,
+            args: [leagueId]
+        });
+
+        let members = membersRes.rows;
+        if (members.length < 2) return res.status(400).json({ error: 'Need at least 2 players' });
+
+        // Optimize: Ensure even number? 
+        // If odd, we can still proceed but one team will have +1 player.
+        // User requested balanced teams.
+
+        // 3. Balanced Distribution (Snake Draft based on Handicap)
+        // Sort by handicap ascending (low to high)
+        members.sort((a, b) => (a.handicap || 54) - (b.handicap || 54));
+
+        const teamGreenIds = [];
+        const teamGoldIds = [];
+
+        // Snake Distribution:
+        // Index: 0 -> Green
+        // Index: 1 -> Gold
+        // Index: 2 -> Gold
+        // Index: 3 -> Green
+        // Index: 4 -> Green ...
+        // Pattern: A, B, B, A, A, B, B, A...
+
+        members.forEach((member, index) => {
+            const cycle = index % 4;
+            if (cycle === 0 || cycle === 3) {
+                teamGreenIds.push(member.userId);
+            } else {
+                teamGoldIds.push(member.userId);
+            }
+        });
+
+        // Update DB with Team Assignments
+        for (const uid of teamGreenIds) {
+            await db.execute("UPDATE league_members SET team = 'GREEN' WHERE leagueId = ? AND userId = ?", [leagueId, uid]);
+        }
+        for (const uid of teamGoldIds) {
+            await db.execute("UPDATE league_members SET team = 'GOLD' WHERE leagueId = ? AND userId = ?", [leagueId, uid]);
+        }
+
+        // 4. Select Captains (Randomly)
+        const greenCaptainId = teamGreenIds[Math.floor(Math.random() * teamGreenIds.length)];
+        const goldCaptainId = teamGoldIds[Math.floor(Math.random() * teamGoldIds.length)];
+
+        // 5. Update League Settings
+        const numMatches = Math.min(teamGreenIds.length, teamGoldIds.length); // Pairs
+        const winningScore = (numMatches / 2) + 0.5;
+
+        settings.captainGreenId = greenCaptainId;
+        settings.captainGoldId = goldCaptainId;
+        settings.formattedWinningScore = winningScore;
+        settings.tournamentStatus = 'PAIRING';
+        settings.team1Name = 'Green Team';
+        settings.team2Name = 'Gold Team';
+
+        await db.execute({
+            sql: 'UPDATE leagues SET settings = ? WHERE id = ?',
+            args: [JSON.stringify(settings), leagueId]
+        });
+
+        res.json({
+            success: true,
+            teams: { green: teamGreenIds, gold: teamGoldIds },
+            captains: { green: greenCaptainId, gold: goldCaptainId }
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+// Submit Team Lineup (Captain Only)
+app.post('/api/leagues/:id/submit-lineup', async (req, res) => {
+    const leagueId = req.params.id;
+    const { userId, lineup, team } = req.body; // team = 'GREEN' or 'GOLD', lineup = [userId1, userId2...]
+
+    try {
+        // 1. Fetch League & Settings
+        const leagueRes = await db.execute({ sql: 'SELECT * FROM leagues WHERE id = ?', args: [leagueId] });
+        if (leagueRes.rows.length === 0) return res.status(404).json({ error: 'League not found' });
+        const league = leagueRes.rows[0];
+        let settings = {};
+        try { settings = JSON.parse(league.settings || '{}'); } catch (e) { }
+
+        // 2. Verify Captain
+        if (team === 'GREEN' && settings.captainGreenId !== userId) return res.status(403).json({ error: 'Not Green Captain' });
+        if (team === 'GOLD' && settings.captainGoldId !== userId) return res.status(403).json({ error: 'Not Gold Captain' });
+
+        // 3. Save Lineup
+        if (team === 'GREEN') settings.lineupGreen = lineup;
+        if (team === 'GOLD') settings.lineupGold = lineup;
+
+        // 4. Check if we can Pair
+        if (settings.lineupGreen && settings.lineupGold) {
+            console.log("Both lineups submitted. Generating Matches...");
+
+            // Validate Lengths match (or handle mismatch)
+            const len = Math.min(settings.lineupGreen.length, settings.lineupGold.length);
+
+            for (let i = 0; i < len; i++) {
+                const p1 = settings.lineupGreen[i];
+                const p2 = settings.lineupGold[i];
+
+                // Create Server-Side Match
+                // Note: We don't know the course yet. Users will pick it when playing?
+                // Or is the tournament strictly on one course?
+                // For Ryder Cup, usually one course. But here?
+                // Let's create the 'league_match' record (The Pairing).
+                // The 'match' record (The actual scorecard) might be created later or now with a placeholder course?
+                // Issue: If we create 'matches' record now, we need courseId.
+                // Solution: We ONLY create 'league_matches' (The Pairing).
+                // Users will "Start Match" from the Dashboard, which will create the 'match' record linked to this pairing.
+
+                await db.execute({
+                    sql: `INSERT INTO league_matches (leagueId, roundNumber, matchNumber, player1Id, player2Id, winnerId) 
+                          VALUES (?, ?, ?, ?, ?, ?)`,
+                    args: [leagueId, 1, i + 1, p1, p2, null]
+                });
+            }
+
+            settings.tournamentStatus = 'PLAYING';
+        }
+
+        await db.execute({
+            sql: 'UPDATE leagues SET settings = ? WHERE id = ?',
+            args: [JSON.stringify(settings), leagueId]
+        });
+
+        res.json({ success: true, status: settings.tournamentStatus });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.get('/api/leagues/:id/standings', async (req, res) => {
     const leagueId = req.params.id;
     try {
@@ -1388,7 +1588,7 @@ app.get('/api/leagues/:id/standings', async (req, res) => {
         // Get Members
         const membersRes = await db.execute({
             sql: `
-                SELECT u.id, u.username, u.avatar, u.handicap, lm.points
+                SELECT u.id, u.username, u.avatar, u.handicap, lm.points, lm.team
                 FROM league_members lm
                 JOIN users u ON lm.userId = u.id
                 WHERE lm.leagueId = ?
@@ -1552,10 +1752,12 @@ app.get('/api/leagues/:id/matches', async (req, res) => {
             sql: `
                 SELECT lm.*, 
                        u1.username as p1Name, 
-                       u2.username as p2Name
+                       u2.username as p2Name,
+                       m.status as status
                 FROM league_matches lm
                 LEFT JOIN users u1 ON lm.player1Id = u1.id
                 LEFT JOIN users u2 ON lm.player2Id = u2.id
+                LEFT JOIN matches m ON lm.matchId = m.id
                 WHERE lm.leagueId = ?
                 ORDER BY lm.roundNumber, lm.matchNumber
             `,

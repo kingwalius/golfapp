@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, Calendar, Trophy, Share2, Trash2, LogOut, Swords, RefreshCw } from 'lucide-react';
 import { useUser } from '../../lib/store';
 import { BracketView } from './BracketView';
+import { TeamLeagueDashboard } from './TeamLeagueDashboard';
 
 export const LeagueDetails = () => {
     const { id } = useParams();
@@ -182,6 +183,24 @@ export const LeagueDetails = () => {
                     isAdmin={league.adminId === user?.id}
                     onStartTournament={handleStartTournament}
                     onResetTournament={handleResetTournament}
+                />
+            ) : league.type === 'TEAM' ? (
+                <TeamLeagueDashboard
+                    league={league}
+                    members={standings} // reusing standing state which contains members
+                    matches={events} // reusing events state which contains matches/events
+                    onStartTournament={() => fetch(`/api/leagues/${id}/start-team-tournament`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: user.id })
+                    }).then(res => res.json()).then(data => {
+                        if (data.success) {
+                            alert("Teams Assigned! Green vs Gold.");
+                            window.location.reload();
+                        } else {
+                            alert(data.error);
+                        }
+                    })}
                 />
             ) : (
                 <>
