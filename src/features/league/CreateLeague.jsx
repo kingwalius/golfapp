@@ -92,7 +92,11 @@ export const CreateLeague = () => {
                             </button>
 
                             <button
-                                onClick={() => setFormData({ ...formData, type: 'TEAM' })}
+                                onClick={() => setFormData({
+                                    ...formData,
+                                    type: 'TEAM',
+                                    settings: { ...formData.settings, tournamentStatus: 'SETUP' }
+                                })}
                                 className={`p-4 rounded-xl border-2 text-left transition ${formData.type === 'TEAM' ? 'border-primary bg-primary/5' : 'border-stone-100 bg-stone-50'}`}
                             >
                                 <div className="flex items-center gap-3 mb-1">
@@ -101,6 +105,7 @@ export const CreateLeague = () => {
                                 </div>
                                 <p className="text-xs text-muted">Two teams (Green vs Gold). Head-to-head matchups.</p>
                             </button>
+
                         </div>
                     </div>
                 </div>

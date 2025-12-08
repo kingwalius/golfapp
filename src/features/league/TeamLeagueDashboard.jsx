@@ -53,9 +53,11 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
         }
     });
 
-    const formattedStatus = settings.tournamentStatus === 'SETUP' ? 'Setup Phase'
-        : settings.tournamentStatus === 'PAIRING' ? 'Captains Selecting Pairings'
-            : settings.tournamentStatus === 'PLAYING' ? 'Matches in Progress'
+    const status = settings.tournamentStatus || 'SETUP';
+
+    const formattedStatus = status === 'SETUP' ? 'Setup Phase'
+        : status === 'PAIRING' ? 'Captains Selecting Pairings'
+            : status === 'PLAYING' ? 'Matches in Progress'
                 : 'Tournament Completed';
 
     const submittedGreen = settings.lineupGreen;
@@ -124,7 +126,7 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
                         <Swords size={16} />
                         <span className="font-bold">{formattedStatus}</span>
                     </div>
-                    {settings.tournamentStatus === 'SETUP' && isAdmin ? (
+                    {status === 'SETUP' && isAdmin ? (
                         <button
                             onClick={onStartTournament}
                             className="bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg transition transform hover:scale-105"
@@ -139,13 +141,13 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
                 </div>
 
                 {/* Progress Bar */}
-                {settings.tournamentStatus === 'PLAYING' && (
+                {status === 'PLAYING' && (
                     <div className="absolute bottom-0 left-0 h-1 bg-emerald-500 transition-all duration-1000" style={{ width: `${(greenScore / (greenScore + goldScore || 1)) * 100}%` }}></div>
                 )}
             </div>
 
             {/* Captains Area */}
-            {settings.tournamentStatus === 'PAIRING' && isCaptain && (
+            {status === 'PAIRING' && isCaptain && (
                 <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 shadow-lg text-white">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
@@ -180,7 +182,7 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
             )}
 
             {/* Matches List (If Playing) */}
-            {settings.tournamentStatus === 'PLAYING' && (
+            {status === 'PLAYING' && (
                 <div className="space-y-3">
                     <h3 className="font-bold text-dark px-2">Matches</h3>
                     {leagueMatches.length === 0 && (
@@ -235,7 +237,7 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
             )}
 
             {/* Teams Lists (Only show when NOT playing, or push to bottom) */}
-            {settings.tournamentStatus !== 'PLAYING' && (
+            {status !== 'PLAYING' && (
                 <div className="grid grid-cols-2 gap-4 mt-8">
                     {/* Green Team */}
                     <div className="bg-white rounded-2xl p-4 shadow-sm border-t-4 border-emerald-500">
