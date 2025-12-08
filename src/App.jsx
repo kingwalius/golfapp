@@ -35,7 +35,9 @@ function App() {
               <Route path="play" element={<Play />} />
               <Route path="play/:id" element={<Scorecard />} />
               <Route path="matchplay" element={<MatchplaySetup />} />
+              <Route path="match-setup" element={<MatchplaySetup />} />
               <Route path="matchplay/:id" element={<MatchplayScorecard />} />
+
               <Route path="/profile" element={<Profile />} />
               <Route path="league" element={<LeagueDashboard />} />
               <Route path="league/create" element={<CreateLeague />} />
