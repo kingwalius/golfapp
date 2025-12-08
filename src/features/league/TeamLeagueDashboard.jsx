@@ -29,7 +29,7 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
 
     // Fetch matches if Playing
     useEffect(() => {
-        if (settings.tournamentStatus === 'PLAYING' || settings.tournamentStatus === 'COMPLETED') {
+        if (settings.tournamentStatus === 'PLAYING' || settings.tournamentStatus === 'COMPLETED' || settings.tournamentStatus === 'PLAYING_SD') {
             fetch(`/api/leagues/${league.id}/matches`)
                 .then(res => res.json())
                 .then(data => {
@@ -58,10 +58,14 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
     const formattedStatus = status === 'SETUP' ? 'Setup Phase'
         : status === 'PAIRING' ? 'Captains Selecting Pairings'
             : status === 'PLAYING' ? 'Matches in Progress'
-                : 'Tournament Completed';
+                : status === 'SUDDEN_DEATH' ? 'Sudden Death: Captains Picking'
+                    : status === 'PLAYING_SD' ? 'Sudden Death Match!'
+                        : 'Tournament Completed';
 
     const submittedGreen = settings.lineupGreen;
     const submittedGold = settings.lineupGold;
+    const sdGreen = settings.suddenDeathGreen;
+    const sdGold = settings.suddenDeathGold;
 
     const handleSaveLineup = async (lineup) => {
         try {
@@ -84,6 +88,17 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
         }
     };
 
+    const handleSuddenDeathPick = async (playerId) => {
+        try {
+            await fetch(`/api/leagues/${league.id}/submit-sudden-death`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.id, team: myTeam, playerId })
+            });
+            window.location.reload();
+        } catch (e) { console.error(e); }
+    };
+
     const handlePlayMatch = (match) => {
         // Find opponent
         const isP1 = match.player1Id === user.id;
@@ -102,7 +117,7 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
     return (
         <div className="space-y-6">
             {/* Scoreboard */}
-            <div className="bg-dark text-white rounded-3xl p-6 shadow-xl overflow-hidden relative">
+            <div className={`text-white rounded-3xl p-6 shadow-xl overflow-hidden relative ${status.includes('SD') || status.includes('SUDDEN') ? 'bg-rose-900' : 'bg-dark'}`}>
                 <div className="flex justify-between items-center relative z-10">
                     <div className="text-center w-5/12">
                         <h2 className="text-emerald-400 font-bold text-lg mb-1">{settings.team1Name || 'Green Team'}</h2>
@@ -133,12 +148,42 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
                         >
                             Start Draft
                         </button>
-                    ) : status === 'PLAYING' && isAdmin && leagueMatches.length > 0 && completedMatches === leagueMatches.length ? (
+                    ) : status === 'PLAYING' && isAdmin && leagueMatches.length > 0 && completedMatches === leagueMatches.length && greenScore === goldScore ? (
+                        <div className="flex gap-2">
+                            <button
+                                onClick={async () => {
+                                    if (!window.confirm("Start Sudden Death Tie-Breaker? Captains will pick 1 player each.")) return;
+                                    await fetch(`/api/leagues/${league.id}/start-sudden-death`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ userId: user.id })
+                                    });
+                                    window.location.reload();
+                                }}
+                                className="bg-rose-500 hover:bg-rose-400 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg transition transform hover:scale-105"
+                            >
+                                Start Sudden Death
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    if (!window.confirm("End as Draw?")) return;
+                                    await fetch(`/api/leagues/${league.id}/complete-tournament`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ userId: user.id, winner: 'DRAW' })
+                                    });
+                                    window.location.reload();
+                                }}
+                                className="bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-xl font-bold text-xs"
+                            >
+                                Draw
+                            </button>
+                        </div>
+                    ) : status.includes('PLAYING') && isAdmin && completedMatches === leagueMatches.length ? (
                         <button
                             onClick={async () => {
                                 const winner = greenScore > goldScore ? 'GREEN' : greenScore < goldScore ? 'GOLD' : 'DRAW';
-                                if (!window.confirm(`End tournament? Result: ${winner}`)) return;
-
+                                if (!window.confirm(`Finalize Tournament? Winner: ${winner}`)) return;
                                 await fetch(`/api/leagues/${league.id}/complete-tournament`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -148,17 +193,17 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
                             }}
                             className="bg-amber-500 hover:bg-amber-400 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg transition transform hover:scale-105"
                         >
-                            {greenScore === goldScore ? 'End as Draw' : 'Finalize Tournament'}
+                            Finalize Tournament
                         </button>
                     ) : (
                         <div className="text-xs text-white/40">
-                            {leagueMatches.length > 0 ? `${leagueMatches.length} Matches` : 'Waiting for Pairings'}
+                            {leagueMatches.length > 0 ? `${leagueMatches.length} Matches` : 'Waiting...'}
                         </div>
                     )}
                 </div>
 
                 {/* Progress Bar */}
-                {status === 'PLAYING' && (
+                {(status === 'PLAYING' || status === 'PLAYING_SD') && (
                     <div className="absolute bottom-0 left-0 h-1 bg-emerald-500 transition-all duration-1000" style={{ width: `${(greenScore / (greenScore + goldScore || 1)) * 100}%` }}></div>
                 )}
             </div>
@@ -185,6 +230,40 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
                             Manage Lineup
                         </button>
                     </div>
+                </div>
+            )}
+
+            {status === 'SUDDEN_DEATH' && isCaptain && (
+                <div className="bg-gradient-to-r from-rose-500 to-pink-600 rounded-2xl p-6 shadow-lg text-white">
+                    <div className="flex items-center gap-3 mb-4">
+                        <Swords className="text-white" size={24} />
+                        <div>
+                            <h3 className="font-bold text-lg">Sudden Death Selection</h3>
+                            <p className="text-white/80 text-sm">Pick your champion for the tie-breaker.</p>
+                        </div>
+                    </div>
+                    {(myTeam === 'GREEN' && sdGreen) || (myTeam === 'GOLD' && sdGold) ? (
+                        <div className="bg-white/20 p-3 rounded-xl text-center font-bold">
+                            Selection Locked. Waiting for opponent...
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 gap-2">
+                            {(myTeam === 'GREEN' ? greenTeam : goldTeam).map(m => (
+                                <button
+                                    key={m.id}
+                                    onClick={() => {
+                                        if (confirm(`Pick ${m.username} for Sudden Death?`)) handleSuddenDeathPick(m.id);
+                                    }}
+                                    className="p-3 bg-white/10 hover:bg-white/30 rounded-xl text-left flex items-center gap-2 transition"
+                                >
+                                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
+                                        {m.username[0]}
+                                    </div>
+                                    <span className="font-bold text-sm">{m.username}</span>
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
 

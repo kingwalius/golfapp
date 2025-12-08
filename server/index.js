@@ -1776,6 +1776,99 @@ app.post('/api/leagues/:id/complete-tournament', async (req, res) => {
     }
 });
 
+// Start Sudden Death
+app.post('/api/leagues/:id/start-sudden-death', async (req, res) => {
+    const { id } = req.params;
+    const { userId } = req.body;
+
+    try {
+        const leagueRes = await db.execute({
+            sql: 'SELECT * FROM leagues WHERE id = ?',
+            args: [id]
+        });
+
+        if (leagueRes.rows.length === 0) return res.status(404).json({ error: 'League not found' });
+        const league = leagueRes.rows[0];
+
+        if (league.adminId !== userId) return res.status(403).json({ error: 'Only admin can start sudden death' });
+
+        const settings = JSON.parse(league.settings || '{}');
+        settings.tournamentStatus = 'SUDDEN_DEATH';
+        // Clear previous playoff picks if any
+        settings.suddenDeathGreen = null;
+        settings.suddenDeathGold = null;
+
+        await db.execute({
+            sql: 'UPDATE leagues SET settings = ? WHERE id = ?',
+            args: [JSON.stringify(settings), id]
+        });
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Error starting sudden death:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Submit Sudden Death Pick
+app.post('/api/leagues/:id/submit-sudden-death', async (req, res) => {
+    const { id } = req.params;
+    const { userId, playerId, team } = req.body; // userId is captain
+
+    try {
+        const leagueRes = await db.execute({
+            sql: 'SELECT * FROM leagues WHERE id = ?',
+            args: [id]
+        });
+        if (leagueRes.rows.length === 0) return res.status(404).json({ error: 'League not found' });
+
+        const settings = JSON.parse(leagueRes.rows[0].settings || '{}');
+
+        // Verify Captain
+        if (team === 'GREEN' && settings.captainGreenId !== userId) return res.status(403).json({ error: 'Not Green Captain' });
+        if (team === 'GOLD' && settings.captainGoldId !== userId) return res.status(403).json({ error: 'Not Gold Captain' });
+
+        // Save Pick
+        if (team === 'GREEN') settings.suddenDeathGreen = playerId;
+        if (team === 'GOLD') settings.suddenDeathGold = playerId;
+
+        // Check if both picked
+        if (settings.suddenDeathGreen && settings.suddenDeathGold) {
+            console.log("Both captains picked for Sudden Death. Generating Match...");
+
+            // Generate Match
+            const p1 = settings.suddenDeathGreen;
+            const p2 = settings.suddenDeathGold;
+
+            // Get next match number (Max + 1)
+            const matchesCheck = await db.execute({
+                sql: 'SELECT MAX(matchNumber) as maxNum FROM league_matches WHERE leagueId = ?',
+                args: [id]
+            });
+            const nextMatchNum = (matchesCheck.rows[0].maxNum || 0) + 1;
+
+            await db.execute({
+                sql: `INSERT INTO league_matches (leagueId, roundNumber, matchNumber, player1Id, player2Id, winnerId) 
+                      VALUES (?, ?, ?, ?, ?, ?)`,
+                args: [id, 99, nextMatchNum, p1, p2, null] // Round 99 for Sudden Death
+            });
+
+            settings.tournamentStatus = 'PLAYING_SD';
+        }
+
+        await db.execute({
+            sql: 'UPDATE leagues SET settings = ? WHERE id = ?',
+            args: [JSON.stringify(settings), id]
+        });
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Error submit sudden death:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
 // Get League Matches (Bracket)
 app.get('/api/leagues/:id/matches', async (req, res) => {
     const leagueId = req.params.id;
