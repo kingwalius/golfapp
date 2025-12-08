@@ -278,7 +278,7 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
             )}
 
             {/* Matches List (If Playing) */}
-            {status === 'PLAYING' && (
+            {(status === 'PLAYING' || status === 'PLAYING_SD') && (
                 <div className="space-y-3">
                     <h3 className="font-bold text-dark px-2">Matches</h3>
                     {leagueMatches.length === 0 && (
