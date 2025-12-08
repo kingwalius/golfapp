@@ -1744,6 +1744,38 @@ app.get('/api/leagues/:id/standings', async (req, res) => {
     }
 });
 
+// Complete Tournament
+app.post('/api/leagues/:id/complete-tournament', async (req, res) => {
+    const { id } = req.params;
+    const { userId, winner } = req.body;
+
+    try {
+        const leagueRes = await db.execute({
+            sql: 'SELECT * FROM leagues WHERE id = ?',
+            args: [id]
+        });
+
+        if (leagueRes.rows.length === 0) return res.status(404).json({ error: 'League not found' });
+        const league = leagueRes.rows[0];
+
+        if (league.adminId !== userId) return res.status(403).json({ error: 'Only admin can complete tournament' });
+
+        const settings = JSON.parse(league.settings || '{}');
+        settings.tournamentStatus = 'COMPLETED';
+        settings.winner = winner; // 'GREEN', 'GOLD', or 'DRAW'
+
+        await db.execute({
+            sql: 'UPDATE leagues SET settings = ? WHERE id = ?',
+            args: [JSON.stringify(settings), id]
+        });
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Error completing tournament:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Get League Matches (Bracket)
 app.get('/api/leagues/:id/matches', async (req, res) => {
     const leagueId = req.params.id;

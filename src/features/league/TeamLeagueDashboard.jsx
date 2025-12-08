@@ -133,6 +133,23 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
                         >
                             Start Draft
                         </button>
+                    ) : status === 'PLAYING' && isAdmin && leagueMatches.length > 0 && completedMatches === leagueMatches.length ? (
+                        <button
+                            onClick={async () => {
+                                const winner = greenScore > goldScore ? 'GREEN' : greenScore < goldScore ? 'GOLD' : 'DRAW';
+                                if (!window.confirm(`End tournament? Result: ${winner}`)) return;
+
+                                await fetch(`/api/leagues/${league.id}/complete-tournament`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ userId: user.id, winner })
+                                });
+                                window.location.reload();
+                            }}
+                            className="bg-amber-500 hover:bg-amber-400 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg transition transform hover:scale-105"
+                        >
+                            {greenScore === goldScore ? 'End as Draw' : 'Finalize Tournament'}
+                        </button>
                     ) : (
                         <div className="text-xs text-white/40">
                             {leagueMatches.length > 0 ? `${leagueMatches.length} Matches` : 'Waiting for Pairings'}
@@ -210,10 +227,10 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
                                 <div className="ml-4 w-24 flex justify-end">
                                     {match.winnerId ? (
                                         <div className={`text-xs font-bold px-2 py-1 rounded-lg ${members.find(m => m.id === match.winnerId)?.team === 'GREEN'
-                                                ? 'bg-emerald-100 text-emerald-700'
-                                                : members.find(m => m.id === match.winnerId)?.team === 'GOLD'
-                                                    ? 'bg-amber-100 text-amber-700'
-                                                    : 'bg-gray-100 text-gray-500'
+                                            ? 'bg-emerald-100 text-emerald-700'
+                                            : members.find(m => m.id === match.winnerId)?.team === 'GOLD'
+                                                ? 'bg-amber-100 text-amber-700'
+                                                : 'bg-gray-100 text-gray-500'
                                             }`}>
                                             {match.winnerId === match.player1Id ? 'Green Won' : 'Gold Won'}
                                         </div>
