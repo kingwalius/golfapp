@@ -117,7 +117,7 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
     return (
         <div className="space-y-6">
             {/* Scoreboard */}
-            <div className={`text-white rounded-3xl p-6 shadow-xl overflow-hidden relative ${status.includes('SD') || status.includes('SUDDEN') ? 'bg-rose-900' : 'bg-dark'}`}>
+            <div className={`text-white rounded-3xl p-6 shadow-xl overflow-hidden relative ${status.includes('SD') || status.includes('SUDDEN') ? 'bg-[#3f0000]' : 'bg-dark'}`}>
                 <div className="flex justify-between items-center relative z-10">
                     <div className="text-center w-5/12">
                         <h2 className="text-emerald-400 font-bold text-lg mb-1">{settings.team1Name || 'Green Team'}</h2>
@@ -160,7 +160,7 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
                                     });
                                     window.location.reload();
                                 }}
-                                className="bg-rose-500 hover:bg-rose-400 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg transition transform hover:scale-105"
+                                className="bg-red-800 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg transition transform hover:scale-105"
                             >
                                 Start Sudden Death
                             </button>
@@ -210,13 +210,13 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
 
             {/* Captains Area */}
             {status === 'PAIRING' && isCaptain && (
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 shadow-lg text-white">
+                <div className="bg-gradient-to-r from-slate-900 to-blue-900 rounded-2xl p-6 shadow-lg text-white">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
-                            <Shield className="text-indigo-200" size={24} />
+                            <Shield className="text-blue-200" size={24} />
                             <div>
                                 <h3 className="font-bold text-lg">Captain's Duty</h3>
-                                <p className="text-indigo-100 text-sm">
+                                <p className="text-blue-100 text-sm">
                                     {(myTeam === 'GREEN' && submittedGreen) || (myTeam === 'GOLD' && submittedGold)
                                         ? "Lineup Submitted. Waiting for opponent..."
                                         : "Set your lineup for the matches."}
@@ -225,7 +225,7 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
                         </div>
                         <button
                             onClick={() => setShowCaptainBoard(true)}
-                            className="bg-white text-indigo-600 px-4 py-2 rounded-xl font-bold shadow-sm hover:bg-indigo-50 transition"
+                            className="bg-white text-blue-900 px-4 py-2 rounded-xl font-bold shadow-sm hover:bg-blue-50 transition"
                         >
                             Manage Lineup
                         </button>
@@ -234,7 +234,7 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
             )}
 
             {status === 'SUDDEN_DEATH' && isCaptain && (
-                <div className="bg-gradient-to-r from-rose-500 to-pink-600 rounded-2xl p-6 shadow-lg text-white">
+                <div className="bg-gradient-to-r from-red-900 to-red-950 rounded-2xl p-6 shadow-lg text-white">
                     <div className="flex items-center gap-3 mb-4">
                         <Swords className="text-white" size={24} />
                         <div>
