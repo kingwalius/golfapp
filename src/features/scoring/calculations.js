@@ -140,7 +140,7 @@ export const calculateHandicapDetails = (preparedRounds, courses) => {
         let differential = round.differential;
 
         if (differential === undefined || differential === null) {
-            const course = courses.find(c => c.id === round.courseId);
+            const course = courses.find(c => c.id === round.courseId || c.serverId == round.courseId);
             if (course && round.score) {
                 differential = calculateDifferential(round.score, course.slope, course.rating);
             }
