@@ -1,36 +1,37 @@
 {
+    "functions": {
+        "api/*.js": {
+            "includeFiles": "server/**"
+        }
+    },
     "rewrites": [
         {
-            "source": "/api/test_simple",
-            "destination": "/api/test_simple"
-        },
-        {
             "source": "/api/(.*)",
-            "destination": "/api/index"
+            "destination": "/api/index.js"
         },
         {
             "source": "/auth/(.*)",
-            "destination": "/api/index"
+            "destination": "/api/index.js"
         },
         {
             "source": "/sync",
-            "destination": "/api/index"
+            "destination": "/api/index.js"
         },
         {
             "source": "/users",
-            "destination": "/api/index"
+            "destination": "/api/index.js"
         },
         {
             "source": "/leaderboard/(.*)",
-            "destination": "/api/index"
+            "destination": "/api/index.js"
         },
         {
             "source": "/courses",
-            "destination": "/api/index"
+            "destination": "/api/index.js"
         },
         {
             "source": "/courses/(.*)",
-            "destination": "/api/index"
+            "destination": "/api/index.js"
         },
         {
             "source": "/(.*)",
