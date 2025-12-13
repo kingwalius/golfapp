@@ -20,7 +20,14 @@ export const Scorecard = () => {
             const r = await db.get('rounds', parseInt(id));
             if (r) {
                 setRound(r);
-                const c = await db.get('courses', r.courseId);
+                let c = await db.get('courses', r.courseId);
+
+                // Fallback: If course not found by ID, try finding by serverId
+                if (!c) {
+                    const allCourses = await db.getAll('courses');
+                    c = allCourses.find(course => course.serverId == r.courseId);
+                }
+
                 if (c) {
                     // Filter holes if 9-hole round
                     if (r.holesPlayed === 9) {
