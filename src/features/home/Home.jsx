@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useUser, useDB } from '../../lib/store';
 import { SwipeableItem } from '../../components/SwipeableItem';
 import { calculatePlayingHcp, calculateStableford, calculateStrokesReceived, prepareHandicapData, calculateHandicapDetails } from '../scoring/calculations';
-import { User, Trophy, Calendar, Swords, Flag, Plus, Star, Search, RefreshCw } from 'lucide-react';
+import { User, Trophy, Calendar, Swords, Flag, Plus, Star, Search, RefreshCw, TrendingUp, TrendingDown } from 'lucide-react';
 import { FriendSearchModal } from '../../components/FriendSearchModal';
 
 export const Home = () => {
@@ -160,34 +160,64 @@ export const Home = () => {
             </header>
 
             {/* Handicap & Stats Row */}
-            <div className="grid grid-cols-2 gap-4">
-                <div className="bg-dark text-white p-5 rounded-3xl shadow-xl flex flex-col justify-between relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
-                        <Trophy size={48} />
-                    </div>
-                    <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">Handicap</span>
-                    <div className="flex items-baseline gap-1 mt-1">
-                        <span className="text-5xl font-black tracking-tighter">{user?.handicap || '54'}</span>
-                        <span className={`text-xs font-bold ${user?.handicapChange < 0 ? 'text-emerald-400' : 'text-stone-500'}`}>
-                            {user?.handicapChange < 0 ? '↓' : '↑'} {Math.abs(user?.handicapChange || 0).toFixed(1)}
-                        </span>
-                    </div>
+            <div className="bg-dark text-white p-6 rounded-3xl shadow-xl relative overflow-hidden group">
+                {/* Background Decor */}
+                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition duration-700 transform group-hover:scale-110 pointer-events-none">
+                    <Trophy size={140} />
                 </div>
 
-                <div className="flex flex-col gap-3">
-                    <Link to="/play" className="flex-1 bg-white p-4 rounded-3xl shadow-sm border border-stone-100 flex flex-col justify-center items-center gap-2 hover:shadow-md transition active:scale-95">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                            <Plus size={20} />
+                <div className="relative z-10 grid grid-cols-2 gap-8 relative">
+                    {/* Divider */}
+                    <div className="absolute left-1/2 top-4 bottom-4 w-px bg-white/10"></div>
+
+                    {/* Handicap Section */}
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">WHS Index</span>
                         </div>
-                        <span className="font-bold text-dark text-sm">New Round</span>
-                    </Link>
-                    <Link to="/league" className="flex-1 bg-white p-4 rounded-3xl shadow-sm border border-stone-100 flex flex-col justify-center items-center gap-2 hover:shadow-md transition active:scale-95">
-                        <div className="w-10 h-10 rounded-full bg-secondary/10 text-secondary flex items-center justify-center">
-                            <Trophy size={20} />
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-5xl font-black tracking-tighter text-white">{user?.handicap || '54'}</span>
                         </div>
-                        <span className="font-bold text-dark text-sm">Leagues</span>
-                    </Link>
+                        <div className={`mt-2 text-xs font-bold flex items-center gap-1 ${user?.handicapChange < 0 ? 'text-emerald-400' : 'text-stone-500'}`}>
+                            {user?.handicapChange < 0 ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
+                            <span>{Math.abs(user?.handicapChange || 0).toFixed(1)}</span>
+                            <span className="text-stone-600 font-normal ml-1">last rnd</span>
+                        </div>
+                    </div>
+
+                    {/* Avg Score Section */}
+                    <div className="pl-4">
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="text-xs font-bold text-secondary uppercase tracking-widest">Avg Score</span>
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-5xl font-black tracking-tighter text-white">{user?.avgScore ? Math.round(user.avgScore) : '-'}</span>
+                            <span className="text-xl font-bold text-stone-500">.{user?.avgScore ? (user.avgScore % 1).toFixed(1).substring(2) : '0'}</span>
+                        </div>
+                        <div className={`mt-2 text-xs font-bold flex items-center gap-1 ${user?.avgScoreChange < 0 ? 'text-emerald-400' : 'text-stone-500'}`}>
+                            {/* Lower score is better */}
+                            {user?.avgScoreChange < 0 ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
+                            <span>{Math.abs(user?.avgScoreChange || 0).toFixed(1)}</span>
+                            <span className="text-stone-600 font-normal ml-1">last 5</span>
+                        </div>
+                    </div>
                 </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-4">
+                <Link to="/play" className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100 flex items-center justify-center gap-3 hover:shadow-md transition active:scale-95 group">
+                    <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-100 transition">
+                        <Plus size={20} />
+                    </div>
+                    <span className="font-bold text-dark text-sm">New Round</span>
+                </Link>
+                <Link to="/league" className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100 flex items-center justify-center gap-3 hover:shadow-md transition active:scale-95 group">
+                    <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-100 transition">
+                        <Trophy size={20} />
+                    </div>
+                    <span className="font-bold text-dark text-sm">Leagues</span>
+                </Link>
             </div>
 
             {/* Quick Actions (Friends) */}
