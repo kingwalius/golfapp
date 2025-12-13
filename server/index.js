@@ -100,23 +100,18 @@ app.use('/api', syncRoutes); // Mounts /sync, /rounds/delete, /matches/delete at
 
 
 const PORT = process.env.PORT || 3000;
-(async () => { // Wrap in an async IIFE to allow await calls before app.listen
-    try {
-        // await initDB(); /* Commented out for debugging startup */
-        console.log("Skipping auto-initDB for debug");
-    } catch (e) {
-        console.error("Critical DB Init Failure:", e);
-    }
 
-    if (process.env.NODE_ENV !== 'production') {
-        app.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
-        });
-    }
-})(); // Immediately invoke the async function
+// Initialize DB in background (Non-blocking)
+initDB().then(() => {
+    console.log('DB Initialized');
+}).catch(e => {
+    console.error('DB Initialization Failed:', e);
+});
+
 if (process.env.NODE_ENV !== 'production') {
-    // The original console.log was here, but the new app.listen handles it.
-    // Keeping the if block structure as per user's snippet, though it's now empty.
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
 }
 
 export default app;
