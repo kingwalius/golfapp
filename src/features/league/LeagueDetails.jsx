@@ -150,27 +150,26 @@ export const LeagueDetails = () => {
                 </div>
             </div>
 
-            {/* League Card */}
-            <div className="bg-primary text-white rounded-3xl p-6 mb-8 shadow-lg relative overflow-hidden">
-                <div className="relative z-10">
-                    <div className="flex items-center gap-2 text-emerald-100 mb-2 text-sm font-medium uppercase tracking-wider">
-                        <Trophy size={16} />
-                        <span>{league.type === 'STROKE' ? 'Strokeplay League' : league.type}</span>
+            {/* League Card - Compact */}
+            <div className="bg-primary text-white rounded-3xl p-6 mb-6 shadow-sm flex flex-col md:flex-row justify-between md:items-center gap-4">
+                <div>
+                    <div className="flex items-center gap-2 text-emerald-100 mb-1 text-xs font-bold uppercase tracking-wider">
+                        <Trophy size={14} />
+                        <span>{league.type === 'STROKE' ? 'Strokeplay' : league.type}</span>
                     </div>
-                    <h1 className="text-3xl font-bold mb-4">{league.name}</h1>
+                    <h1 className="text-2xl font-bold">{league.name}</h1>
+                </div>
 
-                    <div className="flex gap-6 text-sm text-emerald-100/80">
-                        <div className="flex items-center gap-2">
-                            <Calendar size={16} />
-                            <span>{new Date(league.startDate).toLocaleDateString()}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Users size={16} />
-                            <span>{standings.length} Members</span>
-                        </div>
+                <div className="flex gap-4 text-sm text-emerald-100/90 font-medium">
+                    <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg">
+                        <Calendar size={14} />
+                        <span>{new Date(league.startDate).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg">
+                        <Users size={14} />
+                        <span>{standings.length} Mbrs</span>
                     </div>
                 </div>
-                <div className="absolute -right-8 -bottom-8 opacity-10 text-9xl">⛳</div>
             </div>
 
             {/* Actions */}
