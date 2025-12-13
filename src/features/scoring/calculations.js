@@ -124,7 +124,12 @@ export const prepareHandicapData = (rounds, matches, courses, userId) => {
             differential: m.player1?.id == userId ? m.player1Differential : m.player2Differential
         }));
 
-    return [...userRounds, ...userMatches].sort((a, b) => b.date - a.date);
+    return [...userRounds, ...userMatches].sort((a, b) => {
+        const dateDiff = b.date - a.date;
+        if (dateDiff !== 0) return dateDiff;
+        // Secondary sort by ID for stability
+        return b.id.toString().localeCompare(a.id.toString());
+    });
 };
 
 /**

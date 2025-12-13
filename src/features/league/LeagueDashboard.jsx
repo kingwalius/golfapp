@@ -23,7 +23,7 @@ const FeedItem = ({ item }) => {
         <div className="bg-white rounded-3xl p-6 shadow-sm mb-6 border border-stone-100">
             <div className="mb-4">
                 <div>
-                    <h3 className="font-bold text-primary text-lg">{title}</h3>
+                    <h3 className="font-bold text-dark text-lg">{title}</h3>
                     <p className="text-stone-400 text-xs">{date} • {item.courseName}</p>
                 </div>
             </div>
@@ -84,7 +84,7 @@ export const LeagueDashboard = () => {
     return (
         <div className="p-4 pb-24 min-h-screen bg-stone-50">
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-primary">League</h1>
+                <h1 className="text-3xl font-bold text-dark">League</h1>
                 <div className="flex gap-2">
                     <button
                         onClick={() => {
@@ -105,11 +105,11 @@ export const LeagueDashboard = () => {
                                 });
                             }
                         }}
-                        className="bg-white text-primary w-10 h-10 rounded-full flex items-center justify-center shadow-sm border border-stone-100 hover:scale-105 transition"
+                        className="bg-white text-dark w-10 h-10 rounded-full flex items-center justify-center shadow-sm border border-stone-100 hover:scale-105 transition"
                     >
                         <Ticket size={24} />
                     </button>
-                    <Link to="/league/create" className="bg-primary text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition">
+                    <Link to="/league/create" className="bg-dark text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition">
                         <Plus size={24} />
                     </Link>
                 </div>
@@ -119,14 +119,14 @@ export const LeagueDashboard = () => {
             <div className="flex p-1 bg-white rounded-xl shadow-sm mb-6">
                 <button
                     onClick={() => setActiveTab('leagues')}
-                    className={`flex-1 py-3 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 ${activeTab === 'leagues' ? 'bg-primary text-white shadow-md' : 'text-muted hover:bg-stone-50'}`}
+                    className={`flex-1 py-3 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 ${activeTab === 'leagues' ? 'bg-dark text-white shadow-md' : 'text-muted hover:bg-stone-50'}`}
                 >
                     <Trophy size={16} />
                     My Leagues
                 </button>
                 <button
                     onClick={() => setActiveTab('feed')}
-                    className={`flex-1 py-3 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 ${activeTab === 'feed' ? 'bg-primary text-white shadow-md' : 'text-muted hover:bg-stone-50'}`}
+                    className={`flex-1 py-3 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 ${activeTab === 'feed' ? 'bg-dark text-white shadow-md' : 'text-muted hover:bg-stone-50'}`}
                 >
                     <Activity size={16} />
                     Activity Feed
@@ -140,7 +140,7 @@ export const LeagueDashboard = () => {
                         <div
                             key={league.id}
                             onClick={() => navigate(`/league/${league.id}`)}
-                            className="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 flex justify-between items-center cursor-pointer hover:border-primary/30 transition"
+                            className="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 flex justify-between items-center cursor-pointer hover:border-dark transition"
                         >
                             <div>
                                 <h3 className="font-bold text-lg text-dark">{league.name}</h3>
@@ -156,7 +156,7 @@ export const LeagueDashboard = () => {
                         <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-stone-200">
                             <Trophy size={48} className="mx-auto text-stone-300 mb-4" />
                             <p className="text-muted mb-4">You haven't joined any leagues yet.</p>
-                            <Link to="/league/create" className="text-primary font-bold hover:underline">Create your first league</Link>
+                            <Link to="/league/create" className="text-dark font-bold hover:underline">Create your first league</Link>
                         </div>
                     )}
                 </div>

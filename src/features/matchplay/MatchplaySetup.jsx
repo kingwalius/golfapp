@@ -156,7 +156,7 @@ export const MatchplaySetup = () => {
                     {!setup.courseId ? (
                         <button
                             onClick={() => setIsCourseModalOpen(true)}
-                            className="w-full py-5 border-2 border-dashed border-stone-200 rounded-2xl flex flex-col items-center justify-center text-muted hover:border-primary hover:text-primary hover:bg-primary/5 transition group"
+                            className="w-full py-5 border-2 border-dashed border-stone-200 rounded-2xl flex flex-col items-center justify-center text-muted hover:border-dark hover:text-dark hover:bg-stone-50 transition group"
                         >
                             <div className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center mb-2 group-hover:bg-white transition">
                                 <Search size={24} />
@@ -168,10 +168,10 @@ export const MatchplaySetup = () => {
                             const c = courses.find(course => course.id.toString() === setup.courseId || course.serverId?.toString() === setup.courseId);
                             if (!c) return null;
                             return (
-                                <div className="relative p-4 rounded-2xl border-2 border-primary bg-primary/5 shadow-md">
+                                <div className="relative p-4 rounded-2xl border-2 border-dark bg-stone-100 shadow-md">
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <h3 className="font-bold text-lg text-primary mb-1">{c.name}</h3>
+                                            <h3 className="font-bold text-lg text-dark mb-1">{c.name}</h3>
                                             <div className="flex items-center gap-2 text-sm text-dark/70">
                                                 <span>{c.holes?.length || 18} Holes</span>
                                                 <span>•</span>
@@ -180,7 +180,7 @@ export const MatchplaySetup = () => {
                                         </div>
                                         <button
                                             onClick={() => setIsCourseModalOpen(true)}
-                                            className="px-3 py-1.5 bg-white text-primary text-xs font-bold rounded-lg shadow-sm hover:bg-primary hover:text-white transition"
+                                            className="px-3 py-1.5 bg-white text-dark text-xs font-bold rounded-lg shadow-sm hover:bg-dark hover:text-white transition"
                                         >
                                             Change
                                         </button>
@@ -205,7 +205,7 @@ export const MatchplaySetup = () => {
                         <button
                             onClick={() => setSetup({ ...setup, holesToPlay: 18 })}
                             className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${setup.holesToPlay !== 9
-                                ? 'bg-primary text-white shadow-md'
+                                ? 'bg-dark text-white shadow-md'
                                 : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
                                 }`}
                         >
@@ -214,7 +214,7 @@ export const MatchplaySetup = () => {
                         <button
                             onClick={() => setSetup({ ...setup, holesToPlay: 9 })}
                             className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${setup.holesToPlay === 9
-                                ? 'bg-primary text-white shadow-md'
+                                ? 'bg-dark text-white shadow-md'
                                 : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
                                 }`}
                         >
@@ -233,7 +233,7 @@ export const MatchplaySetup = () => {
                                     <button
                                         onClick={() => setSetup({ ...setup, startingHole: 1 })}
                                         className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${(!setup.startingHole || setup.startingHole === 1)
-                                            ? 'bg-secondary text-white shadow-md'
+                                            ? 'bg-stone-600 text-white shadow-md'
                                             : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
                                             }`}
                                     >
@@ -242,7 +242,7 @@ export const MatchplaySetup = () => {
                                     <button
                                         onClick={() => setSetup({ ...setup, startingHole: 10 })}
                                         className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${setup.startingHole === 10
-                                            ? 'bg-secondary text-white shadow-md'
+                                            ? 'bg-stone-600 text-white shadow-md'
                                             : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
                                             }`}
                                     >
@@ -259,7 +259,7 @@ export const MatchplaySetup = () => {
                         <button
                             onClick={() => setSetup({ ...setup, matchType: 'NET' })}
                             className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${setup.matchType === 'NET'
-                                ? 'bg-primary text-white shadow-md'
+                                ? 'bg-dark text-white shadow-md'
                                 : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
                                 }`}
                         >
@@ -268,7 +268,7 @@ export const MatchplaySetup = () => {
                         <button
                             onClick={() => setSetup({ ...setup, matchType: 'GROSS' })}
                             className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${setup.matchType === 'GROSS'
-                                ? 'bg-primary text-white shadow-md'
+                                ? 'bg-dark text-white shadow-md'
                                 : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
                                 }`}
                         >
@@ -302,14 +302,14 @@ export const MatchplaySetup = () => {
                                             className={`
                                                 flex justify-between items-center p-4 rounded-xl border text-left transition-all text-base
                                                 ${setup.manualStrokesPlayer === p.id
-                                                    ? 'bg-primary/5 border-primary shadow-sm ring-1 ring-primary'
+                                                    ? 'bg-stone-100 border-dark shadow-sm ring-1 ring-dark'
                                                     : 'bg-white border-gray-100 hover:bg-gray-50'
                                                 }
                                             `}
                                         >
                                             <span className="font-medium truncate">{p.name}</span>
                                             {setup.manualStrokesPlayer === p.id && (
-                                                <span className="text-primary font-bold">
+                                                <span className="text-dark font-bold">
                                                     <Check size={16} />
                                                 </span>
                                             )}
@@ -350,7 +350,7 @@ export const MatchplaySetup = () => {
                             {!setup.player2.id ? (
                                 <button
                                     onClick={() => setIsPlayerModalOpen(true)}
-                                    className="w-full py-4 border-2 border-dashed border-stone-200 rounded-xl flex flex-col items-center justify-center text-muted hover:border-primary hover:text-primary hover:bg-primary/5 transition group"
+                                    className="w-full py-4 border-2 border-dashed border-stone-200 rounded-xl flex flex-col items-center justify-center text-muted hover:border-dark hover:text-dark hover:bg-stone-50 transition group"
                                 >
                                     <div className="w-8 h-8 rounded-full bg-stone-50 flex items-center justify-center mb-1 group-hover:bg-white transition">
                                         <Search size={18} />
@@ -358,14 +358,14 @@ export const MatchplaySetup = () => {
                                     <span className="font-bold text-sm">Select Opponent</span>
                                 </button>
                             ) : (
-                                <div className="relative p-3 rounded-xl border-2 border-primary bg-primary/5 shadow-sm">
+                                <div className="relative p-3 rounded-xl border-2 border-dark bg-stone-100 shadow-sm">
                                     <div className="flex justify-between items-center">
                                         <div className="flex items-center gap-3 overflow-hidden">
-                                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20 flex-shrink-0">
+                                            <div className="w-10 h-10 rounded-full bg-dark/10 flex items-center justify-center text-dark border border-dark/20 flex-shrink-0">
                                                 <User size={20} />
                                             </div>
                                             <div className="min-w-0">
-                                                <h3 className="font-bold text-base text-primary truncate">{setup.player2.name}</h3>
+                                                <h3 className="font-bold text-base text-dark truncate">{setup.player2.name}</h3>
                                                 <div className="text-xs text-dark/70">
                                                     HCP: {setup.player2.hcp}
                                                 </div>
@@ -373,7 +373,7 @@ export const MatchplaySetup = () => {
                                         </div>
                                         <button
                                             onClick={() => setIsPlayerModalOpen(true)}
-                                            className="ml-2 px-2 py-1 bg-white text-primary text-xs font-bold rounded-lg shadow-sm hover:bg-primary hover:text-white transition flex-shrink-0"
+                                            className="ml-2 px-2 py-1 bg-white text-dark text-xs font-bold rounded-lg shadow-sm hover:bg-dark hover:text-white transition flex-shrink-0"
                                         >
                                             Change
                                         </button>
@@ -413,7 +413,7 @@ export const MatchplaySetup = () => {
                 <button
                     onClick={startMatch}
                     disabled={!setup.courseId}
-                    className="w-full bg-secondary text-white py-3 rounded-lg font-bold mt-4 hover:bg-amber-600 transition"
+                    className="w-full bg-dark text-white py-3 rounded-lg font-bold mt-4 hover:bg-black transition"
                 >
                     Start Match
                 </button>

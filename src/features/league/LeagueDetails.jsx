@@ -144,7 +144,7 @@ export const LeagueDetails = () => {
                             <LogOut size={20} />
                         </button>
                     )}
-                    <button onClick={handleShare} className="p-2 bg-white rounded-full shadow-sm text-primary">
+                    <button onClick={handleShare} className="p-2 bg-white rounded-full shadow-sm text-dark">
                         <Share2 size={20} />
                     </button>
                 </div>
@@ -153,7 +153,7 @@ export const LeagueDetails = () => {
             {/* League Header - Minimalist */}
             <div className="mb-8 px-2">
                 <div className="flex items-center gap-3 mb-3">
-                    <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-widest rounded-md">
+                    <span className="px-2.5 py-1 bg-stone-200 text-dark text-[10px] font-bold uppercase tracking-widest rounded-md">
                         {league.type === 'STROKE' ? 'Strokeplay' : league.type}
                     </span>
                     <span className="h-1 w-1 rounded-full bg-stone-300"></span>
@@ -213,7 +213,7 @@ export const LeagueDetails = () => {
                     <div className="mb-8">
                         <button
                             onClick={() => navigate('/play', { state: { leagueId: league.id } })}
-                            className="w-full bg-secondary text-white py-4 rounded-2xl font-bold shadow-lg shadow-secondary/20 flex items-center justify-center gap-2 hover:bg-amber-500 transition active:scale-95"
+                            className="w-full bg-dark text-white py-4 rounded-2xl font-bold shadow-lg shadow-dark/20 flex items-center justify-center gap-2 hover:bg-black transition active:scale-95"
                         >
                             <Trophy size={20} />
                             Play League Round
@@ -241,7 +241,7 @@ export const LeagueDetails = () => {
                                     <div className="font-bold text-dark">{member.username}</div>
                                     <div className="text-xs text-muted">HCP {member.handicap}</div>
                                 </div>
-                                <div className="font-black text-xl text-primary">
+                                <div className="font-black text-xl text-dark">
                                     {member.points} <span className="text-xs font-normal text-muted">pts</span>
                                 </div>
                             </div>
@@ -262,7 +262,7 @@ export const LeagueDetails = () => {
                                     <div key={event.id} className="bg-white rounded-3xl shadow-sm border border-stone-100 overflow-hidden">
                                         <div className="bg-stone-50 p-4 border-b border-stone-100 flex justify-between items-center">
                                             <h3 className="font-bold text-dark">{event.name}</h3>
-                                            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-lg">
+                                            <span className="text-xs font-bold text-dark bg-stone-200 px-2 py-1 rounded-lg">
                                                 {event.results.length} Players
                                             </span>
                                         </div>
@@ -275,7 +275,7 @@ export const LeagueDetails = () => {
                                                     <div className="font-bold text-dark text-sm">{result.username}</div>
                                                     <div className="text-xs text-muted">{result.rawScore} pts (Best Round)</div>
                                                 </div>
-                                                <div className="font-bold text-primary">
+                                                <div className="font-bold text-dark">
                                                     +{result.points}
                                                 </div>
                                             </div>
@@ -305,7 +305,7 @@ export const LeagueDetails = () => {
                                     <div className="text-xs text-muted">{new Date(round.date).toLocaleDateString()}</div>
                                 </div>
                                 <div className="text-right">
-                                    <div className="font-bold text-primary">{round.stableford} <span className="text-xs font-normal text-muted">pts</span></div>
+                                    <div className="font-bold text-dark">{round.stableford} <span className="text-xs font-normal text-muted">pts</span></div>
                                     <div className="text-xs text-muted">{round.score} strokes</div>
                                 </div>
                             </div>

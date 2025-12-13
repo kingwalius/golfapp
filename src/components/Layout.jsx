@@ -14,14 +14,14 @@ const NavItem = ({ to, label, icon: Icon, activeIcon: ActiveIcon }) => {
         <Link to={to} className="group relative flex flex-col items-center justify-center w-full h-full">
             <span className={clsx(
                 "transition-transform duration-300",
-                isActive ? "scale-110 -translate-y-1 text-primary" : "text-muted group-hover:scale-105"
+                isActive ? "scale-110 -translate-y-1 text-dark" : "text-muted group-hover:scale-105"
             )}>
                 <CurrentIcon size={24} strokeWidth={isActive ? 2.5 : 2} />
             </span>
 
             <span className={clsx(
                 "text-[10px] font-medium tracking-wide transition-all duration-300",
-                isActive ? "text-primary opacity-100 translate-y-0" : "text-muted opacity-70 translate-y-1"
+                isActive ? "text-dark opacity-100 translate-y-0" : "text-muted opacity-70 translate-y-1"
             )}>
                 {label}
             </span>

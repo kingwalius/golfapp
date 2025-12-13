@@ -148,7 +148,7 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
                         {status === 'SETUP' && isAdmin ? (
                             <button
                                 onClick={onStartTournament}
-                                className="bg-primary text-white px-6 py-2 rounded-xl font-bold text-sm shadow-md hover:bg-primaryLight transition transform active:scale-95"
+                                className="bg-dark text-white px-6 py-2 rounded-xl font-bold text-sm shadow-md hover:bg-black transition transform active:scale-95"
                             >
                                 Generate Matches
                             </button>
@@ -195,7 +195,7 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
                                     });
                                     window.location.reload();
                                 }}
-                                className="bg-primary text-white px-6 py-2 rounded-xl font-bold text-sm shadow-md hover:bg-primaryLight transition"
+                                className="bg-dark text-white px-6 py-2 rounded-xl font-bold text-sm shadow-md hover:bg-black transition"
                             >
                                 Finalize & End
                             </button>
@@ -339,7 +339,7 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
                                     ) : isMyMatch ? (
                                         <button
                                             onClick={() => handlePlayMatch({ ...match, p1Name: p1?.username, p2Name: p2?.username })}
-                                            className="w-10 h-10 bg-primary text-white rounded-xl shadow-lg hover:bg-primaryLight flex items-center justify-center transition active:scale-95"
+                                            className="w-10 h-10 bg-dark text-white rounded-xl shadow-lg hover:bg-black flex items-center justify-center transition active:scale-95"
                                         >
                                             <Play size={18} fill="currentColor" />
                                         </button>

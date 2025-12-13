@@ -91,7 +91,7 @@ export const CourseEditor = () => {
                     <input
                         type="text"
                         required
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary p-2 border"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-dark focus:ring-dark p-2 border"
                         value={course.name}
                         onChange={e => setCourse({ ...course, name: e.target.value })}
                     />
@@ -103,7 +103,7 @@ export const CourseEditor = () => {
                         <input
                             type="number"
                             required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary p-2 border"
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-dark focus:ring-dark p-2 border"
                             value={course.slope}
                             onChange={e => setCourse({ ...course, slope: parseInt(e.target.value) })}
                         />
@@ -114,7 +114,7 @@ export const CourseEditor = () => {
                             type="text"
                             inputMode="decimal"
                             required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary p-2 border"
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-dark focus:ring-dark p-2 border"
                             value={course.rating}
                             onChange={e => setCourse({ ...course, rating: e.target.value })}
                         />
@@ -162,7 +162,7 @@ export const CourseEditor = () => {
 
                 <button
                     type="submit"
-                    className="w-full bg-primary text-white py-3 rounded-lg font-bold shadow-lg hover:bg-teal-800 transition"
+                    className="w-full bg-dark text-white py-4 rounded-2xl font-bold shadow-lg hover:bg-black transition active:scale-95"
                 >
                     Save Course
                 </button>

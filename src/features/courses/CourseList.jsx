@@ -40,17 +40,17 @@ export const CourseList = () => {
         <div className="p-6 pb-24">
             <div className="flex justify-between items-center mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold text-primary">Courses</h1>
+                    <h1 className="text-3xl font-bold text-dark">Courses</h1>
                     <p className="text-muted">Manage your golf courses.</p>
                 </div>
                 <div className="flex gap-3">
                     <button
                         onClick={() => setShowSearch(true)}
-                        className="bg-white text-primary w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-sm border border-stone-100 hover:scale-105 transition"
+                        className="bg-white text-dark w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-sm border border-stone-100 hover:scale-105 transition"
                     >
                         <Search size={24} />
                     </button>
-                    <Link to="/courses/new" className="bg-primary text-white w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-lg hover:scale-105 transition">
+                    <Link to="/courses/new" className="bg-dark text-white w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-lg hover:scale-105 transition">
                         +
                     </Link>
                 </div>
@@ -66,7 +66,7 @@ export const CourseList = () => {
                                 type="text"
                                 autoFocus
                                 placeholder="Search courses..."
-                                className="w-full bg-white pl-12 pr-4 py-4 rounded-2xl shadow-sm border-none text-lg focus:ring-2 focus:ring-primary/20 outline-none"
+                                className="w-full bg-white pl-12 pr-4 py-4 rounded-2xl shadow-sm border-none text-lg focus:ring-2 focus:ring-dark/20 outline-none"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
@@ -139,14 +139,14 @@ export const CourseList = () => {
                                         <div>
                                             <div className="flex items-center gap-2">
                                                 <Star size={16} className="fill-yellow-400 text-yellow-400" />
-                                                <h3 className="font-bold text-xl text-dark group-hover:text-primary transition">{course.name}</h3>
+                                                <h3 className="font-bold text-xl text-dark group-hover:text-dark transition">{course.name}</h3>
                                             </div>
                                             <div className="flex gap-4 mt-2 text-sm text-muted">
                                                 <span className="bg-stone-100 px-2 py-1 rounded-md">Par {course.holes?.reduce((a, b) => a + (parseInt(b.par) || 0), 0)}</span>
                                                 <span className="bg-stone-100 px-2 py-1 rounded-md">{course.holes?.length || 0} Holes</span>
                                             </div>
                                         </div>
-                                        <span className="text-stone-300 text-xl group-hover:text-primary transition">✎</span>
+                                        <span className="text-stone-300 text-xl group-hover:text-dark transition">✎</span>
                                     </div>
                                 </SwipeableItem>
                             ))}
@@ -165,20 +165,20 @@ export const CourseList = () => {
                     >
                         <div className="p-5 flex justify-between items-start">
                             <div>
-                                <h3 className="font-bold text-xl text-dark group-hover:text-primary transition">{course.name}</h3>
+                                <h3 className="font-bold text-xl text-dark group-hover:text-dark transition">{course.name}</h3>
                                 <div className="flex gap-4 mt-2 text-sm text-muted">
                                     <span className="bg-stone-100 px-2 py-1 rounded-md">Par {course.holes?.reduce((a, b) => a + (parseInt(b.par) || 0), 0)}</span>
                                     <span className="bg-stone-100 px-2 py-1 rounded-md">{course.holes?.length || 0} Holes</span>
                                 </div>
                             </div>
-                            <span className="text-stone-300 text-xl group-hover:text-primary transition">✎</span>
+                            <span className="text-stone-300 text-xl group-hover:text-dark transition">✎</span>
                         </div>
                     </SwipeableItem>
                 ))}
                 {courses.length === 0 && (
                     <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-stone-200">
                         <p className="text-muted mb-4">No courses added yet.</p>
-                        <Link to="/courses/new" className="text-primary font-bold hover:underline">Add your first course</Link>
+                        <Link to="/courses/new" className="text-dark font-bold hover:underline">Add your first course</Link>
                     </div>
                 )}
             </div>

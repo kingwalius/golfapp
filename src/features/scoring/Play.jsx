@@ -130,7 +130,7 @@ export const Play = () => {
     return (
         <div className="p-6 pb-24">
             <header className="mb-8">
-                <h1 className="text-3xl font-bold text-primary">Play Golf</h1>
+                <h1 className="text-3xl font-bold text-dark">Play Golf</h1>
                 <p className="text-muted">Start a new round or continue playing.</p>
             </header>
 
@@ -138,7 +138,7 @@ export const Play = () => {
                 <div className="space-y-6">
                     <button
                         onClick={() => setShowNewRound(true)}
-                        className="w-full bg-primary text-white py-6 rounded-2xl font-bold shadow-lg shadow-primary/20 flex items-center justify-center space-x-3 hover:bg-primaryLight transition active:scale-95"
+                        className="w-full bg-dark text-white py-6 rounded-2xl font-bold shadow-lg shadow-stone-400/20 flex items-center justify-center space-x-3 hover:bg-black transition active:scale-95"
                     >
                         <Flag size={28} />
                         <span className="text-lg">Start New Round</span>
@@ -146,7 +146,7 @@ export const Play = () => {
 
                     <Link
                         to="/matchplay"
-                        className="w-full bg-secondary text-white py-6 rounded-2xl font-bold shadow-lg shadow-secondary/20 flex items-center justify-center space-x-3 hover:bg-amber-500 transition active:scale-95 block"
+                        className="w-full bg-stone-800 text-white py-6 rounded-2xl font-bold shadow-lg shadow-stone-800/20 flex items-center justify-center space-x-3 hover:bg-stone-900 transition active:scale-95 block"
                     >
                         <Swords size={28} />
                         <span className="text-lg">Start Matchplay</span>
@@ -184,10 +184,10 @@ export const Play = () => {
                                         <div className="p-5 flex justify-between items-center">
                                             <div>
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-xl text-primary">
+                                                    <span className="text-xl text-dark">
                                                         {isMatch ? <Swords size={20} /> : <Flag size={20} />}
                                                     </span>
-                                                    <span className="font-bold text-lg text-dark group-hover:text-primary transition">
+                                                    <span className="font-bold text-lg text-dark group-hover:text-dark transition">
                                                         {course?.name || 'Unknown Course'}
                                                     </span>
                                                 </div>
@@ -266,7 +266,7 @@ export const Play = () => {
                             {!selectedCourseId ? (
                                 <button
                                     onClick={() => setIsCourseModalOpen(true)}
-                                    className="w-full py-5 border-2 border-dashed border-stone-200 rounded-2xl flex flex-col items-center justify-center text-muted hover:border-primary hover:text-primary hover:bg-primary/5 transition group"
+                                    className="w-full py-5 border-2 border-dashed border-stone-200 rounded-2xl flex flex-col items-center justify-center text-muted hover:border-dark hover:text-dark hover:bg-stone-50 transition group"
                                 >
                                     <div className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center mb-2 group-hover:bg-white transition">
                                         <Search size={24} />
@@ -278,10 +278,10 @@ export const Play = () => {
                                     const c = courses.find(course => course.id.toString() === selectedCourseId || course.serverId?.toString() === selectedCourseId);
                                     if (!c) return null;
                                     return (
-                                        <div className="relative p-4 rounded-2xl border-2 border-primary bg-primary/5 shadow-md">
+                                        <div className="relative p-4 rounded-2xl border-2 border-dark bg-stone-100 shadow-md">
                                             <div className="flex justify-between items-start">
                                                 <div>
-                                                    <h3 className="font-bold text-lg text-primary mb-1">{c.name}</h3>
+                                                    <h3 className="font-bold text-lg text-dark mb-1">{c.name}</h3>
                                                     <div className="flex items-center gap-2 text-sm text-dark/70">
                                                         <span>{c.holes?.length || 18} Holes</span>
                                                         <span>•</span>
@@ -290,7 +290,7 @@ export const Play = () => {
                                                 </div>
                                                 <button
                                                     onClick={() => setIsCourseModalOpen(true)}
-                                                    className="px-3 py-1.5 bg-white text-primary text-xs font-bold rounded-lg shadow-sm hover:bg-primary hover:text-white transition"
+                                                    className="px-3 py-1.5 bg-white text-dark text-xs font-bold rounded-lg shadow-sm hover:bg-dark hover:text-white transition"
                                                 >
                                                     Change
                                                 </button>
@@ -331,7 +331,7 @@ export const Play = () => {
                                 <button
                                     onClick={() => setHolesToPlay(18)}
                                     className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${holesToPlay === 18
-                                        ? 'bg-primary text-white shadow-md'
+                                        ? 'bg-dark text-white shadow-md'
                                         : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
                                         }`}
                                 >
@@ -340,7 +340,7 @@ export const Play = () => {
                                 <button
                                     onClick={() => setHolesToPlay(9)}
                                     className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${holesToPlay === 9
-                                        ? 'bg-primary text-white shadow-md'
+                                        ? 'bg-dark text-white shadow-md'
                                         : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
                                         }`}
                                 >
@@ -359,7 +359,7 @@ export const Play = () => {
                                             <button
                                                 onClick={() => setStartingHole(1)}
                                                 className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${startingHole === 1
-                                                    ? 'bg-secondary text-white shadow-md'
+                                                    ? 'bg-stone-600 text-white shadow-md'
                                                     : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
                                                     }`}
                                             >
@@ -368,7 +368,7 @@ export const Play = () => {
                                             <button
                                                 onClick={() => setStartingHole(10)}
                                                 className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${startingHole === 10
-                                                    ? 'bg-secondary text-white shadow-md'
+                                                    ? 'bg-stone-600 text-white shadow-md'
                                                     : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
                                                     }`}
                                             >
@@ -391,7 +391,7 @@ export const Play = () => {
                             <button
                                 onClick={startRound}
                                 disabled={!selectedCourseId}
-                                className="flex-1 bg-primary text-white py-4 rounded-xl font-bold shadow-lg disabled:opacity-50 disabled:shadow-none hover:bg-primaryLight transition"
+                                className="flex-1 bg-dark text-white py-4 rounded-xl font-bold shadow-lg disabled:opacity-50 disabled:shadow-none hover:bg-black transition"
                             >
                                 Start Game
                             </button>
