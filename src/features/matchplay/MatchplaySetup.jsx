@@ -98,7 +98,7 @@ export const MatchplaySetup = () => {
     }, [db, user]);
 
     const startMatch = async () => {
-        const course = courses.find(c => c.id === parseInt(setup.courseId));
+        const course = courses.find(c => c.id == setup.courseId || c.serverId == setup.courseId);
         if (!course) return;
 
         const p1Playing = calculatePlayingHcp(setup.player1.hcp, course.slope, course.rating, 72);
@@ -165,7 +165,7 @@ export const MatchplaySetup = () => {
                         </button>
                     ) : (
                         (() => {
-                            const c = courses.find(course => course.id.toString() === setup.courseId);
+                            const c = courses.find(course => course.id.toString() === setup.courseId || course.serverId?.toString() === setup.courseId);
                             if (!c) return null;
                             return (
                                 <div className="relative p-4 rounded-2xl border-2 border-primary bg-primary/5 shadow-md">
