@@ -150,24 +150,30 @@ export const LeagueDetails = () => {
                 </div>
             </div>
 
-            {/* League Card - Compact */}
-            <div className="bg-primary text-white rounded-3xl p-6 mb-6 shadow-sm flex flex-col md:flex-row justify-between md:items-center gap-4">
-                <div>
-                    <div className="flex items-center gap-2 text-emerald-100 mb-1 text-xs font-bold uppercase tracking-wider">
-                        <Trophy size={14} />
-                        <span>{league.type === 'STROKE' ? 'Strokeplay' : league.type}</span>
-                    </div>
-                    <h1 className="text-2xl font-bold">{league.name}</h1>
+            {/* League Header - Minimalist */}
+            <div className="mb-8 px-2">
+                <div className="flex items-center gap-3 mb-3">
+                    <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-widest rounded-md">
+                        {league.type === 'STROKE' ? 'Strokeplay' : league.type}
+                    </span>
+                    <span className="h-1 w-1 rounded-full bg-stone-300"></span>
+                    <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">
+                        {new Date(league.startDate).getFullYear()} Season
+                    </span>
                 </div>
 
-                <div className="flex gap-4 text-sm text-emerald-100/90 font-medium">
-                    <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg">
-                        <Calendar size={14} />
+                <h1 className="text-3xl md:text-4xl font-black text-dark tracking-tight mb-4 leading-tight">
+                    {league.name}
+                </h1>
+
+                <div className="flex items-center gap-6 text-sm text-stone-500 font-medium border-l-2 border-stone-200 pl-4">
+                    <div className="flex items-center gap-2">
+                        <Calendar size={16} className="text-stone-400" />
                         <span>{new Date(league.startDate).toLocaleDateString()}</span>
                     </div>
-                    <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg">
-                        <Users size={14} />
-                        <span>{standings.length} Mbrs</span>
+                    <div className="flex items-center gap-2">
+                        <Users size={16} className="text-stone-400" />
+                        <span>{standings.length} Members</span>
                     </div>
                 </div>
             </div>
