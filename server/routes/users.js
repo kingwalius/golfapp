@@ -123,6 +123,16 @@ router.get('/:id/activity', async (req, res) => {
     }
 });
 
+// Leaderboard Route
+router.get('/leaderboard/solo', async (req, res) => {
+    try {
+        const result = await db.execute('SELECT id, username, handicap, avatar FROM users ORDER BY handicap ASC LIMIT 10');
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Get single user (Last to avoid masking other specific routes)
 router.get('/:id', async (req, res) => {
     try {
