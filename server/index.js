@@ -954,7 +954,15 @@ app.get('/courses', async (req, res) => {
 });
 
 app.post('/courses', async (req, res) => {
-    const { name, holes, rating, slope, par } = req.body;
+    let { name, holes, rating, slope, par } = req.body;
+    if (!name) return res.status(400).json({ error: 'Course name required' });
+
+    // Defaults to prevent DB crash
+    holes = holes || [];
+    rating = rating || 0;
+    slope = slope || 0;
+    par = par || 0;
+
     try {
         // Check for existing course by name (Case Insensitive)
         const existing = await db.execute({
@@ -978,8 +986,17 @@ app.post('/courses', async (req, res) => {
 });
 
 app.put('/courses/:id', async (req, res) => {
-    const { name, holes, rating, slope, par } = req.body;
+    let { name, holes, rating, slope, par } = req.body;
     const id = req.params.id;
+
+    if (!name) return res.status(400).json({ error: 'Course name required' });
+
+    // Defaults to prevent DB crash
+    holes = holes || [];
+    rating = rating || 0;
+    slope = slope || 0;
+    par = par || 0;
+
     try {
         const result = await db.execute({
             sql: 'UPDATE courses SET name = ?, holes = ?, rating = ?, slope = ?, par = ? WHERE id = ?',
