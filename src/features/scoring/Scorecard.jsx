@@ -157,97 +157,106 @@ export const Scorecard = () => {
     if (!round || !course) return <div className="p-4">Round not found.</div>;
 
     return (
-        <div className="pb-24">
+        <div className="pb-32 bg-stone-50 min-h-screen">
             {/* Header */}
-            <div className="bg-white sticky top-0 z-10 shadow-sm border-b border-stone-100">
-                <div className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                        <button onClick={() => navigate('/')} className="p-2 -ml-2 text-stone-400 hover:text-dark">
-                            <ChevronLeft size={24} />
-                        </button>
-                        <div className="text-center flex-1 px-4">
-                            <h1 className="font-bold text-lg text-dark leading-tight">{course?.name}</h1>
-                            <div className="text-xs text-muted font-medium uppercase tracking-wider mt-1">
-                                {round.holesPlayed === 9 ? '9 Holes' : '18 Holes'} • HCP {round.hcpIndex}
+            <div className="bg-white sticky top-0 z-20 shadow-sm border-b border-stone-100">
+                <div className="p-4 flex items-center justify-between">
+                    <button onClick={() => navigate('/')} className="p-2 -ml-2 text-stone-400 hover:text-dark transition">
+                        <ChevronLeft size={24} />
+                    </button>
+                    <div className="text-center">
+                        <h1 className="font-bold text-dark text-lg leading-none">{course?.name}</h1>
+                        <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">
+                            {round.holesPlayed === 9 ? 'Front 9' : '18 Holes'} • HCP {round.hcpIndex}
+                        </span>
+                    </div>
+                    <div className="w-10"></div>
+                </div>
+
+                {/* Live Summary Bar */}
+                <div className="px-6 pb-4">
+                    <div className="bg-dark text-white p-4 rounded-2xl shadow-lg flex justify-between items-center relative overflow-hidden">
+                        <div className="relative z-10 flex gap-6">
+                            <div>
+                                <div className="text-[10px] h-3 font-bold text-stone-400 uppercase tracking-wider mb-0.5">Score</div>
+                                <div className="text-3xl font-black leading-none">{totalStrokes}</div>
+                            </div>
+                            <div className="w-px bg-white/10"></div>
+                            <div>
+                                <div className="text-[10px] h-3 font-bold text-secondary uppercase tracking-wider mb-0.5">Points</div>
+                                <div className="text-3xl font-black leading-none text-secondary">{totalStableford}</div>
                             </div>
                         </div>
-                        <div className="w-10" />
+                        <div className="text-right">
+                            <div className="text-[10px] h-3 font-bold text-emerald-400 uppercase tracking-wider mb-0.5">Differential</div>
+                            <div className="text-xl font-bold">{differential.toFixed(1)}</div>
+                        </div>
                     </div>
-
                 </div>
             </div>
 
             {/* Disclaimer for 9-hole rounds */}
             {round.holesPlayed === 9 && (
-                <div className="bg-amber-50 text-amber-800 text-xs p-2 text-center border-b border-amber-100 font-medium">
-                    ℹ️ 9-Hole round: Not included in Handicap Calculation.
+                <div className="px-6 py-2">
+                    <div className="bg-amber-50 text-amber-800 text-[10px] font-bold uppercase tracking-wide py-2 px-3 rounded-lg text-center border border-amber-100">
+                        Practice Round (9 Holes)
+                    </div>
                 </div>
             )}
 
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm text-center">
-                    <thead className="bg-gray-100 text-gray-600 font-medium">
-                        <tr>
-                            <th className="p-2 w-12 text-xs uppercase text-muted">Hole</th>
-                            <th className="p-2 w-12 text-xs uppercase text-muted">Par</th>
-                            <th className="p-2 w-12 text-xs uppercase text-muted">HCP</th>
-                            <th className="p-2">Score</th>
-                            <th className="p-2 w-12 text-xs uppercase text-muted">Pts</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                        {course.holes.map((hole) => {
-                            const strokes = round.scores[hole.number] || 0;
-                            const strokesReceived = calculateStrokesReceived(playingHcp, hole.hcp);
-                            const points = calculateStableford(hole.par, strokes, strokesReceived);
+            {/* List Layout */}
+            <div className="px-4 space-y-3 mt-4">
+                {course.holes.map((hole) => {
+                    const strokes = round.scores[hole.number] || 0;
+                    const strokesReceived = calculateStrokesReceived(playingHcp, hole.hcp);
+                    const points = calculateStableford(hole.par, strokes, strokesReceived);
 
-                            return (
-                                <tr key={hole.number} className={clsx(strokes > 0 ? "bg-white" : "bg-gray-50")}>
-                                    <td className="p-2 font-bold text-dark">{hole.number}</td>
-                                    <td className="p-2 text-muted">{hole.par}</td>
-                                    <td className="p-2 text-stone-400 text-xs">{hole.hcp}</td>
-                                    <td className="p-1">
-                                        <ScoreSelector
-                                            par={hole.par}
-                                            value={strokes}
-                                            onChange={(val) => updateScore(hole.number, val)}
-                                        />
-                                        {/* 
-                                        <input
-                                            type="number"
-                                            inputMode="numeric"
-                                            className={clsx(
-                                                "w-full h-12 text-center border rounded-xl font-bold text-xl focus:ring-2 focus:ring-primary outline-none touch-manipulation",
-                                                strokes === 0 ? "text-gray-300 border-gray-200" : "text-dark border-primary bg-teal-50"
-                                            )}
-                                            value={strokes || ''}
-                                            placeholder="-"
-                                            onChange={(e) => updateScore(hole.number, e.target.value)}
-                                        /> 
-                                        */}
-                                    </td>
-                                    <td className="p-3 font-bold text-primary">{strokes > 0 ? points : '-'}</td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                    <tfoot className="bg-gray-800 text-white font-bold">
-                        <tr>
-                            <td colSpan="2" className="p-3 text-right">Total</td>
-                            <td className="p-3 text-xs font-normal text-gray-300">
-                                Diff: {totalStrokes > 0 ? calculateDifferential(adjustedGrossScore, course.slope, course.rating).toFixed(1) : '-'}
-                            </td>
-                            <td className="p-3">{totalStrokes}</td>
-                            <td className="p-3 text-secondary">{totalStableford}</td>
-                        </tr>
-                    </tfoot>
-                </table>
+                    return (
+                        <div key={hole.number} className="bg-white rounded-2xl p-4 shadow-sm border border-stone-100 flex items-center justify-between">
+                            {/* Hole Info */}
+                            <div className="flex items-center gap-4 w-28">
+                                <div className="flex flex-col items-center justify-center w-10 h-10 bg-stone-50 rounded-xl border border-stone-100">
+                                    <span className="text-xs font-bold text-stone-400">Hole</span>
+                                    <span className="text-lg font-black text-dark leading-none">{hole.number}</span>
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                        <span className="text-sm font-bold text-dark">Par {hole.par}</span>
+                                    </div>
+                                    <div className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                                        HCP {hole.hcp}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Input */}
+                            <div className="flex-1 flex justify-center">
+                                <ScoreSelector
+                                    par={hole.par}
+                                    value={strokes}
+                                    onChange={(val) => updateScore(hole.number, val)}
+                                />
+                            </div>
+
+                            {/* Points Badge */}
+                            <div className="w-12 text-right">
+                                {strokes > 0 && (
+                                    <div className="inline-flex flex-col items-center justify-center bg-secondary/10 text-secondary px-2 py-1 rounded-lg min-w-[32px]">
+                                        <span className="text-lg font-black leading-none">{points}</span>
+                                        <span className="text-[8px] font-bold uppercase tracking-wider leading-none opacity-80">PTS</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
-            {/* Finish Round Button */}
-            <div className="mt-8 pb-8">
+
+            {/* Finish Action */}
+            <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-lg border-t border-stone-100 z-50">
                 <button
                     onClick={handleFinish}
-                    className="w-full bg-primary text-white py-4 rounded-xl font-bold shadow-lg hover:bg-primaryLight transition active:scale-95 flex items-center justify-center gap-2"
+                    className="w-full bg-primary text-white font-bold text-lg py-4 rounded-2xl shadow-lg hover:bg-primaryLight hover:shadow-xl active:scale-95 transition-all"
                 >
                     Finish Round
                 </button>

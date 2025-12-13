@@ -77,47 +77,65 @@ export default function Profile() {
     };
 
     return (
-        <div className="min-h-screen bg-stone-50 pb-safe">
-            <div className="bg-primary pt-12 pb-24 px-6 rounded-b-[2.5rem] shadow-floating relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-                    <div className="absolute top-[-50%] left-[-20%] w-[140%] h-[140%] border-[40px] border-white rounded-full opacity-20"></div>
-                </div>
-
-                <div className="relative z-10 flex flex-col items-center">
-                    <h1 className="text-3xl font-bold text-white mb-8">My Profile</h1>
-
-                    <div className="relative group cursor-pointer" onClick={() => fileInputRef.current.click()}>
-                        <div className="w-32 h-32 rounded-full border-4 border-white/20 shadow-floating overflow-hidden bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                            {avatar ? (
-                                <img src={avatar} alt="Profile" className="w-full h-full object-cover" />
-                            ) : (
-                                <span className="text-4xl">👤</span>
-                            )}
-                        </div>
-                        <div className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <span className="text-white text-sm font-medium">Change</span>
-                        </div>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            className="hidden"
-                            accept="image/*"
-                            onChange={handleFileChange}
-                        />
-                    </div>
-                    <div className="mt-4 w-full max-w-xs">
-                        <label className="block text-white/80 text-sm font-medium mb-1 text-center">Username</label>
-                        <input
-                            type="text"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-xl px-4 py-2 text-white text-center font-bold placeholder-white/50 focus:outline-none focus:bg-white/20 transition"
-                        />
-                    </div>
+        <div className="min-h-screen bg-stone-50 pb-safe p-6">
+            {/* Minimal Header with Back Action */}
+            <div className="flex justify-between items-center mb-8">
+                <button onClick={() => navigate(-1)} className="text-stone-400 hover:text-dark transition">
+                    Back
+                </button>
+                <div className="flex gap-4">
+                    <button
+                        onClick={forceResync}
+                        className="flex items-center gap-2 text-stone-400 font-bold text-xs uppercase tracking-widest hover:text-primary transition"
+                    >
+                        <RefreshCw size={14} />
+                        Sync
+                    </button>
+                    <button
+                        onClick={logout}
+                        className="flex items-center gap-2 text-red-400 font-bold text-xs uppercase tracking-widest hover:text-red-600 transition"
+                    >
+                        Log out
+                    </button>
                 </div>
             </div>
 
-            <div className="px-6 -mt-12 relative z-20 space-y-6">
+            <div className="flex flex-col items-center mb-10">
+                <h1 className="text-4xl font-black text-dark mb-8 tracking-tight">Edit Profile</h1>
+
+                <div className="relative group cursor-pointer mb-6" onClick={() => fileInputRef.current.click()}>
+                    <div className="w-32 h-32 rounded-3xl border-2 border-stone-200 shadow-xl overflow-hidden bg-white flex items-center justify-center transform transition group-hover:scale-105">
+                        {avatar ? (
+                            <img src={avatar} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                            <span className="text-4xl text-stone-300">USER</span>
+                        )}
+                    </div>
+                    <div className="absolute -bottom-2 -right-2 bg-dark text-white p-2 rounded-xl shadow-md border-2 border-white">
+                        <span className="text-xs font-bold px-2">Edit</span>
+                    </div>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                    />
+                </div>
+
+                <div className="w-full max-w-xs">
+                    <label className="block text-stone-400 text-[10px] font-bold uppercase tracking-widest mb-2 text-center">Display Name</label>
+                    <input
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        className="w-full bg-white border border-stone-200 rounded-2xl px-4 py-3 text-dark text-center font-bold text-lg shadow-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition"
+                        placeholder="Enter your name"
+                    />
+                </div>
+            </div>
+
+            <div className="space-y-6">
                 {/* Handicap Settings Card */}
                 <div className="card bg-white/90 backdrop-blur-md">
                     <h2 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
@@ -181,51 +199,34 @@ export default function Profile() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex flex-col gap-3 pt-4">
+                {/* Save Action */}
+                <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-lg border-t border-stone-100 z-50">
                     <button
                         onClick={handleSave}
                         disabled={isSaving}
-                        className="btn-primary w-full flex items-center justify-center gap-2"
+                        className="w-full bg-primary text-white font-bold text-lg py-4 rounded-2xl shadow-lg hover:bg-primaryLight hover:shadow-xl active:scale-95 transition-all disabled:opacity-70 disabled:scale-100"
                     >
-                        {isSaving ? 'Saving...' : 'Save Profile'}
+                        {isSaving ? 'Saving Changes...' : 'Save Changes'}
                     </button>
+                </div>
 
+                {/* Troubleshooting Area - Minimal */}
+                <div className="pt-8 pb-32 text-center">
                     <button
-                        onClick={() => navigate('/')}
-                        className="btn-secondary bg-stone-200 text-dark hover:bg-stone-300 w-full"
+                        onClick={async () => {
+                            if (confirm('Force Resync?')) {
+                                await forceResync();
+                                alert('Done');
+                            }
+                        }}
+                        className="text-amber-500 text-xs font-bold uppercase tracking-widest hover:underline mb-4 block mx-auto"
                     >
-                        Cancel
+                        Troubleshoot: Force Sync
                     </button>
 
-                    <div className="pt-6 border-t border-gray-200 mt-2">
-                        <h3 className="text-sm font-bold text-gray-400 mb-2 uppercase tracking-wider">Troubleshooting</h3>
-                        <button
-                            onClick={async () => {
-                                if (confirm('This will attempt to re-upload all unsynced data. Continue?')) {
-                                    setIsSaving(true);
-                                    await forceResync();
-                                    setIsSaving(false);
-                                    alert('Resync complete. Check activity feed.');
-                                }
-                            }}
-                            className="w-full py-3 rounded-xl font-bold text-amber-600 bg-amber-50 hover:bg-amber-100 transition-colors mb-2 flex items-center justify-center gap-2"
-                        >
-                            <RefreshCw size={18} />
-                            Fix Sync Issues (Force Upload)
-                        </button>
-
-                        <button
-                            onClick={() => {
-                                if (confirm('This will clear all local data and log you out. Are you sure?')) {
-                                    logout();
-                                    navigate('/');
-                                }
-                            }}
-                            className="w-full py-3 rounded-xl font-bold text-red-500 bg-red-50 hover:bg-red-100 transition-colors"
-                        >
-                            Clear Data & Log Out
-                        </button>
-                    </div>
+                    <p className="text-[10px] text-stone-300 font-mono">
+                        User ID: {user?.id} • v1.2.0
+                    </p>
                 </div>
             </div>
         </div>
