@@ -253,10 +253,10 @@ export const Scorecard = () => {
             </div>
 
             {/* Finish Action */}
-            <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-lg border-t border-stone-100 z-50">
+            <div className="fixed bottom-24 left-0 right-0 px-6 py-4 z-40 pointer-events-none">
                 <button
                     onClick={handleFinish}
-                    className="w-full bg-primary text-white font-bold text-lg py-4 rounded-2xl shadow-lg hover:bg-primaryLight hover:shadow-xl active:scale-95 transition-all"
+                    className="w-full bg-dark text-white font-black text-lg py-4 rounded-3xl shadow-2xl hover:bg-black transition-all transform active:scale-95 pointer-events-auto flex items-center justify-center gap-2 border border-white/10"
                 >
                     Finish Round
                 </button>
