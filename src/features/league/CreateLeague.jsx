@@ -49,7 +49,7 @@ export const CreateLeague = () => {
                 <button onClick={() => navigate(-1)} className="p-2 bg-white rounded-full shadow-sm">
                     <ArrowLeft size={20} />
                 </button>
-                <h1 className="text-2xl font-bold text-primary">Create League</h1>
+                <h1 className="text-2xl font-bold text-dark">Create League</h1>
             </div>
 
             <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100">
@@ -62,7 +62,7 @@ export const CreateLeague = () => {
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             placeholder="e.g. Sunday Drivers 2024"
-                            className="w-full bg-stone-50 p-4 rounded-xl text-lg font-bold text-dark outline-none focus:ring-2 focus:ring-primary/20"
+                            className="w-full bg-stone-50 p-4 rounded-xl text-lg font-bold text-dark outline-none focus:ring-2 focus:ring-dark/20"
                         />
                     </div>
 
@@ -71,22 +71,22 @@ export const CreateLeague = () => {
                         <div className="grid grid-cols-1 gap-3">
                             <button
                                 onClick={() => setFormData({ ...formData, type: 'STROKE' })}
-                                className={`p-4 rounded-xl border-2 text-left transition ${formData.type === 'STROKE' ? 'border-primary bg-primary/5' : 'border-stone-100 bg-stone-50'}`}
+                                className={`p-4 rounded-xl border-2 text-left transition ${formData.type === 'STROKE' ? 'border-dark bg-stone-100' : 'border-stone-100 bg-stone-50'}`}
                             >
                                 <div className="flex items-center gap-3 mb-1">
-                                    <Trophy size={20} className={formData.type === 'STROKE' ? 'text-primary' : 'text-muted'} />
-                                    <span className={`font-bold ${formData.type === 'STROKE' ? 'text-primary' : 'text-dark'}`}>Strokeplay League</span>
+                                    <Trophy size={20} className={formData.type === 'STROKE' ? 'text-dark' : 'text-muted'} />
+                                    <span className={`font-bold ${formData.type === 'STROKE' ? 'text-dark' : 'text-dark'}`}>Strokeplay League</span>
                                 </div>
                                 <p className="text-xs text-muted">Weekly rounds, points based on best score. F1 style ranking.</p>
                             </button>
 
                             <button
                                 onClick={() => setFormData({ ...formData, type: 'MATCH' })}
-                                className={`p-4 rounded-xl border-2 text-left transition ${formData.type === 'MATCH' ? 'border-primary bg-primary/5' : 'border-stone-100 bg-stone-50'}`}
+                                className={`p-4 rounded-xl border-2 text-left transition ${formData.type === 'MATCH' ? 'border-dark bg-stone-100' : 'border-stone-100 bg-stone-50'}`}
                             >
                                 <div className="flex items-center gap-3 mb-1">
-                                    <Users size={20} className={formData.type === 'MATCH' ? 'text-primary' : 'text-muted'} />
-                                    <span className={`font-bold ${formData.type === 'MATCH' ? 'text-primary' : 'text-dark'}`}>Matchplay Tournament</span>
+                                    <Users size={20} className={formData.type === 'MATCH' ? 'text-dark' : 'text-muted'} />
+                                    <span className={`font-bold ${formData.type === 'MATCH' ? 'text-dark' : 'text-dark'}`}>Matchplay Tournament</span>
                                 </div>
                                 <p className="text-xs text-muted">Bracket style knockout tournament. Sudden death.</p>
                             </button>
@@ -97,11 +97,11 @@ export const CreateLeague = () => {
                                     type: 'TEAM',
                                     settings: { ...formData.settings, tournamentStatus: 'SETUP' }
                                 })}
-                                className={`p-4 rounded-xl border-2 text-left transition ${formData.type === 'TEAM' ? 'border-primary bg-primary/5' : 'border-stone-100 bg-stone-50'}`}
+                                className={`p-4 rounded-xl border-2 text-left transition ${formData.type === 'TEAM' ? 'border-dark bg-stone-100' : 'border-stone-100 bg-stone-50'}`}
                             >
                                 <div className="flex items-center gap-3 mb-1">
-                                    <Users size={20} className={formData.type === 'TEAM' ? 'text-primary' : 'text-muted'} />
-                                    <span className={`font-bold ${formData.type === 'TEAM' ? 'text-primary' : 'text-dark'}`}>Team Cup (Ryder Style)</span>
+                                    <Users size={20} className={formData.type === 'TEAM' ? 'text-dark' : 'text-muted'} />
+                                    <span className={`font-bold ${formData.type === 'TEAM' ? 'text-dark' : 'text-dark'}`}>Team Cup (Ryder Style)</span>
                                 </div>
                                 <p className="text-xs text-muted">Two teams (Green vs Gold). Head-to-head matchups.</p>
                             </button>
@@ -116,13 +116,13 @@ export const CreateLeague = () => {
                         <div className="flex gap-4">
                             <button
                                 onClick={() => setFormData({ ...formData, roundFrequency: 'WEEKLY' })}
-                                className={`flex-1 p-4 rounded-xl border-2 text-center transition ${formData.roundFrequency !== 'MONTHLY' ? 'border-primary bg-primary/5 text-primary font-bold' : 'border-stone-100 bg-stone-50 text-muted'}`}
+                                className={`flex-1 p-4 rounded-xl border-2 text-center transition ${formData.roundFrequency !== 'MONTHLY' ? 'border-dark bg-stone-100 text-dark font-bold' : 'border-stone-100 bg-stone-50 text-muted'}`}
                             >
                                 Weekly
                             </button>
                             <button
                                 onClick={() => setFormData({ ...formData, roundFrequency: 'MONTHLY' })}
-                                className={`flex-1 p-4 rounded-xl border-2 text-center transition ${formData.roundFrequency === 'MONTHLY' ? 'border-primary bg-primary/5 text-primary font-bold' : 'border-stone-100 bg-stone-50 text-muted'}`}
+                                className={`flex-1 p-4 rounded-xl border-2 text-center transition ${formData.roundFrequency === 'MONTHLY' ? 'border-dark bg-stone-100 text-dark font-bold' : 'border-stone-100 bg-stone-50 text-muted'}`}
                             >
                                 Monthly
                             </button>
@@ -159,7 +159,7 @@ export const CreateLeague = () => {
                 <button
                     onClick={handleSubmit}
                     disabled={loading || !formData.name}
-                    className="w-full bg-primary text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:scale-[1.02] transition disabled:opacity-50 disabled:hover:scale-100"
+                    className="w-full bg-dark text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:scale-[1.02] transition disabled:opacity-50 disabled:hover:scale-100"
                 >
                     {loading ? 'Creating...' : 'Create League'}
                 </button>
