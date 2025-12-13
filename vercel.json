@@ -1,0 +1,40 @@
+{
+    "rewrites": [
+        {
+            "source": "/api/test_simple",
+            "destination": "/api/test_simple"
+        },
+        {
+            "source": "/api/(.*)",
+            "destination": "/api/index"
+        },
+        {
+            "source": "/auth/(.*)",
+            "destination": "/api/index"
+        },
+        {
+            "source": "/sync",
+            "destination": "/api/index"
+        },
+        {
+            "source": "/users",
+            "destination": "/api/index"
+        },
+        {
+            "source": "/leaderboard/(.*)",
+            "destination": "/api/index"
+        },
+        {
+            "source": "/courses",
+            "destination": "/api/index"
+        },
+        {
+            "source": "/courses/(.*)",
+            "destination": "/api/index"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
+}
