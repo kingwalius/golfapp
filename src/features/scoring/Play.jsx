@@ -156,7 +156,7 @@ export const Play = () => {
                         <h2 className="font-bold text-xl mb-4 text-dark">Recent Activity</h2>
                         <div className="space-y-1">
                             {activities.map(item => {
-                                const course = courses.find(c => c.id === item.courseId);
+                                const course = courses.find(c => c.id == item.courseId || c.serverId == item.courseId);
                                 const isMatch = item.type === 'match';
 
                                 // Determine opponent name
@@ -275,7 +275,7 @@ export const Play = () => {
                                 </button>
                             ) : (
                                 (() => {
-                                    const c = courses.find(course => course.id.toString() === selectedCourseId);
+                                    const c = courses.find(course => course.id.toString() === selectedCourseId || course.serverId?.toString() === selectedCourseId);
                                     if (!c) return null;
                                     return (
                                         <div className="relative p-4 rounded-2xl border-2 border-primary bg-primary/5 shadow-md">

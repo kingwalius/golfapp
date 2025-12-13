@@ -30,7 +30,25 @@ export const useDB = () => {
     return context;
 };
 
-// Example hook to fetch courses
+// Helper for authenticated requests
+const authFetch = async (url, options = {}) => {
+    let token = null;
+    try {
+        const storedUser = localStorage.getItem('golf_user');
+        if (storedUser) {
+            const user = JSON.parse(storedUser);
+            if (user && user.token) token = user.token;
+        }
+    } catch (e) { console.error("Error reading token for request", e); }
+
+    const headers = { ...options.headers };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    return fetch(url, { ...options, headers });
+};
+
 export const useCourses = () => {
     const db = useDB();
     const [courses, setCourses] = useState([]);
@@ -41,7 +59,7 @@ export const useCourses = () => {
         if (!db) return;
 
         try {
-            const res = await fetch('/courses');
+            const res = await authFetch('/courses');
             if (res.ok) {
                 const serverCourses = await res.json();
                 const tx = db.transaction('courses', 'readwrite');
@@ -342,7 +360,7 @@ export const UserProvider = ({ children }) => {
                         }
 
                         console.log("Uploading course:", course.name);
-                        const res = await fetch('/courses', {
+                        const res = await authFetch('/courses', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -393,7 +411,7 @@ export const UserProvider = ({ children }) => {
 
             // --- DOWN-SYNC: Fetch latest activity from server ---
             try {
-                const activityRes = await fetch(`/api/user/${user.id}/activity`);
+                const activityRes = await authFetch(`/api/user/${user.id}/activity`);
                 if (activityRes.ok) {
                     const activityData = await activityRes.json();
                     const tx = db.transaction(['rounds', 'matches'], 'readwrite');
@@ -496,7 +514,7 @@ export const UserProvider = ({ children }) => {
                 }))
             };
 
-            const res = await fetch('/sync', {
+            const res = await authFetch('/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -540,7 +558,7 @@ export const UserProvider = ({ children }) => {
             await recalculateHandicap();
 
             try {
-                const userRes = await fetch(`/api/user/${user.id}`);
+                const userRes = await authFetch(`/api/user/${user.id}`);
                 if (userRes.ok) {
                     const latestUser = await userRes.json();
                     const updatedUser = { ...user, ...latestUser };
@@ -568,7 +586,7 @@ export const UserProvider = ({ children }) => {
 
                     // Verify with server to get latest data
                     try {
-                        const res = await fetch(`/api/user/${parsed.id}`);
+                        const res = await authFetch(`/api/user/${parsed.id}`);
                         if (res.ok) {
                             const latest = await res.json();
                             setUser(latest);
@@ -609,7 +627,7 @@ export const UserProvider = ({ children }) => {
 
         // Sync to backend
         try {
-            await fetch('/api/user/update', {
+            await authFetch('/api/user/update', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: updatedUser.id, ...updates })
@@ -669,7 +687,7 @@ export const UserProvider = ({ children }) => {
 
                     // Update server
                     try {
-                        await fetch('/api/user/update', {
+                        await authFetch('/api/user/update', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ id: user.id, handicap: newHandicap, handicapChange, avgScore, avgScoreChange })
@@ -698,7 +716,7 @@ export const UserProvider = ({ children }) => {
         saveToLocalStorage(updatedUser);
 
         try {
-            await fetch('/api/user/update', {
+            await authFetch('/api/user/update', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: user.id, friends: JSON.stringify(updatedFriends) })
@@ -719,7 +737,7 @@ export const UserProvider = ({ children }) => {
         saveToLocalStorage(updatedUser);
 
         try {
-            await fetch('/api/user/update', {
+            await authFetch('/api/user/update', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: user.id, friends: JSON.stringify(updatedFriends) })
@@ -746,7 +764,7 @@ export const UserProvider = ({ children }) => {
         saveToLocalStorage(updatedUser);
 
         try {
-            await fetch('/api/user/update', {
+            await authFetch('/api/user/update', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: user.id, favoriteCourses: JSON.stringify(updatedFavorites) })

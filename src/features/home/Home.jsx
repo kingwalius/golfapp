@@ -281,7 +281,7 @@ export const Home = () => {
                 <div className="space-y-3">
                     {countingRounds.length > 0 ? (
                         countingRounds.map(item => {
-                            const course = courses.find(c => c.id === item.courseId);
+                            const course = courses.find(c => c.id == item.courseId || c.serverId == item.courseId);
                             const isMatch = item.type === 'match';
 
                             return (

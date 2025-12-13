@@ -1,8 +1,14 @@
+
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
-import db, { initDB } from './db.js';
+import { dbPromise as db, initDB } from './db.js';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+dotenv.config();
+
+const JWT_SECRET = process.env.JWT_SECRET || 'golf-app-super-secret-key-change-in-prod';
 
 const app = express();
 
@@ -39,53 +45,53 @@ app.get('/api/fix-db', async (req, res) => {
     const log = (msg) => report.push(msg);
 
     try {
-        log(`Starting League DB fix (Step: ${step})...`);
+        log(`Starting League DB fix(Step: ${step})...`);
 
         // STEP 1: Create Tables
         if (step === 'all' || step === 'tables') {
             const leagueTables = [
-                `CREATE TABLE IF NOT EXISTS leagues (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    adminId INTEGER NOT NULL,
-                    startDate TEXT,
-                    endDate TEXT,
-                    settings TEXT,
-                    status TEXT DEFAULT 'ACTIVE',
-                    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-                )`,
-                `CREATE TABLE IF NOT EXISTS league_members (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    leagueId INTEGER NOT NULL,
-                    userId INTEGER NOT NULL,
-                    team TEXT,
-                    points REAL DEFAULT 0,
-                    joinedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
-                    FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
-                )`,
-                `CREATE TABLE IF NOT EXISTS league_matches (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    leagueId INTEGER NOT NULL,
-                    roundNumber INTEGER,
-                    matchId INTEGER,
-                    player1Id INTEGER,
-                    player2Id INTEGER,
-                    winnerId INTEGER,
-                    concedeDeadline DATETIME,
-                    FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
-                    FOREIGN KEY(matchId) REFERENCES matches(id) ON DELETE SET NULL
-                )`,
-                `CREATE TABLE IF NOT EXISTS league_rounds (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    leagueId INTEGER NOT NULL,
-                    roundId INTEGER NOT NULL,
-                    points REAL DEFAULT 0,
-                    date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
-                    FOREIGN KEY(roundId) REFERENCES rounds(id) ON DELETE CASCADE
-                )`
+                `CREATE TABLE IF NOT EXISTS leagues(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    adminId INTEGER NOT NULL,
+    startDate TEXT,
+    endDate TEXT,
+    settings TEXT,
+    status TEXT DEFAULT 'ACTIVE',
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+)`,
+                `CREATE TABLE IF NOT EXISTS league_members(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    leagueId INTEGER NOT NULL,
+    userId INTEGER NOT NULL,
+    team TEXT,
+    points REAL DEFAULT 0,
+    joinedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
+    FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
+)`,
+                `CREATE TABLE IF NOT EXISTS league_matches(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    leagueId INTEGER NOT NULL,
+    roundNumber INTEGER,
+    matchId INTEGER,
+    player1Id INTEGER,
+    player2Id INTEGER,
+    winnerId INTEGER,
+    concedeDeadline DATETIME,
+    FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
+    FOREIGN KEY(matchId) REFERENCES matches(id) ON DELETE SET NULL
+)`,
+                `CREATE TABLE IF NOT EXISTS league_rounds(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    leagueId INTEGER NOT NULL,
+    roundId INTEGER NOT NULL,
+    points REAL DEFAULT 0,
+    date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
+    FOREIGN KEY(roundId) REFERENCES rounds(id) ON DELETE CASCADE
+)`
             ];
 
             for (const sql of leagueTables) {
@@ -93,7 +99,7 @@ app.get('/api/fix-db', async (req, res) => {
                     await db.execute(sql);
                     log('✅ Executed CREATE TABLE.');
                 } catch (e) {
-                    log(`❌ Failed to create table: ${e.message}`);
+                    log(`❌ Failed to create table: ${e.message} `);
                 }
             }
         }
@@ -111,7 +117,7 @@ app.get('/api/fix-db', async (req, res) => {
                     await db.execute("ALTER TABLE rounds ADD COLUMN leagueId INTEGER");
                     log('✅ Added leagueId to rounds.');
                 } catch (e2) {
-                    log(`❌ Failed to add leagueId: ${e2.message}`);
+                    log(`❌ Failed to add leagueId: ${e2.message} `);
                 }
             }
         }
@@ -161,7 +167,7 @@ app.get('/api/debug-sql', async (req, res) => {
             JOIN rounds r ON lr.roundId = r.id
             JOIN users u ON r.userId = u.id 
             WHERE lr.leagueId = ?
-            ORDER BY r.date DESC
+    ORDER BY r.date DESC
         `;
         const result = await db.execute({ sql, args: [leagueId] });
 
@@ -269,7 +275,15 @@ app.post('/auth/login', async (req, res) => {
             });
         }
 
+        // Generate Token
+        const token = jwt.sign(
+            { id: user.id, username: user.username },
+            JWT_SECRET,
+            { expiresIn: '30d' }
+        );
+
         res.json({
+            token, // Return the token!
             id: user.id,
             username: user.username,
             handicap: user.handicap,
@@ -286,6 +300,22 @@ app.post('/auth/login', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// Middleware for JWT Verification
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (token == null) return res.sendStatus(401); // No token present
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.sendStatus(403); // Invalid token
+        req.user = user;
+        next();
+    });
+};
+
+// --- Secure Routes ---
 
 // Reset Password (Unsecured for MVP)
 app.post('/auth/reset-password', async (req, res) => {
@@ -353,7 +383,7 @@ app.get('/users', async (req, res) => {
 });
 
 // Get single user
-app.get('/api/user/:id', async (req, res) => {
+app.get('/api/user/:id', authenticateToken, async (req, res) => {
     try {
         const result = await db.execute({
             sql: 'SELECT * FROM users WHERE id = ?',
@@ -371,7 +401,7 @@ app.get('/api/user/:id', async (req, res) => {
 });
 
 // --- Update User Profile ---
-app.post('/api/user/update', async (req, res) => {
+app.post('/api/user/update', authenticateToken, async (req, res) => {
     const { id, ...updates } = req.body;
     if (!id) return res.status(400).json({ error: 'User ID required' });
 
@@ -395,7 +425,7 @@ app.post('/api/user/update', async (req, res) => {
 
         args.push(id);
 
-        const sql = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
+        const sql = `UPDATE users SET ${fields.join(', ')} WHERE id = ? `;
 
         await db.execute({ sql, args });
         res.json({ success: true });
@@ -406,7 +436,7 @@ app.post('/api/user/update', async (req, res) => {
 });
 
 // --- User Activity Route ---
-app.get('/api/user/:id/activity', async (req, res) => {
+app.get('/api/user/:id/activity', authenticateToken, async (req, res) => {
     const userId = req.params.id;
     try {
         // Fetch Rounds
@@ -423,7 +453,7 @@ app.get('/api/user/:id/activity', async (req, res) => {
                     LEFT JOIN users u1 ON m.player1Id = u1.id
                     LEFT JOIN users u2 ON m.player2Id = u2.id
                     WHERE m.player1Id = ? OR m.player2Id = ?
-                `,
+    `,
             args: [userId, userId]
         });
 
@@ -504,7 +534,7 @@ app.get('/api/league/feed', async (req, res) => {
             JOIN users u ON r.userId = u.id
             JOIN courses c ON r.courseId = c.id
             ORDER BY r.date DESC LIMIT 50
-        `);
+    `);
 
         // Fetch all matches with user info
         const matchesResult = await db.execute(`
@@ -550,7 +580,7 @@ const ensureScoresColumn = async (table) => {
             try {
                 await db.execute(`ALTER TABLE ${table} ADD COLUMN scores TEXT`);
             } catch (alterError) {
-                console.error(`Failed to add scores column to ${table}:`, alterError);
+                console.error(`Failed to add scores column to ${table}: `, alterError);
             }
         }
     }
@@ -560,15 +590,15 @@ const ensureScoresColumn = async (table) => {
 const ensureLeagueRoundsTable = async () => {
     try {
         await db.execute(`
-            CREATE TABLE IF NOT EXISTS league_rounds (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                leagueId INTEGER NOT NULL,
-                roundId INTEGER NOT NULL,
-                points REAL DEFAULT 0,
-                date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
-                FOREIGN KEY(roundId) REFERENCES rounds(id) ON DELETE CASCADE
-            )
+            CREATE TABLE IF NOT EXISTS league_rounds(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        leagueId INTEGER NOT NULL,
+        roundId INTEGER NOT NULL,
+        points REAL DEFAULT 0,
+        date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
+        FOREIGN KEY(roundId) REFERENCES rounds(id) ON DELETE CASCADE
+    )
         `);
     } catch (e) {
         console.error("Failed to ensure league_rounds table:", e);
@@ -606,7 +636,7 @@ const ensureGuestUser = async () => {
 };
 
 // --- Sync Routes ---
-app.post('/sync', async (req, res) => {
+app.post('/sync', authenticateToken, async (req, res) => {
     const { userId, rounds, matches } = req.body;
     if (!userId) return res.status(400).json({ error: 'User ID required' });
 
@@ -670,11 +700,11 @@ app.post('/sync', async (req, res) => {
         });
 
         if (userCheck.rows.length === 0) {
-            console.log(`User ${userId} missing on server. Auto-restoring...`);
+            console.log(`User ${userId} missing on server.Auto - restoring...`);
             // Restore user with a placeholder to allow sync to proceed
             await db.execute({
                 sql: "INSERT INTO users (id, username, handicap, handicapMode) VALUES (?, ?, ?, ?)",
-                args: [userId, `Restored_User_${userId}`, 28.0, 'AUTO']
+                args: [userId, `Restored_User_${userId} `, 28.0, 'AUTO']
             });
         }
 
@@ -749,8 +779,8 @@ app.post('/sync', async (req, res) => {
                     } else {
                         // Insert new round
                         const roundRes = await db.execute({
-                            sql: `INSERT INTO rounds (userId, courseId, date, score, stableford, hcpIndex, scores, leagueId)
-                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                            sql: `INSERT INTO rounds(userId, courseId, date, score, stableford, hcpIndex, scores, leagueId)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?)`,
                             args: [userId, round.courseId, round.date, round.score, round.stableford, round.hcpIndex, scoresJson, round.leagueId || null]
                         });
 
@@ -790,8 +820,8 @@ app.post('/sync', async (req, res) => {
                     const matchDate = match.date || new Date().toISOString();
                     const courseId = match.courseId || 1; // Default to course 1 if missing
 
-                    if (!match.date) console.warn(`Match missing date, using ${matchDate}`);
-                    if (!match.courseId) console.warn(`Match missing courseId, using ${courseId}`);
+                    if (!match.date) console.warn(`Match missing date, using ${matchDate} `);
+                    if (!match.courseId) console.warn(`Match missing courseId, using ${courseId} `);
 
                     // Ensure Player 2 exists (Self-healing for FK constraints)
                     // Explicitly check if p2Id exists, even if it is guestId (just to be safe)
@@ -801,10 +831,10 @@ app.post('/sync', async (req, res) => {
                     });
 
                     if (p2Check.rows.length === 0) {
-                        console.log(`Player 2 (${p2Id}) missing on server. Auto-restoring...`);
+                        console.log(`Player 2(${p2Id}) missing on server.Auto - restoring...`);
                         await db.execute({
                             sql: "INSERT INTO users (id, username, handicap, handicapMode) VALUES (?, ?, ?, ?)",
-                            args: [p2Id, p2Id == 9999 ? 'Guest' : `Restored_User_${p2Id}`, 18.0, 'MANUAL']
+                            args: [p2Id, p2Id == 9999 ? 'Guest' : `Restored_User_${p2Id} `, 18.0, 'MANUAL']
                         });
                     }
 
@@ -822,7 +852,7 @@ app.post('/sync', async (req, res) => {
                         });
 
                         if (guestMatch.rows.length > 0) {
-                            console.log(`Linking Guest match ${guestMatch.rows[0].id} to Real User ${p2Id}`);
+                            console.log(`Linking Guest match ${guestMatch.rows[0].id} to Real User ${p2Id} `);
                             existing = guestMatch;
                             await db.execute({
                                 sql: 'UPDATE matches SET player2Id = ? WHERE id = ?',
@@ -841,7 +871,7 @@ app.post('/sync', async (req, res) => {
 
                         // Tournament Bracket Update Logic
                         if (match.leagueMatchId && match.winnerId && match.status !== 'AS') {
-                            console.log(`Advancing Tournament Bracket for League Match ${match.leagueMatchId}`);
+                            console.log(`Advancing Tournament Bracket for League Match ${match.leagueMatchId} `);
                             // 1. Update the bracket match with the result
                             await db.execute({
                                 sql: 'UPDATE league_matches SET matchId = ?, winnerId = ? WHERE id = ?',
@@ -868,10 +898,10 @@ app.post('/sync', async (req, res) => {
 
                                 if (nextMatchRes.rows.length > 0) {
                                     await db.execute({
-                                        sql: `UPDATE league_matches SET ${field} = ? WHERE id = ?`,
+                                        sql: `UPDATE league_matches SET ${field} = ? WHERE id = ? `,
                                         args: [match.winnerId, nextMatchRes.rows[0].id]
                                     });
-                                    console.log(`Advanced winner ${match.winnerId} to Round ${nextRound}, Match ${nextMatchNum}`);
+                                    console.log(`Advanced winner ${match.winnerId} to Round ${nextRound}, Match ${nextMatchNum} `);
                                 }
                             }
                         }
@@ -879,14 +909,14 @@ app.post('/sync', async (req, res) => {
                     } else {
                         // Insert new match
                         const newMatch = await db.execute({
-                            sql: `INSERT INTO matches (player1Id, player2Id, courseId, date, winnerId, status, scores, player1Differential, player2Differential, countForHandicap, leagueMatchId)
-                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                            sql: `INSERT INTO matches(player1Id, player2Id, courseId, date, winnerId, status, scores, player1Differential, player2Differential, countForHandicap, leagueMatchId)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                             args: [match.player1Id, p2Id, courseId, matchDate, match.winnerId, match.status, scoresJson, match.player1Differential || null, match.player2Differential || null, match.countForHandicap || 0, match.leagueMatchId || null]
                         });
 
                         // Tournament Bracket Update Logic (Same for Insert)
                         if (match.leagueMatchId && match.winnerId && match.status !== 'AS') {
-                            console.log(`Advancing Tournament Bracket for League Match ${match.leagueMatchId}`);
+                            console.log(`Advancing Tournament Bracket for League Match ${match.leagueMatchId} `);
                             const matchId = newMatch.lastInsertRowid.toString();
 
                             await db.execute({
@@ -914,10 +944,10 @@ app.post('/sync', async (req, res) => {
 
                                 if (nextMatchRes.rows.length > 0) {
                                     await db.execute({
-                                        sql: `UPDATE league_matches SET ${field} = ? WHERE id = ?`,
+                                        sql: `UPDATE league_matches SET ${field} = ? WHERE id = ? `,
                                         args: [match.winnerId, nextMatchRes.rows[0].id]
                                     });
-                                    console.log(`Advanced winner ${match.winnerId} to Round ${nextRound}, Match ${nextMatchNum}`);
+                                    console.log(`Advanced winner ${match.winnerId} to Round ${nextRound}, Match ${nextMatchNum} `);
                                 }
                             }
                         }
@@ -1108,7 +1138,7 @@ app.get('/api/leagues', async (req, res) => {
                 FROM leagues l
                 JOIN league_members lm ON l.id = lm.leagueId
                 WHERE lm.userId = ?
-                ORDER BY l.createdAt DESC
+    ORDER BY l.createdAt DESC
             `,
             args: [userId]
         });
@@ -1202,8 +1232,8 @@ app.post('/api/leagues/:id/leave', async (req, res) => {
         // Complex query: Delete from league_rounds where leagueId = ? AND roundId IN (SELECT id FROM rounds WHERE userId = ?)
         await db.execute({
             sql: `DELETE FROM league_rounds 
-                  WHERE leagueId = ? 
-                  AND roundId IN (SELECT id FROM rounds WHERE userId = ?)`,
+                  WHERE leagueId = ?
+    AND roundId IN(SELECT id FROM rounds WHERE userId = ?)`,
             args: [leagueId, userId]
         });
 
@@ -1349,8 +1379,8 @@ app.post('/api/leagues/:id/start-tournament', async (req, res) => {
             if (!p1 && !p2) winner = null; // Double bye? Advances null?
 
             await db.execute({
-                sql: `INSERT INTO league_matches (leagueId, roundNumber, matchNumber, player1Id, player2Id, winnerId) 
-                      VALUES (?, ?, ?, ?, ?, ?)`,
+                sql: `INSERT INTO league_matches(leagueId, roundNumber, matchNumber, player1Id, player2Id, winnerId)
+VALUES(?, ?, ?, ?, ?, ?)`,
                 args: [leagueId, 1, i + 1, p1, p2, winner]
             });
         }
@@ -1361,8 +1391,8 @@ app.post('/api/leagues/:id/start-tournament', async (req, res) => {
             currentRoundMatches /= 2;
             for (let m = 1; m <= currentRoundMatches; m++) {
                 await db.execute({
-                    sql: `INSERT INTO league_matches (leagueId, roundNumber, matchNumber, player1Id, player2Id, winnerId) 
-                          VALUES (?, ?, ?, ?, ?, ?)`,
+                    sql: `INSERT INTO league_matches(leagueId, roundNumber, matchNumber, player1Id, player2Id, winnerId)
+VALUES(?, ?, ?, ?, ?, ?)`,
                     args: [leagueId, r, m, null, null, null]
                 });
             }
@@ -1389,7 +1419,7 @@ app.post('/api/leagues/:id/start-tournament', async (req, res) => {
             const field = isPlayer1 ? 'player1Id' : 'player2Id';
 
             await db.execute({
-                sql: `UPDATE league_matches SET ${field} = ? WHERE leagueId = ? AND roundNumber = ? AND matchNumber = ?`,
+                sql: `UPDATE league_matches SET ${field} = ? WHERE leagueId = ? AND roundNumber = ? AND matchNumber = ? `,
                 args: [match.winnerId, leagueId, nextRound, nextMatchNum]
             });
         }
@@ -1450,7 +1480,7 @@ app.post('/api/leagues/:id/start-team-tournament', async (req, res) => {
                 FROM league_members lm
                 JOIN users u ON lm.userId = u.id
                 WHERE lm.leagueId = ?
-            `,
+    `,
             args: [leagueId]
         });
 
@@ -1569,8 +1599,8 @@ app.post('/api/leagues/:id/submit-lineup', async (req, res) => {
                 // Users will "Start Match" from the Dashboard, which will create the 'match' record linked to this pairing.
 
                 await db.execute({
-                    sql: `INSERT INTO league_matches (leagueId, roundNumber, matchNumber, player1Id, player2Id, winnerId) 
-                          VALUES (?, ?, ?, ?, ?, ?)`,
+                    sql: `INSERT INTO league_matches(leagueId, roundNumber, matchNumber, player1Id, player2Id, winnerId)
+VALUES(?, ?, ?, ?, ?, ?)`,
                     args: [leagueId, 1, i + 1, p1, p2, null]
                 });
             }
@@ -1609,7 +1639,7 @@ app.get('/api/leagues/:id/standings', async (req, res) => {
                 FROM league_members lm
                 JOIN users u ON lm.userId = u.id
                 WHERE lm.leagueId = ?
-            `,
+    `,
             args: [leagueId]
         });
         const members = membersRes.rows;
@@ -1628,7 +1658,7 @@ app.get('/api/leagues/:id/standings', async (req, res) => {
                       JOIN rounds r ON lr.roundId = r.id
                       JOIN users u ON r.userId = u.id 
                       WHERE lr.leagueId = ?
-                      ORDER BY r.date DESC`,
+    ORDER BY r.date DESC`,
                 args: [leagueId]
             });
             rounds = roundsRes.rows;
@@ -1643,13 +1673,13 @@ app.get('/api/leagues/:id/standings', async (req, res) => {
 
                 if (frequency === 'MONTHLY') {
                     // Key: YYYY-MM
-                    key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    key = `${date.getFullYear()} -${String(date.getMonth() + 1).padStart(2, '0')} `;
                 } else {
                     // Key: YYYY-Www (ISO Week)
                     const oneJan = new Date(date.getFullYear(), 0, 1);
                     const numberOfDays = Math.floor((date - oneJan) / (24 * 60 * 60 * 1000));
                     const weekNum = Math.ceil((date.getDay() + 1 + numberOfDays) / 7);
-                    key = `${date.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+                    key = `${date.getFullYear()} -W${String(weekNum).padStart(2, '0')} `;
                 }
 
                 if (!roundsByPeriod[key]) roundsByPeriod[key] = [];
@@ -1707,7 +1737,7 @@ app.get('/api/leagues/:id/standings', async (req, res) => {
                 const distribution = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
                 const periodBreakdown = {
                     id: periodKey,
-                    name: frequency === 'MONTHLY' ? periodKey : `Week ${periodKey.split('-W')[1]}`,
+                    name: frequency === 'MONTHLY' ? periodKey : `Week ${periodKey.split('-W')[1]} `,
                     results: []
                 };
 
@@ -1865,8 +1895,8 @@ app.post('/api/leagues/:id/submit-sudden-death', async (req, res) => {
             const nextMatchNum = (matchesCheck.rows[0].maxNum || 0) + 1;
 
             await db.execute({
-                sql: `INSERT INTO league_matches (leagueId, roundNumber, matchNumber, player1Id, player2Id, winnerId) 
-                      VALUES (?, ?, ?, ?, ?, ?)`,
+                sql: `INSERT INTO league_matches(leagueId, roundNumber, matchNumber, player1Id, player2Id, winnerId)
+VALUES(?, ?, ?, ?, ?, ?)`,
                 args: [id, 99, nextMatchNum, p1, p2, null] // Round 99 for Sudden Death
             });
 
@@ -1892,17 +1922,17 @@ app.get('/api/leagues/:id/matches', async (req, res) => {
     try {
         const result = await db.execute({
             sql: `
-                SELECT lm.*, 
-                       u1.username as p1Name, 
-                       u2.username as p2Name,
-                       m.status as status
+                SELECT lm.*,
+    u1.username as p1Name,
+    u2.username as p2Name,
+    m.status as status
                 FROM league_matches lm
                 LEFT JOIN users u1 ON lm.player1Id = u1.id
                 LEFT JOIN users u2 ON lm.player2Id = u2.id
                 LEFT JOIN matches m ON lm.matchId = m.id
                 WHERE lm.leagueId = ?
-                ORDER BY lm.roundNumber, lm.matchNumber
-            `,
+    ORDER BY lm.roundNumber, lm.matchNumber
+        `,
             args: [leagueId]
         });
         res.json(result.rows);
@@ -1972,7 +2002,7 @@ app.post('/api/leagues/:id/advance-match', async (req, res) => {
 
             if (nextMatchRes.rows.length > 0) {
                 await db.execute({
-                    sql: `UPDATE league_matches SET ${field} = ? WHERE id = ?`,
+                    sql: `UPDATE league_matches SET ${field} = ? WHERE id = ? `,
                     args: [winnerId, nextMatchRes.rows[0].id]
                 });
                 return res.json({ success: true, message: `Manually advanced winner.` });
@@ -2012,7 +2042,7 @@ app.post('/api/debug/resolve-bracket', async (req, res) => {
         if (matchRes.rows.length === 0) return res.status(404).json({ error: 'Match not found' });
 
         const match = matchRes.rows[0];
-        console.log(`Manual Resolve for Match ${match.id}, LeagueMatchId: ${match.leagueMatchId}`);
+        console.log(`Manual Resolve for Match ${match.id}, LeagueMatchId: ${match.leagueMatchId} `);
 
         if (match.leagueMatchId && match.winnerId) {
             // 1. Update the bracket match with the result
@@ -2041,10 +2071,10 @@ app.post('/api/debug/resolve-bracket', async (req, res) => {
 
                 if (nextMatchRes.rows.length > 0) {
                     await db.execute({
-                        sql: `UPDATE league_matches SET ${field} = ? WHERE id = ?`,
+                        sql: `UPDATE league_matches SET ${field} = ? WHERE id = ? `,
                         args: [match.winnerId, nextMatchRes.rows[0].id]
                     });
-                    return res.json({ success: true, message: `Advanced winner ${match.winnerId} to Round ${nextRound}, Match ${nextMatchNum}` });
+                    return res.json({ success: true, message: `Advanced winner ${match.winnerId} to Round ${nextRound}, Match ${nextMatchNum} ` });
                 }
                 return res.json({ success: true, message: 'Bracket updated, but next match not found (Final?)' });
             }
@@ -2060,7 +2090,7 @@ app.post('/api/debug/resolve-bracket', async (req, res) => {
 app.post('/api/debug/force-link', async (req, res) => {
     const { matchId, leagueMatchId } = req.body;
     try {
-        console.log(`Force Link: Linking Match ${matchId} to LeagueMatch ${leagueMatchId}`);
+        console.log(`Force Link: Linking Match ${matchId} to LeagueMatch ${leagueMatchId} `);
 
         // 1. Update Match with Link
         await db.execute({
@@ -2102,10 +2132,10 @@ app.post('/api/debug/force-link', async (req, res) => {
 
                 if (nextMatchRes.rows.length > 0) {
                     await db.execute({
-                        sql: `UPDATE league_matches SET ${field} = ? WHERE id = ?`,
+                        sql: `UPDATE league_matches SET ${field} = ? WHERE id = ? `,
                         args: [match.winnerId, nextMatchRes.rows[0].id]
                     });
-                    return res.json({ success: true, message: `Linked & Advanced winner ${match.winnerId} to Round ${nextRound}` });
+                    return res.json({ success: true, message: `Linked & Advanced winner ${match.winnerId} to Round ${nextRound} ` });
                 }
                 return res.json({ success: true, message: 'Linked & Updated, but next match not found' });
             }
@@ -2126,7 +2156,7 @@ if (process.env.NODE_ENV !== 'production') {
             await ensureLeagueMatchIdColumn();
             await ensureGuestUser();
             app.listen(PORT, () => {
-                console.log(`Server running on port ${PORT}`);
+                console.log(`Server running on port ${PORT} `);
             });
         } catch (e) {
             console.error("Startup failed:", e);
