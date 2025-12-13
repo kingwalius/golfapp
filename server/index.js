@@ -2102,14 +2102,20 @@ app.post('/api/debug/force-link', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-(async () => { // Wrap in an async IIFE to allow await calls before app.listen
-    await ensureLeagueMatchIdColumn();
-    await ensureGuestUser();
 
-    app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-    });
-})(); // Immediately invoke the async function
+if (process.env.NODE_ENV !== 'production') {
+    (async () => {
+        try {
+            await ensureLeagueMatchIdColumn();
+            await ensureGuestUser();
+            app.listen(PORT, () => {
+                console.log(`Server running on port ${PORT}`);
+            });
+        } catch (e) {
+            console.error("Startup failed:", e);
+        }
+    })();
+}
 if (process.env.NODE_ENV !== 'production') {
     // The original console.log was here, but the new app.listen handles it.
     // Keeping the if block structure as per user's snippet, though it's now empty.
