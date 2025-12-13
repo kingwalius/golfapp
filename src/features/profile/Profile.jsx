@@ -138,7 +138,7 @@ export default function Profile() {
             <div className="space-y-6">
                 {/* Handicap Settings Card */}
                 <div className="card bg-white/90 backdrop-blur-md">
-                    <h2 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
+                    <h2 className="text-xl font-bold text-dark mb-4 flex items-center gap-2">
                         Handicap Settings
                     </h2>
 
@@ -149,7 +149,7 @@ export default function Profile() {
                                 <button
                                     onClick={() => setHandicapMode('AUTO')}
                                     className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${handicapMode === 'AUTO'
-                                        ? 'bg-white text-primary shadow-sm'
+                                        ? 'bg-white text-dark shadow-sm'
                                         : 'text-muted hover:text-dark'
                                         }`}
                                 >
@@ -158,7 +158,7 @@ export default function Profile() {
                                 <button
                                     onClick={() => setHandicapMode('MANUAL')}
                                     className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${handicapMode === 'MANUAL'
-                                        ? 'bg-white text-primary shadow-sm'
+                                        ? 'bg-white text-dark shadow-sm'
                                         : 'text-muted hover:text-dark'
                                         }`}
                                 >
@@ -175,7 +175,7 @@ export default function Profile() {
                                     step="0.1"
                                     value={manualHandicap}
                                     onChange={(e) => setManualHandicap(e.target.value)}
-                                    className="input-field text-lg font-semibold text-primary"
+                                    className="input-field text-lg font-semibold text-dark"
                                     placeholder="e.g. 18.5"
                                 />
                                 <p className="text-xs text-muted mt-2">
@@ -185,12 +185,12 @@ export default function Profile() {
                         )}
 
                         {handicapMode === 'AUTO' && (
-                            <div className="p-4 bg-primary/5 rounded-xl border border-primary/10 animate-fade-in">
+                            <div className="p-4 bg-stone-50 rounded-xl border border-stone-200 animate-fade-in">
                                 <div className="flex justify-between items-center mb-1">
-                                    <span className="text-sm font-medium text-primary">Current WHS Index</span>
-                                    <span className="text-2xl font-bold text-primary">{user?.handicap?.toFixed(1)}</span>
+                                    <span className="text-sm font-medium text-dark">Current WHS Index</span>
+                                    <span className="text-2xl font-bold text-dark">{user?.handicap?.toFixed(1)}</span>
                                 </div>
-                                <p className="text-xs text-primary/70">
+                                <p className="text-xs text-muted">
                                     Calculated based on your best 8 of last 20 rounds.
                                 </p>
                             </div>
