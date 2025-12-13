@@ -116,107 +116,116 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
 
     return (
         <div className="space-y-6">
-            {/* Scoreboard */}
-            <div className={`text-white rounded-3xl p-6 shadow-xl overflow-hidden relative ${status.includes('SD') || status.includes('SUDDEN') ? 'bg-[#3f0000]' : 'bg-dark'}`}>
+            {/* Scoreboard - Modern Light Theme */}
+            <div className="bg-white rounded-3xl p-8 shadow-floating border border-stone-100 relative overflow-hidden">
                 <div className="flex justify-between items-center relative z-10">
-                    <div className="text-center w-5/12">
-                        <h2 className="text-emerald-400 font-bold text-lg mb-1">{settings.team1Name || 'Green Team'}</h2>
-                        <div className="text-5xl font-black">{greenScore}</div>
+                    <div className="text-center flex-1">
+                        <h2 className="text-emerald-600 font-bold text-sm tracking-widest uppercase mb-2">{settings.team1Name || 'Green'}</h2>
+                        <div className="text-6xl font-black text-emerald-600 leading-none">{greenScore}</div>
                     </div>
-                    <div className="text-center w-2/12">
-                        <div className="text-xs font-bold uppercase tracking-widest text-white/50 mb-2">VS</div>
-                        <div className="inline-block px-3 py-1 bg-white/10 rounded-full text-xs font-bold whitespace-nowrap">
-                            target {settings.formattedWinningScore || '?'}
+
+                    <div className="text-center w-24 pt-2">
+                        <div className="text-xs font-bold text-muted uppercase tracking-widest mb-1">VS</div>
+                        <div className="text-xs font-medium text-stone-400 bg-stone-100 px-2 py-1 rounded-lg inline-block">
+                            Target {settings.formattedWinningScore || '?'}
                         </div>
                     </div>
-                    <div className="text-center w-5/12">
-                        <h2 className="text-amber-400 font-bold text-lg mb-1">{settings.team2Name || 'Gold Team'}</h2>
-                        <div className="text-5xl font-black">{goldScore}</div>
+
+                    <div className="text-center flex-1">
+                        <h2 className="text-amber-500 font-bold text-sm tracking-widest uppercase mb-2">{settings.team2Name || 'Gold'}</h2>
+                        <div className="text-6xl font-black text-amber-500 leading-none">{goldScore}</div>
                     </div>
                 </div>
 
                 {/* Status Bar */}
-                <div className="mt-8 pt-4 border-t border-white/10 flex justify-between items-center text-sm">
-                    <div className="flex items-center gap-2 text-white/70">
-                        <Swords size={16} />
-                        <span className="font-bold">{formattedStatus}</span>
+                <div className="mt-8 pt-6 border-t border-stone-100 flex flex-col md:flex-row gap-4 justify-between items-center">
+                    <div className="flex items-center gap-2 text-stone-500 text-sm font-medium">
+                        <div className={`w-2 h-2 rounded-full ${status === 'PLAYING' ? 'bg-green-500 animate-pulse' : 'bg-stone-300'}`}></div>
+                        <span>{formattedStatus}</span>
                     </div>
-                    {status === 'SETUP' && isAdmin ? (
-                        <button
-                            onClick={onStartTournament}
-                            className="bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg transition transform hover:scale-105"
-                        >
-                            Start Draft
-                        </button>
-                    ) : status === 'PLAYING' && isAdmin && leagueMatches.length > 0 && completedMatches === leagueMatches.length && greenScore === goldScore ? (
-                        <div className="flex gap-2">
+
+                    <div className="flex gap-2">
+                        {status === 'SETUP' && isAdmin ? (
                             <button
-                                onClick={async () => {
-                                    if (!window.confirm("Start Sudden Death Tie-Breaker? Captains will pick 1 player each.")) return;
-                                    await fetch(`/api/leagues/${league.id}/start-sudden-death`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ userId: user.id })
-                                    });
-                                    window.location.reload();
-                                }}
-                                className="bg-red-800 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg transition transform hover:scale-105"
+                                onClick={onStartTournament}
+                                className="bg-primary text-white px-6 py-2 rounded-xl font-bold text-sm shadow-md hover:bg-primaryLight transition transform active:scale-95"
                             >
-                                Start Sudden Death
+                                Generate Matches
                             </button>
+                        ) : status === 'PLAYING' && isAdmin && leagueMatches.length > 0 && completedMatches === leagueMatches.length && greenScore === goldScore ? (
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={async () => {
+                                        if (!window.confirm("Start Sudden Death Tie-Breaker? Captains will pick 1 player each.")) return;
+                                        await fetch(`/api/leagues/${league.id}/start-sudden-death`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ userId: user.id })
+                                        });
+                                        window.location.reload();
+                                    }}
+                                    className="bg-red-600 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-md"
+                                >
+                                    Start Sudden Death
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        if (!window.confirm("End as Draw?")) return;
+                                        await fetch(`/api/leagues/${league.id}/complete-tournament`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ userId: user.id, winner: 'DRAW' })
+                                        });
+                                        window.location.reload();
+                                    }}
+                                    className="bg-stone-100 text-stone-500 px-4 py-2 rounded-xl font-bold text-sm hover:bg-stone-200"
+                                >
+                                    Draw
+                                </button>
+                            </div>
+                        ) : status.includes('PLAYING') && isAdmin && completedMatches === leagueMatches.length ? (
                             <button
                                 onClick={async () => {
-                                    if (!window.confirm("End as Draw?")) return;
+                                    const winner = greenScore > goldScore ? 'GREEN' : greenScore < goldScore ? 'GOLD' : 'DRAW';
+                                    if (!window.confirm(`Finalize Tournament? Winner: ${winner}`)) return;
                                     await fetch(`/api/leagues/${league.id}/complete-tournament`, {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ userId: user.id, winner: 'DRAW' })
+                                        body: JSON.stringify({ userId: user.id, winner })
                                     });
                                     window.location.reload();
                                 }}
-                                className="bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-xl font-bold text-xs"
+                                className="bg-primary text-white px-6 py-2 rounded-xl font-bold text-sm shadow-md hover:bg-primaryLight transition"
                             >
-                                Draw
+                                Finalize & End
                             </button>
-                        </div>
-                    ) : status.includes('PLAYING') && isAdmin && completedMatches === leagueMatches.length ? (
-                        <button
-                            onClick={async () => {
-                                const winner = greenScore > goldScore ? 'GREEN' : greenScore < goldScore ? 'GOLD' : 'DRAW';
-                                if (!window.confirm(`Finalize Tournament? Winner: ${winner}`)) return;
-                                await fetch(`/api/leagues/${league.id}/complete-tournament`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ userId: user.id, winner })
-                                });
-                                window.location.reload();
-                            }}
-                            className="bg-amber-500 hover:bg-amber-400 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg transition transform hover:scale-105"
-                        >
-                            Finalize Tournament
-                        </button>
-                    ) : (
-                        <div className="text-xs text-white/40">
-                            {leagueMatches.length > 0 ? `${leagueMatches.length} Matches` : 'Waiting...'}
-                        </div>
-                    )}
+                        ) : null}
+                    </div>
                 </div>
 
-                {/* Progress Bar */}
+                {/* Progress Bar Background */}
                 {(status === 'PLAYING' || status === 'PLAYING_SD') && (
-                    <div className="absolute bottom-0 left-0 h-1 bg-emerald-500 transition-all duration-1000" style={{ width: `${(greenScore / (greenScore + goldScore || 1)) * 100}%` }}></div>
+                    <div className="absolute bottom-0 left-0 w-full h-1 bg-stone-100">
+                        <div
+                            className="h-full bg-emerald-500 transition-all duration-1000"
+                            style={{ width: `${(greenScore / (greenScore + goldScore || 1)) * 100}%` }}
+                        />
+                    </div>
                 )}
             </div>
 
             {/* Captains Area */}
             {status === 'PAIRING' && isCaptain && (
-                <div className="bg-gradient-to-r from-slate-900 to-blue-900 rounded-2xl p-6 shadow-lg text-white">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                            <Shield className="text-blue-200" size={24} />
+                <div className="bg-white rounded-3xl p-6 shadow-md border border-stone-100 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center">
+                                <Shield size={24} />
+                            </div>
                             <div>
-                                <h3 className="font-bold text-lg">Captain's Duty</h3>
-                                <p className="text-blue-100 text-sm">
+                                <h3 className="font-bold text-lg text-dark">Captain's Duty</h3>
+                                <p className="text-muted text-sm">
                                     {(myTeam === 'GREEN' && submittedGreen) || (myTeam === 'GOLD' && submittedGold)
                                         ? "Lineup Submitted. Waiting for opponent..."
                                         : "Set your lineup for the matches."}
@@ -225,7 +234,7 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
                         </div>
                         <button
                             onClick={() => setShowCaptainBoard(true)}
-                            className="bg-white text-blue-900 px-4 py-2 rounded-xl font-bold shadow-sm hover:bg-blue-50 transition"
+                            className="w-full md:w-auto bg-blue-500 text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-blue-600 transition"
                         >
                             Manage Lineup
                         </button>
@@ -233,33 +242,33 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
                 </div>
             )}
 
+            {/* Sudden Death Area */}
             {status === 'SUDDEN_DEATH' && isCaptain && (
-                <div className="bg-gradient-to-r from-red-900 to-red-950 rounded-2xl p-6 shadow-lg text-white">
-                    <div className="flex items-center gap-3 mb-4">
-                        <Swords className="text-white" size={24} />
-                        <div>
-                            <h3 className="font-bold text-lg">Sudden Death Selection</h3>
-                            <p className="text-white/80 text-sm">Pick your champion for the tie-breaker.</p>
-                        </div>
-                    </div>
+                <div className="bg-white rounded-3xl p-6 shadow-md border border-stone-100 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-red-500"></div>
+                    <h3 className="font-bold text-lg text-dark mb-4 flex items-center gap-2">
+                        <Swords className="text-red-500" size={20} />
+                        Sudden Death Selection
+                    </h3>
+
                     {(myTeam === 'GREEN' && sdGreen) || (myTeam === 'GOLD' && sdGold) ? (
-                        <div className="bg-white/20 p-3 rounded-xl text-center font-bold">
-                            Selection Locked. Waiting for opponent...
+                        <div className="p-4 bg-stone-50 rounded-xl text-center font-bold text-muted">
+                            Locked In. Waiting for opponent...
                         </div>
                     ) : (
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-3">
                             {(myTeam === 'GREEN' ? greenTeam : goldTeam).map(m => (
                                 <button
                                     key={m.id}
                                     onClick={() => {
                                         if (confirm(`Pick ${m.username} for Sudden Death?`)) handleSuddenDeathPick(m.id);
                                     }}
-                                    className="p-3 bg-white/10 hover:bg-white/30 rounded-xl text-left flex items-center gap-2 transition"
+                                    className="p-3 bg-stone-50 hover:bg-stone-100 rounded-xl text-left flex items-center gap-3 transition border border-stone-100"
                                 >
-                                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
-                                        {m.username[0]}
+                                    <div className="w-10 h-10 rounded-full bg-stone-200 flex items-center justify-center text-stone-500 font-bold overflow-hidden">
+                                        {m.avatar ? <img src={m.avatar} className="w-full h-full object-cover" /> : m.username[0]}
                                     </div>
-                                    <span className="font-bold text-sm">{m.username}</span>
+                                    <span className="font-bold text-dark">{m.username}</span>
                                 </button>
                             ))}
                         </div>
@@ -279,8 +288,8 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
 
             {/* Matches List (If Playing) */}
             {(status === 'PLAYING' || status === 'PLAYING_SD') && (
-                <div className="space-y-3">
-                    <h3 className="font-bold text-dark px-2">Matches</h3>
+                <div className="space-y-4">
+                    <h3 className="font-bold text-dark px-2 text-lg">Current Matches</h3>
                     {leagueMatches.length === 0 && (
                         <div className="p-8 text-center text-muted bg-white rounded-2xl border border-stone-100">
                             Loading matches...
@@ -293,19 +302,33 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
 
                         return (
                             <div key={match.id} className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100 flex items-center justify-between">
-                                <div className="flex items-center gap-3 flex-1">
-                                    <div className="text-right flex-1 font-bold text-sm truncate text-emerald-700">
-                                        {match.p1Name || p1?.username || 'Player 1'}
+                                <div className="flex items-center gap-3 flex-1 overflow-hidden">
+                                    {/* P1 */}
+                                    <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+                                        <span className={`font-bold text-sm truncate ${match.winnerId === match.player1Id ? 'text-dark' : 'text-stone-600'}`}>
+                                            {match.p1Name || p1?.username || 'P1'}
+                                        </span>
+                                        <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex flex-shrink-0 items-center justify-center font-bold text-xs ring-2 ring-white">
+                                            {p1?.username?.[0] || '1'}
+                                        </div>
                                     </div>
-                                    <div className="font-black text-muted text-xs">VS</div>
-                                    <div className="text-left flex-1 font-bold text-sm truncate text-amber-700">
-                                        {match.p2Name || p2?.username || 'Player 2'}
+
+                                    <div className="font-black text-stone-300 text-xs px-1">VS</div>
+
+                                    {/* P2 */}
+                                    <div className="flex items-center gap-2 flex-1 justify-start min-w-0">
+                                        <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-700 flex flex-shrink-0 items-center justify-center font-bold text-xs ring-2 ring-white">
+                                            {p2?.username?.[0] || '2'}
+                                        </div>
+                                        <span className={`font-bold text-sm truncate ${match.winnerId === match.player2Id ? 'text-dark' : 'text-stone-600'}`}>
+                                            {match.p2Name || p2?.username || 'P2'}
+                                        </span>
                                     </div>
                                 </div>
 
-                                <div className="ml-4 w-24 flex justify-end">
+                                <div className="ml-4 flex-shrink-0">
                                     {match.winnerId ? (
-                                        <div className={`text-xs font-bold px-2 py-1 rounded-lg ${members.find(m => m.id === match.winnerId)?.team === 'GREEN'
+                                        <div className={`text-xs font-bold px-3 py-1.5 rounded-lg ${members.find(m => m.id === match.winnerId)?.team === 'GREEN'
                                             ? 'bg-emerald-100 text-emerald-700'
                                             : members.find(m => m.id === match.winnerId)?.team === 'GOLD'
                                                 ? 'bg-amber-100 text-amber-700'
@@ -316,13 +339,13 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
                                     ) : isMyMatch ? (
                                         <button
                                             onClick={() => handlePlayMatch({ ...match, p1Name: p1?.username, p2Name: p2?.username })}
-                                            className="p-2 bg-primary text-white rounded-full shadow-lg hover:bg-primary-dark transition active:scale-95"
+                                            className="w-10 h-10 bg-primary text-white rounded-xl shadow-lg hover:bg-primaryLight flex items-center justify-center transition active:scale-95"
                                         >
-                                            <Play size={16} fill="currentColor" />
+                                            <Play size={18} fill="currentColor" />
                                         </button>
                                     ) : (
-                                        <div className="text-xs font-bold text-muted bg-stone-100 px-2 py-1 rounded-lg">
-                                            In Play
+                                        <div className="w-10 h-10 border border-stone-200 rounded-xl flex items-center justify-center">
+                                            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                                         </div>
                                     )}
                                 </div>
@@ -332,51 +355,66 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
                 </div>
             )}
 
-            {/* Teams Lists (Only show when NOT playing, or push to bottom) */}
+            {/* Teams Lists (Only show when NOT playing, or always show for reference?) */}
+            {/* Let's show always but change layout depending on status. Actually user said separate looks "weird". */}
+            {/* Stacking the lists vertically looks cleaner on mobile */}
+
             {status !== 'PLAYING' && (
-                <div className="grid grid-cols-2 gap-4 mt-8">
-                    {/* Green Team */}
-                    <div className="bg-white rounded-2xl p-4 shadow-sm border-t-4 border-emerald-500">
-                        <div className="flex items-center gap-2 mb-4 text-emerald-700 font-bold uppercase text-xs tracking-wider">
-                            <Users size={14} />
-                            <span>Green Team</span>
+                <div className="space-y-6">
+                    {/* Green Team Card */}
+                    <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                                <Users size={20} />
+                            </div>
+                            <h3 className="font-bold text-xl text-dark">Green Team</h3>
+                            <span className="ml-auto text-xs font-bold bg-stone-100 text-stone-500 px-2 py-1 rounded-lg">{greenTeam.length} Players</span>
                         </div>
-                        <div className="space-y-2">
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {greenTeam.map(m => (
-                                <div key={m.id} className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50/50">
-                                    <div className="w-8 h-8 rounded-full bg-emerald-200 flex items-center justify-center text-emerald-800 font-bold text-xs overflow-hidden">
+                                <div key={m.id} className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 border border-stone-100">
+                                    <div className="w-10 h-10 rounded-full bg-emerald-200 text-emerald-800 flex items-center justify-center font-bold overflow-hidden shadow-sm">
                                         {m.avatar ? <img src={m.avatar} className="w-full h-full object-cover" /> : m.username[0]}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="font-bold text-dark text-sm truncate">{m.username}</div>
-                                        <div className="text-xs text-muted">HCP {m.handicap}</div>
+                                        <div className="font-bold text-dark truncate">{m.username}</div>
+                                        <div className="text-xs text-muted font-medium">HCP {m.handicap}</div>
                                     </div>
                                     {m.id === settings.captainGreenId && (
-                                        <Shield size={14} className="text-emerald-500" />
+                                        <div className="px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase rounded-lg">
+                                            Captain
+                                        </div>
                                     )}
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* Gold Team */}
-                    <div className="bg-white rounded-2xl p-4 shadow-sm border-t-4 border-amber-500">
-                        <div className="flex items-center gap-2 mb-4 text-amber-700 font-bold uppercase text-xs tracking-wider">
-                            <Users size={14} />
-                            <span>Gold Team</span>
+                    {/* Gold Team Card */}
+                    <div className="bg-white rounded-3xl p-6 shadow-sm border border-stone-100">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
+                                <Users size={20} />
+                            </div>
+                            <h3 className="font-bold text-xl text-dark">Gold Team</h3>
+                            <span className="ml-auto text-xs font-bold bg-stone-100 text-stone-500 px-2 py-1 rounded-lg">{goldTeam.length} Players</span>
                         </div>
-                        <div className="space-y-2">
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {goldTeam.map(m => (
-                                <div key={m.id} className="flex items-center gap-2 p-2 rounded-lg bg-amber-50/50">
-                                    <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center text-amber-800 font-bold text-xs overflow-hidden">
+                                <div key={m.id} className="flex items-center gap-3 p-3 rounded-xl bg-stone-50 border border-stone-100">
+                                    <div className="w-10 h-10 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center font-bold overflow-hidden shadow-sm">
                                         {m.avatar ? <img src={m.avatar} className="w-full h-full object-cover" /> : m.username[0]}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="font-bold text-dark text-sm truncate">{m.username}</div>
-                                        <div className="text-xs text-muted">HCP {m.handicap}</div>
+                                        <div className="font-bold text-dark truncate">{m.username}</div>
+                                        <div className="text-xs text-muted font-medium">HCP {m.handicap}</div>
                                     </div>
                                     {m.id === settings.captainGoldId && (
-                                        <Shield size={14} className="text-amber-500" />
+                                        <div className="px-2 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold uppercase rounded-lg">
+                                            Captain
+                                        </div>
                                     )}
                                 </div>
                             ))}
