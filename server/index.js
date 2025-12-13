@@ -16,6 +16,19 @@ app.use(bodyParser.json({ limit: '50mb' }));
 // Health Check
 app.get('/api/health', (req, res) => res.send('OK'));
 
+app.get('/api/debug-request', (req, res) => {
+    res.json({
+        url: req.url,
+        originalUrl: req.originalUrl,
+        baseUrl: req.baseUrl,
+        headers: req.headers,
+        env: {
+            NODE_ENV: process.env.NODE_ENV,
+            HAS_DB_URL: !!process.env.TURSO_DATABASE_URL
+        }
+    });
+});
+
 app.get('/api/debug-sql', async (req, res) => {
     try {
         const leagueId = 1;
@@ -83,37 +96,14 @@ app.get('/api/league/feed', (req, res) => res.redirect(`/api/leagues/feed?userId
 import syncRoutes from './routes/sync.js';
 app.use('/api', syncRoutes); // Mounts /sync, /rounds/delete, /matches/delete at /api root
 
-// Original was /api/league/feed. I should perhaps change the mount or the route.
-// Let's check original: app.get('/api/league/feed'
-// In leagues.js: router.get('/feed') -> /api/leagues/feed.
-// This is a subtle breaking change (/league/ vs /leagues/).
-// I will add a redirect or alias if needed, or just specific mount.
-// Actually, for cleaner API, /api/leagues/feed is better. I will assume client flexibility or update client?
-// Wait, "Backward compatibility".
-// I'll mount the feed route specifically if I want to preserve /api/league/feed, OR I'll add a redirect in index.js.
-// Let's add the legacy route alias here.
-
-app.get('/api/league/feed', (req, res) => res.redirect(`/api/leagues/feed?userId=${req.query.userId || ''}`));
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Reset Tournament (Admin Only) - Panic Button
 
 
 const PORT = process.env.PORT || 3000;
 (async () => { // Wrap in an async IIFE to allow await calls before app.listen
     try {
-        await initDB(); /* Ensures tables and columns (including Guest user) */
+        // await initDB(); /* Commented out for debugging startup */
+        console.log("Skipping auto-initDB for debug");
     } catch (e) {
         console.error("Critical DB Init Failure:", e);
     }
