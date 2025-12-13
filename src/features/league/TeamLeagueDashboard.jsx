@@ -360,62 +360,54 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
             {/* Stacking the lists vertically looks cleaner on mobile */}
 
             {status !== 'PLAYING' && (
-                <div className="grid grid-cols-2 gap-3 mt-6">
-                    {/* Green Team Card */}
-                    <div className="bg-white rounded-3xl p-4 shadow-sm border border-stone-100">
-                        <div className="flex flex-col items-center gap-2 mb-4">
-                            <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                                <Users size={16} />
-                            </div>
-                            <h3 className="font-bold text-base text-dark text-center leading-tight">Green Team</h3>
-                            <span className="text-[10px] font-bold bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">{greenTeam.length}</span>
+                <div className="grid grid-cols-2 gap-4 mt-8 px-1">
+                    {/* Green Team Column */}
+                    <div>
+                        <div className="flex items-center justify-center gap-2 mb-3 text-emerald-600">
+                            <h3 className="font-bold text-xs uppercase tracking-widest">Green Team</h3>
+                            <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded-md">{greenTeam.length}</span>
                         </div>
-
                         <div className="space-y-2">
                             {greenTeam.map(m => (
-                                <div key={m.id} className="flex flex-col items-center p-2 rounded-xl bg-stone-50 border border-stone-100 text-center">
-                                    <div className="w-8 h-8 rounded-full bg-emerald-200 text-emerald-800 flex items-center justify-center font-bold overflow-hidden shadow-sm mb-1">
+                                <div key={m.id} className="bg-white p-2.5 rounded-xl border border-stone-100 shadow-sm flex items-center gap-2.5 relative overflow-hidden group">
+                                    {m.id === settings.captainGreenId && (
+                                        <div className="absolute top-0 right-0 w-8 h-8 -mr-4 -mt-4 bg-emerald-500 rotate-45 transform"></div>
+                                    )}
+
+                                    <div className="w-9 h-9 flex-shrink-0 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs overflow-hidden border border-white shadow-inner">
                                         {m.avatar ? <img src={m.avatar} className="w-full h-full object-cover" /> : m.username[0]}
                                     </div>
-                                    <div className="w-full min-w-0">
-                                        <div className="font-bold text-dark text-xs truncate">{m.username}</div>
+
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-bold text-dark text-xs truncate leading-tight">{m.username}</div>
                                         <div className="text-[10px] text-muted font-medium">HCP {m.handicap}</div>
                                     </div>
-                                    {m.id === settings.captainGreenId && (
-                                        <div className="mt-1 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-bold uppercase rounded-md">
-                                            Capt
-                                        </div>
-                                    )}
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* Gold Team Card */}
-                    <div className="bg-white rounded-3xl p-4 shadow-sm border border-stone-100">
-                        <div className="flex flex-col items-center gap-2 mb-4">
-                            <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
-                                <Users size={16} />
-                            </div>
-                            <h3 className="font-bold text-base text-dark text-center leading-tight">Gold Team</h3>
-                            <span className="text-[10px] font-bold bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">{goldTeam.length}</span>
+                    {/* Gold Team Column */}
+                    <div>
+                        <div className="flex items-center justify-center gap-2 mb-3 text-amber-600">
+                            <h3 className="font-bold text-xs uppercase tracking-widest">Gold Team</h3>
+                            <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded-md">{goldTeam.length}</span>
                         </div>
-
                         <div className="space-y-2">
                             {goldTeam.map(m => (
-                                <div key={m.id} className="flex flex-col items-center p-2 rounded-xl bg-stone-50 border border-stone-100 text-center">
-                                    <div className="w-8 h-8 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center font-bold overflow-hidden shadow-sm mb-1">
+                                <div key={m.id} className="bg-white p-2.5 rounded-xl border border-stone-100 shadow-sm flex items-center gap-2.5 relative overflow-hidden group">
+                                    {m.id === settings.captainGoldId && (
+                                        <div className="absolute top-0 right-0 w-8 h-8 -mr-4 -mt-4 bg-amber-500 rotate-45 transform"></div>
+                                    )}
+
+                                    <div className="w-9 h-9 flex-shrink-0 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs overflow-hidden border border-white shadow-inner">
                                         {m.avatar ? <img src={m.avatar} className="w-full h-full object-cover" /> : m.username[0]}
                                     </div>
-                                    <div className="w-full min-w-0">
-                                        <div className="font-bold text-dark text-xs truncate">{m.username}</div>
+
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-bold text-dark text-xs truncate leading-tight">{m.username}</div>
                                         <div className="text-[10px] text-muted font-medium">HCP {m.handicap}</div>
                                     </div>
-                                    {m.id === settings.captainGoldId && (
-                                        <div className="mt-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-bold uppercase rounded-md">
-                                            Capt
-                                        </div>
-                                    )}
                                 </div>
                             ))}
                         </div>
