@@ -126,141 +126,95 @@ export const Home = () => {
 
     return (
         <div className="p-6 space-y-8">
-            {/* Header */}
-            <header className="flex justify-between items-center pt-4">
+            {/* Premium Header */}
+            <header className="pt-2 flex justify-between items-start">
                 <div>
-                    <div className="flex items-center gap-2">
-                        <p className="text-muted text-sm font-medium uppercase tracking-wider">Welcome back</p>
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">
+                            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                        </span>
                         <button
                             onClick={handleManualSync}
                             disabled={isManualSyncing}
-                            className="text-muted hover:text-primary transition disabled:opacity-50"
+                            className="text-stone-300 hover:text-primary transition disabled:opacity-50"
                         >
-                            <RefreshCw size={14} className={isManualSyncing ? "animate-spin" : ""} />
+                            <RefreshCw size={12} className={isManualSyncing ? "animate-spin" : ""} />
                         </button>
                     </div>
-                    <h1 className="text-3xl font-bold text-dark mt-1">
-                        {user ? user.username : 'Golfer'}
+                    <h1 className="text-4xl font-black text-dark tracking-tight leading-none">
+                        Hello, {user ? user.username.split(' ')[0] : 'Golfer'}
                     </h1>
                 </div>
-                <Link to="/profile" className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20 overflow-hidden hover:opacity-80 transition">
-                    {user?.avatar ? (
-                        <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
-                    ) : (
-                        <User size={24} />
-                    )}
+                <Link to="/profile" className="relative group">
+                    <div className="w-14 h-14 rounded-2xl bg-stone-100 flex items-center justify-center text-dark border-2 border-white shadow-lg overflow-hidden transition transform group-hover:scale-105 group-active:scale-95">
+                        {user?.avatar ? (
+                            <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                            <User size={28} className="text-stone-400" />
+                        )}
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center">
+                        <Star size={10} className="text-white fill-current" />
+                    </div>
                 </Link>
             </header>
 
-            {/* Handicap Card */}
-            <div className="relative overflow-hidden bg-primary rounded-3xl p-6 text-white shadow-card">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-2xl"></div>
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-secondary/20 rounded-full -ml-10 -mb-10 blur-xl"></div>
-
-                <div className="relative z-10">
-                    <div className="flex justify-between items-start mb-8">
-                        <div>
-                            <p className="text-emerald-100 font-medium text-sm">Current Handicap</p>
-                            <h2 className="text-5xl font-bold mt-1 tracking-tight text-white flex items-baseline gap-2">
-                                {user?.handicapMode === 'MANUAL' && user?.manualHandicap
-                                    ? parseFloat(user.manualHandicap).toFixed(1)
-                                    : (user?.handicap ? user.handicap.toFixed(1) : '54.0')}
-                                {user?.handicapChange != null && (
-                                    <span className={`text-2xl font-semibold ${user.handicapChange < 0 ? 'text-secondary' : 'text-white/80'}`}>
-                                        {user.handicapChange === 0 ? '-' : (user.handicapChange > 0 ? '+' : '') + user.handicapChange.toFixed(1)}
-                                    </span>
-                                )}
-                            </h2>
-                        </div>
-                        <div className="flex flex-col items-end">
-                            <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide mb-4">
-                                WHS Index
-                            </span>
-                            <div className="text-right">
-                                <div className="text-xs font-bold text-secondary uppercase tracking-wider mb-1">Avg 5 Rounds</div>
-                                <div className="flex items-baseline justify-end gap-2">
-                                    <div className="text-2xl font-black text-secondary">
-                                        {user?.avgScore ? user.avgScore.toFixed(1) : '-'}
-                                    </div>
-                                    {user?.avgScoreChange != null && (
-                                        <div className={`text-lg font-bold ${user.avgScoreChange < 0 ? 'text-secondary' : 'text-secondary/80'}`}>
-                                            {user.avgScoreChange === 0 ? '' : (user.avgScoreChange > 0 ? '+' : '') + user.avgScoreChange.toFixed(1)}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+            {/* Handicap & Stats Row */}
+            <div className="grid grid-cols-2 gap-4">
+                <div className="bg-dark text-white p-5 rounded-3xl shadow-xl flex flex-col justify-between relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                        <Trophy size={48} />
                     </div>
-
-                    <div className="flex gap-3">
-                        <Link to="/play" className="flex-1 bg-white text-primary py-3 rounded-xl font-bold text-center shadow-lg hover:bg-emerald-50 transition active:scale-95">
-                            Play Round
-                        </Link>
-                        <Link to="/matchplay" className="flex-1 bg-secondary text-white py-3 rounded-xl font-bold text-center shadow-lg hover:bg-amber-600 transition active:scale-95">
-                            Matchplay
-                        </Link>
+                    <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">Handicap</span>
+                    <div className="flex items-baseline gap-1 mt-1">
+                        <span className="text-5xl font-black tracking-tighter">{user?.handicap || '54'}</span>
+                        <span className={`text-xs font-bold ${user?.handicapChange < 0 ? 'text-emerald-400' : 'text-stone-500'}`}>
+                            {user?.handicapChange < 0 ? '↓' : '↑'} {Math.abs(user?.handicapChange || 0).toFixed(1)}
+                        </span>
                     </div>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                    <Link to="/play" className="flex-1 bg-white p-4 rounded-3xl shadow-sm border border-stone-100 flex flex-col justify-center items-center gap-2 hover:shadow-md transition active:scale-95">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                            <Plus size={20} />
+                        </div>
+                        <span className="font-bold text-dark text-sm">New Round</span>
+                    </Link>
+                    <Link to="/league" className="flex-1 bg-white p-4 rounded-3xl shadow-sm border border-stone-100 flex flex-col justify-center items-center gap-2 hover:shadow-md transition active:scale-95">
+                        <div className="w-10 h-10 rounded-full bg-secondary/10 text-secondary flex items-center justify-center">
+                            <Trophy size={20} />
+                        </div>
+                        <span className="font-bold text-dark text-sm">Leagues</span>
+                    </Link>
                 </div>
             </div>
 
-            {/* Friends Section */}
+            {/* Quick Actions (Friends) */}
             <div>
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center justify-between mb-4 px-1">
                     <h3 className="font-bold text-lg text-dark">Friends</h3>
-                    <button
-                        onClick={() => setIsFriendSearchOpen(true)}
-                        className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-dark hover:bg-primary hover:text-white transition"
-                    >
-                        <Search size={16} />
+                    <button onClick={() => setIsFriendSearchOpen(true)} className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-dark hover:bg-stone-200 transition">
+                        <Plus size={16} />
                     </button>
                 </div>
 
-                <div className="space-y-3">
-                    {friendsList.length > 0 ? (
-                        friendsList.map(friend => (
-                            <SwipeableItem
-                                key={friend.id}
-                                onDelete={() => {
-                                    addFriend(null); // Hack to trigger re-render if needed, but actually we need removeFriend
-                                    // Wait, I need to import removeFriend from useUser first.
-                                    // Actually, I should just call removeFriend(friend.id.toString())
-                                    // But I need to update the local friendsList state too or wait for re-render.
-                                    // The loadData depends on user.friends, so updating user should trigger it.
-                                    // Let's use the function from context.
-                                    removeFriend(friend.id.toString());
-                                }}
-                            >
-                                <div className="bg-white p-4 flex justify-between items-center">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-stone-400 border border-stone-100">
-                                            {friend.avatar ? (
-                                                <img src={friend.avatar} alt={friend.username} className="w-full h-full rounded-full object-cover" />
-                                            ) : (
-                                                <User size={20} />
-                                            )}
-                                        </div>
-                                        <div>
-                                            <h4 className="font-bold text-dark leading-tight">{friend.username}</h4>
-                                            <div className="text-xs text-muted font-medium">HCP: {friend.handicap}</div>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-xs font-bold text-muted uppercase tracking-wider mb-0.5">Last Round</div>
-                                        <div className="font-bold text-dark">{friend.lastGrossScore || '-'}</div>
-                                    </div>
-                                </div>
-                            </SwipeableItem>
-                        ))
+                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide px-1">
+                    {friendsList.length === 0 ? (
+                        <div className="text-sm text-stone-400 italic">No friends added yet.</div>
                     ) : (
-                        <div className="text-center py-6 bg-stone-50 rounded-2xl border border-dashed border-stone-200">
-                            <p className="text-sm text-muted mb-2">No friends added yet</p>
-                            <button
-                                onClick={() => setIsFriendSearchOpen(true)}
-                                className="text-primary font-bold text-sm hover:underline"
-                            >
-                                Find Friends
-                            </button>
-                        </div>
+                        friendsList.map(friend => (
+                            <Link key={friend.id} to={`/user/${friend.id}`} className="flex flex-col items-center gap-2 min-w-[60px] group">
+                                <div className="w-14 h-14 rounded-2xl bg-white border border-stone-100 shadow-sm flex items-center justify-center overflow-hidden group-hover:scale-105 transition">
+                                    {friend.avatar ? (
+                                        <img src={friend.avatar} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="font-bold text-stone-300 text-lg">{friend.username[0]}</span>
+                                    )}
+                                </div>
+                                <span className="text-[10px] font-bold text-dark truncate w-full text-center">{friend.username.split(' ')[0]}</span>
+                            </Link>
+                        ))
                     )}
                 </div>
 
@@ -273,7 +227,7 @@ export const Home = () => {
             </div>
 
             {/* Counting Rounds */}
-            <div>
+            < div >
                 <div className="flex justify-between items-end mb-4">
                     <h3 className="font-bold text-lg text-dark">Counting Rounds</h3>
                     <Link to="/play" className="text-primary text-sm font-medium hover:underline">View All</Link>
@@ -328,8 +282,8 @@ export const Home = () => {
                         </div>
                     )}
                 </div>
-            </div>
+            </div >
 
-        </div>
+        </div >
     );
 };
