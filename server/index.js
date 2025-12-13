@@ -13,6 +13,9 @@ app.use(bodyParser.json({ limit: '50mb' }));
 // Initialize DB (Lazy or Manual)
 
 
+// Health Check
+app.get('/api/health', (req, res) => res.send('OK'));
+
 app.get('/api/debug-sql', async (req, res) => {
     try {
         const leagueId = 1;
@@ -52,19 +55,17 @@ app.get('/api/debug-sql', async (req, res) => {
 });
 
 // --- Auth Routes ---
-
 import authRoutes from './routes/auth.js';
-
-app.use('/auth', authRoutes);
-
+app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes); // Fallback
 
 import userRoutes from './routes/users.js';
-
-app.use('/api/user', userRoutes);
-// Backward compatibility for GET /users
-app.use('/users', userRoutes);
+app.use('/api/users', userRoutes); // Standard
+app.use('/api/user', userRoutes); // Legacy?
+app.use('/users', userRoutes); // Short
 
 import courseRoutes from './routes/courses.js';
+app.use('/api/courses', courseRoutes);
 app.use('/courses', courseRoutes);
 
 import leagueRoutes from './routes/leagues.js';
@@ -117,9 +118,11 @@ const PORT = process.env.PORT || 3000;
         console.error("Critical DB Init Failure:", e);
     }
 
-    app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-    });
+    if (process.env.NODE_ENV !== 'production') {
+        app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+    }
 })(); // Immediately invoke the async function
 if (process.env.NODE_ENV !== 'production') {
     // The original console.log was here, but the new app.listen handles it.
