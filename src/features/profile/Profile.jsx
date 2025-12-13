@@ -200,11 +200,13 @@ export default function Profile() {
 
                 {/* Action Buttons */}
                 {/* Save Action */}
-                <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-lg border-t border-stone-100 z-50">
+                {/* Action Buttons */}
+                {/* Save Action - Static at bottom of form to avoid nav overlap issues */}
+                <div className="p-6 mt-4">
                     <button
                         onClick={handleSave}
                         disabled={isSaving}
-                        className="w-full bg-primary text-white font-bold text-lg py-4 rounded-2xl shadow-lg hover:bg-primaryLight hover:shadow-xl active:scale-95 transition-all disabled:opacity-70 disabled:scale-100"
+                        className="w-full bg-dark text-white font-bold text-lg py-4 rounded-2xl shadow-lg hover:bg-black hover:shadow-xl active:scale-95 transition-all disabled:opacity-70 disabled:scale-100"
                     >
                         {isSaving ? 'Saving Changes...' : 'Save Changes'}
                     </button>

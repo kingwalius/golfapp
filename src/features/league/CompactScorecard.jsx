@@ -8,8 +8,8 @@ export const CompactScorecard = ({ holes, scores, par, p1Name, p2Name }) => {
         let baseStyle = '';
 
         if (diff === 0) baseStyle = 'text-stone-800'; // Par
-        else if (diff === -1) baseStyle = 'rounded-full border border-primary text-primary'; // Birdie
-        else if (diff <= -2) baseStyle = 'rounded-full border-2 border-primary text-primary double-ring'; // Eagle
+        else if (diff === -1) baseStyle = 'rounded-full border border-dark text-dark'; // Birdie
+        else if (diff <= -2) baseStyle = 'rounded-full border-2 border-dark text-dark double-ring'; // Eagle
         else if (diff === 1) baseStyle = 'border border-stone-400 text-stone-600'; // Bogey (Square)
         else if (diff >= 2) baseStyle = 'border-2 border-stone-400 text-stone-600'; // Double Bogey+
         else baseStyle = 'text-stone-800';
@@ -48,11 +48,11 @@ export const CompactScorecard = ({ holes, scores, par, p1Name, p2Name }) => {
             <div className="mb-2 last:mb-0">
                 <div className="grid grid-cols-[4rem_repeat(9,1fr)_3rem] gap-0 text-center text-xs">
                     {/* Header Row */}
-                    <div className="bg-primary text-white py-1 font-bold border-b border-white/10 rounded-tl-lg">HOLE</div>
+                    <div className="bg-dark text-white py-1 font-bold border-b border-white/10 rounded-tl-lg">HOLE</div>
                     {nineHoles.map((_, i) => (
-                        <div key={i} className="bg-primary text-white py-1 border-b border-white/10">{startIndex + i + 1}</div>
+                        <div key={i} className="bg-dark text-white py-1 border-b border-white/10">{startIndex + i + 1}</div>
                     ))}
-                    <div className="bg-primary text-white py-1 font-bold border-b border-white/10 rounded-tr-lg">{label}</div>
+                    <div className="bg-dark text-white py-1 font-bold border-b border-white/10 rounded-tr-lg">{label}</div>
 
                     {/* Par Row */}
                     <div className="bg-stone-100 text-stone-500 py-2 font-medium border-b border-stone-200">PAR</div>

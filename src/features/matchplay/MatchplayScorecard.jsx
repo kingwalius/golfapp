@@ -321,7 +321,7 @@ export const MatchplayScorecard = () => {
                         await sync();
                         navigate('/');
                     }}
-                    className="w-full bg-primary text-white py-4 rounded-xl font-bold shadow-lg hover:bg-primaryLight transition active:scale-95 flex items-center justify-center gap-2"
+                    className="w-full bg-dark text-white py-4 rounded-xl font-bold shadow-lg hover:bg-black transition active:scale-95 flex items-center justify-center gap-2"
                 >
                     Finish Match
                 </button>
