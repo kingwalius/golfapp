@@ -46,7 +46,7 @@ export const Welcome = () => {
                         alt="Social Greens"
                         className="w-72 mx-auto"
                     />
-                    <p className="text-primary/80 mt-2 text-lg font-medium tracking-wide">Track your game, challenge friends.</p>
+                    <p className="text-dark/80 mt-2 text-lg font-medium tracking-wide">Track your game, challenge friends.</p>
                 </div>
 
                 <div className="p-4">
@@ -61,7 +61,7 @@ export const Welcome = () => {
                             <input
                                 type="text"
                                 placeholder="Username"
-                                className="w-full p-4 rounded-2xl bg-white border-2 border-stone-200 text-lg font-medium text-primary placeholder-stone-400 focus:ring-0 focus:border-primary transition-all shadow-sm"
+                                className="w-full p-4 rounded-2xl bg-white border-2 border-stone-200 text-lg font-medium text-dark placeholder-stone-400 focus:ring-0 focus:border-dark transition-all shadow-sm"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 autoFocus
@@ -69,7 +69,7 @@ export const Welcome = () => {
                             <input
                                 type="password"
                                 placeholder="Password"
-                                className="w-full p-4 rounded-2xl bg-white border-2 border-stone-200 text-lg font-medium text-primary placeholder-stone-400 focus:ring-0 focus:border-primary transition-all shadow-sm"
+                                className="w-full p-4 rounded-2xl bg-white border-2 border-stone-200 text-lg font-medium text-dark placeholder-stone-400 focus:ring-0 focus:border-dark transition-all shadow-sm"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                             />
@@ -78,7 +78,7 @@ export const Welcome = () => {
                         <button
                             type="submit"
                             disabled={!username.trim() || !password.trim() || loading}
-                            className="w-full py-4 bg-primary text-white rounded-2xl font-bold text-xl shadow-lg hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+                            className="w-full py-4 bg-dark text-white rounded-2xl font-bold text-xl shadow-lg hover:bg-black active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                         >
                             {loading ? 'Processing...' : (isRegistering ? 'Create Account' : 'Log In')}
                         </button>
@@ -87,7 +87,7 @@ export const Welcome = () => {
                             <button
                                 type="button"
                                 onClick={() => navigate('/reset-password')}
-                                className="text-stone-500 text-sm font-medium hover:text-primary transition-colors"
+                                className="text-stone-500 text-sm font-medium hover:text-dark transition-colors"
                             >
                                 Forgot Password?
                             </button>
@@ -101,7 +101,7 @@ export const Welcome = () => {
                             setIsRegistering(!isRegistering);
                             setError('');
                         }}
-                        className="text-primary font-bold text-base hover:underline decoration-2 underline-offset-4"
+                        className="text-dark font-bold text-base hover:underline decoration-2 underline-offset-4"
                     >
                         {isRegistering ? 'Already have an account? Log In' : 'New here? Create Account'}
                     </button>

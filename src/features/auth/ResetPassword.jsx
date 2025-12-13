@@ -49,7 +49,7 @@ export const ResetPassword = () => {
                 </button>
 
                 <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                    <div className="w-16 h-16 bg-stone-100 text-dark rounded-full flex items-center justify-center mx-auto mb-4">
                         <KeyRound size={32} />
                     </div>
                     <h1 className="text-2xl font-bold text-dark">Reset Password</h1>
@@ -76,7 +76,7 @@ export const ResetPassword = () => {
                                 type="text"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
-                                className="w-full p-4 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition outline-none font-medium"
+                                className="w-full p-4 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-dark focus:ring-2 focus:ring-dark/20 transition outline-none font-medium text-dark"
                                 placeholder="e.g. GeilerPachler"
                                 required
                             />
@@ -88,7 +88,7 @@ export const ResetPassword = () => {
                                 type="password"
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
-                                className="w-full p-4 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition outline-none font-medium"
+                                className="w-full p-4 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-dark focus:ring-2 focus:ring-dark/20 transition outline-none font-medium text-dark"
                                 placeholder="••••••••"
                                 required
                             />
@@ -97,7 +97,7 @@ export const ResetPassword = () => {
                         <button
                             type="submit"
                             disabled={status === 'loading'}
-                            className="w-full bg-primary text-white py-4 rounded-xl font-bold shadow-lg shadow-primary/30 hover:bg-primaryLight active:scale-[0.98] transition disabled:opacity-70 disabled:cursor-not-allowed mt-4"
+                            className="w-full bg-dark text-white py-4 rounded-xl font-bold shadow-lg shadow-black/10 hover:bg-black active:scale-[0.98] transition disabled:opacity-70 disabled:cursor-not-allowed mt-4"
                         >
                             {status === 'loading' ? 'Resetting...' : 'Reset Password'}
                         </button>
