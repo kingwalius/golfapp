@@ -99,6 +99,18 @@ app.use('/api', syncRoutes); // Mounts /sync, /rounds/delete, /matches/delete at
 // Reset Tournament (Admin Only) - Panic Button
 
 
+// Global Catch-All for Debugging (Must be last)
+app.use('*', (req, res) => {
+    res.json({
+        message: 'Global Catch-All Hit',
+        url: req.url,
+        originalUrl: req.originalUrl,
+        baseUrl: req.baseUrl,
+        method: req.method,
+        headers: req.headers
+    });
+});
+
 const PORT = process.env.PORT || 3000;
 
 // Initialize DB in background (Non-blocking)
