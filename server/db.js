@@ -216,64 +216,10 @@ export const initDB = async () => {
       console.error("Guest user init failed:", e.message);
     }
 
-    try {
-      await ensureLeagueMatchIdColumn();
-    } catch (e) { console.error("ensureLeagueMatchIdColumn failed:", e); }
-
     console.log('Database initialized successfully.');
   } catch (error) {
     console.error("initDB failed:", error);
     throw error;
-  }
-};
-
-// Helper to ensure scores column exists (Self-healing schema)
-export const ensureScoresColumn = async (table) => {
-  try {
-    await db.execute(`SELECT scores FROM ${table} LIMIT 1`);
-  } catch (e) {
-    if (e.message && (e.message.includes('no such column') || e.message.includes('column not found'))) {
-      console.log(`Adding missing 'scores' column to ${table}...`);
-      try {
-        await db.execute(`ALTER TABLE ${table} ADD COLUMN scores TEXT`);
-      } catch (alterError) {
-        console.error(`Failed to add scores column to ${table}:`, alterError);
-      }
-    }
-  }
-};
-
-// Helper to ensure league_rounds table exists (Self-healing)
-export const ensureLeagueRoundsTable = async () => {
-  try {
-    await db.execute(`
-            CREATE TABLE IF NOT EXISTS league_rounds (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                leagueId INTEGER NOT NULL,
-                roundId INTEGER NOT NULL,
-                points REAL DEFAULT 0,
-                date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
-                FOREIGN KEY(roundId) REFERENCES rounds(id) ON DELETE CASCADE
-            )
-        `);
-  } catch (e) {
-    console.error("Failed to ensure league_rounds table:", e);
-  }
-};
-
-export const ensureLeagueMatchIdColumn = async () => {
-  try {
-    await db.execute("SELECT leagueMatchId FROM matches LIMIT 1");
-  } catch (e) {
-    if (e.message && (e.message.includes('no such column') || e.message.includes('column not found'))) {
-      console.log("Adding missing 'leagueMatchId' column to matches...");
-      try {
-        await db.execute("ALTER TABLE matches ADD COLUMN leagueMatchId INTEGER");
-      } catch (alterError) {
-        console.error("Failed to add leagueMatchId column to matches:", alterError);
-      }
-    }
   }
 };
 
