@@ -590,16 +590,18 @@ export const UserProvider = ({ children }) => {
                     const parsed = JSON.parse(saved);
                     setUser(parsed);
 
-                    // Verify with server to get latest data
-                    try {
-                        const res = await authFetch(`/api/user/${parsed.id}`);
-                        if (res.ok) {
-                            const latest = await res.json();
-                            setUser(latest);
-                            saveToLocalStorage(latest);
+                    // Verify with server to get latest data (Skip for Guest)
+                    if (parsed.id != 9999 && parsed.token) {
+                        try {
+                            const res = await authFetch(`/api/user/${parsed.id}`);
+                            if (res.ok) {
+                                const latest = await res.json();
+                                setUser(latest);
+                                saveToLocalStorage(latest);
+                            }
+                        } catch (e) {
+                            console.warn("Could not verify user with server (offline?)", e);
                         }
-                    } catch (e) {
-                        console.warn("Could not verify user with server (offline?)", e);
                     }
                 }
             } catch (err) {
