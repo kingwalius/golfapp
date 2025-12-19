@@ -228,7 +228,14 @@ app.post('/auth/register', async (req, res) => {
             manualHandicap: null
         };
 
-        res.json(user);
+        // Generate Token immediately
+        const token = jwt.sign(
+            { id: userId, username },
+            JWT_SECRET,
+            { expiresIn: '30d' }
+        );
+
+        res.json({ ...user, token });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
