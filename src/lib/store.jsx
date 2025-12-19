@@ -316,6 +316,12 @@ export const UserProvider = ({ children }) => {
             return;
         }
 
+        // Skip sync if user has no token (Guest or unauthenticated)
+        if (!user.token) {
+            console.log("Sync skipped: User has no token.");
+            return;
+        }
+
         isSyncing.current = true;
 
         try {
