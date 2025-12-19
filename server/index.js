@@ -974,8 +974,8 @@ app.get('/courses', async (req, res) => {
     try {
         const result = await db.execute('SELECT * FROM courses');
         const courses = result.rows.map(c => ({
-            ...c,
-            holes: JSON.parse(c.holes)
+            ...c
+            // holes is stored as text, send as text so client can parse it
         }));
         res.json(courses);
     } catch (error) {
