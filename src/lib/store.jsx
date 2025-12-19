@@ -590,8 +590,8 @@ export const UserProvider = ({ children }) => {
                     const parsed = JSON.parse(saved);
                     setUser(parsed);
 
-                    // Verify with server to get latest data (Skip for Guest)
-                    if (parsed.id != 9999 && parsed.token) {
+                    // Verify with server to get latest data (require token)
+                    if (parsed.token) {
                         try {
                             const res = await authFetch(`/api/user/${parsed.id}`);
                             if (res.ok) {
