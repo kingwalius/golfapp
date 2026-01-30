@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useDB, useUser } from '../../lib/store';
@@ -17,6 +18,7 @@ export const Play = () => {
     const [showNewRound, setShowNewRound] = useState(false);
     const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
     const [selectedCourseId, setSelectedCourseId] = useState('');
+    const [selectedTeeId, setSelectedTeeId] = useState('');
     const [hcpIndex, setHcpIndex] = useState(54.0);
     const [holesToPlay, setHolesToPlay] = useState(18);
     const [startingHole, setStartingHole] = useState(1);
@@ -29,6 +31,24 @@ export const Play = () => {
             setShowNewRound(true);
         }
     }, [leagueId]);
+
+    // Effect to set default tee when course changes
+    useEffect(() => {
+        if (selectedCourseId) {
+            const course = courses.find(c => c.id.toString() === selectedCourseId || c.serverId?.toString() === selectedCourseId);
+            if (course) {
+                // Handle legacy courses (no tees array)
+                const tees = course.tees && course.tees.length > 0 ? course.tees : [{
+                    id: 'default', name: 'Standard', color: 'white', slope: course.slope || 113, rating: course.rating || 72.0
+                }];
+
+                // Select first tee by default
+                if (tees.length > 0) {
+                    setSelectedTeeId(tees[0].id);
+                }
+            }
+        }
+    }, [selectedCourseId, courses]);
 
     const loadData = async () => {
         const r = await db.getAll('rounds');
@@ -82,10 +102,21 @@ export const Play = () => {
     const startRound = async () => {
         if (!selectedCourseId) return;
 
+        const course = courses.find(c => c.id.toString() === selectedCourseId || c.serverId?.toString() === selectedCourseId);
+        if (!course) return;
+
+        // Get Tee Info
+        const tees = course.tees && course.tees.length > 0 ? course.tees : [{
+            id: 'default', name: 'Standard', color: 'white', slope: course.slope || 113, rating: course.rating || 72.0
+        }];
+        const selectedTee = tees.find(t => t.id === selectedTeeId) || tees[0];
+
         const newRound = {
             date: new Date(),
             courseId: parseInt(selectedCourseId),
             hcpIndex: parseFloat(hcpIndex),
+            teeId: selectedTee.id,
+            teeInfo: selectedTee, // Snapshot
             scores: {},
             completed: false,
             synced: false,
@@ -308,6 +339,41 @@ export const Play = () => {
                                 selectedCourseId={selectedCourseId}
                             />
                         </div>
+
+                        {/* Tee Selection */}
+                        {selectedCourseId && (
+                            <div className="pt-4 border-t border-stone-100">
+                                <label className="block text-sm font-bold text-muted mb-2 uppercase tracking-wide">Tee Set</label>
+                                <div className="flex gap-2 overflow-x-auto pb-2">
+                                    {(() => {
+                                        const c = courses.find(course => course.id.toString() === selectedCourseId || course.serverId?.toString() === selectedCourseId);
+                                        if (!c) return null;
+
+                                        const tees = c.tees && c.tees.length > 0 ? c.tees : [{
+                                            id: 'default', name: 'Standard', color: 'white', slope: c.slope || 113, rating: c.rating || 72.0
+                                        }];
+
+                                        return tees.map(tee => (
+                                            <button
+                                                key={tee.id}
+                                                onClick={() => setSelectedTeeId(tee.id)}
+                                                className={`
+                                                    px-4 py-2 rounded-xl font-bold text-sm whitespace-nowrap transition border
+                                                    ${selectedTeeId === tee.id
+                                                        ? 'bg-dark text-white border-dark shadow-md'
+                                                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}
+                                                `}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`w-2 h-2 rounded-full bg-${tee.color.toLowerCase()}-500 border border-gray-200`}></div>
+                                                    {tee.name}
+                                                </div>
+                                            </button>
+                                        ));
+                                    })()}
+                                </div>
+                            </div>
+                        )}
 
                         <div className="pt-4 border-t border-stone-100">
                             <label className="block text-sm font-bold text-muted mb-2 uppercase tracking-wide">Your Handicap</label>

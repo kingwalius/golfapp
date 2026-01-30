@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDB, useUser } from '../../lib/store';
@@ -18,13 +19,13 @@ export const MatchplaySetup = () => {
     const [opponentSearchQuery, setOpponentSearchQuery] = useState('');
     const [setup, setSetup] = useState({
         courseId: '',
-        player1: { name: '', hcp: 0 },
-        player2: { name: 'Opponent', hcp: 18.0, id: null },
+        player1: { name: '', hcp: 0, teeId: '' }, // Added teeId
+        player2: { name: 'Opponent', hcp: 18.0, id: null, teeId: '' }, // Added teeId
         hcpAllowance: 0.75,
         matchType: 'NET',
         manualStrokes: 0,
         manualStrokesPlayer: 'p1',
-        leagueMatchId: null // New field
+        leagueMatchId: null
     });
 
     // Initialize Player 1 with User Data
@@ -37,6 +38,7 @@ export const MatchplaySetup = () => {
             setSetup(prev => ({
                 ...prev,
                 player1: {
+                    ...prev.player1,
                     name: user.username || 'Me',
                     hcp: hcp,
                     id: user.id
@@ -62,7 +64,7 @@ export const MatchplaySetup = () => {
 
             setSetup(prev => ({
                 ...prev,
-                player2: opponentId ? { id: opponentId, name: opponentName || 'Opponent', hcp: 0 } : prev.player2, // HCP will be fetched by onlineUsers effect if valid ID
+                player2: opponentId ? { ...prev.player2, id: opponentId, name: opponentName || 'Opponent', hcp: 0 } : prev.player2, // HCP will be fetched by onlineUsers effect if valid ID
                 leagueMatchId: leagueMatchId || prev.leagueMatchId // Ensure we capture it
             }));
         }
@@ -97,12 +99,40 @@ export const MatchplaySetup = () => {
             .catch(err => console.error("Failed to fetch users", err));
     }, [db, user]);
 
+    // Set default tees when course changes
+    useEffect(() => {
+        if (setup.courseId && courses.length > 0) {
+            const course = courses.find(c => c.id.toString() === setup.courseId || c.serverId?.toString() === setup.courseId);
+            if (course) {
+                const tees = course.tees && course.tees.length > 0 ? course.tees : [{
+                    id: 'default', name: 'Standard', color: 'white', slope: course.slope || 113, rating: course.rating || 72.0
+                }];
+                const defaultTeeId = tees[0].id;
+
+                setSetup(prev => ({
+                    ...prev,
+                    player1: { ...prev.player1, teeId: prev.player1.teeId || defaultTeeId },
+                    player2: { ...prev.player2, teeId: prev.player2.teeId || defaultTeeId }
+                }));
+            }
+        }
+    }, [setup.courseId, courses]);
+
+
     const startMatch = async () => {
         const course = courses.find(c => c.id == setup.courseId || c.serverId == setup.courseId);
         if (!course) return;
 
-        const p1Playing = calculatePlayingHcp(setup.player1.hcp, course.slope, course.rating, 72);
-        const p2Playing = calculatePlayingHcp(setup.player2.hcp, course.slope, course.rating, 72);
+        // Determine Tees
+        const tees = course.tees && course.tees.length > 0 ? course.tees : [{
+            id: 'default', name: 'Standard', color: 'white', slope: course.slope || 113, rating: course.rating || 72.0
+        }];
+
+        const p1Tee = tees.find(t => t.id === setup.player1.teeId) || tees[0];
+        const p2Tee = tees.find(t => t.id === setup.player2.teeId) || tees[0];
+
+        const p1Playing = calculatePlayingHcp(setup.player1.hcp, p1Tee.slope, p1Tee.rating, 72);
+        const p2Playing = calculatePlayingHcp(setup.player2.hcp, p2Tee.slope, p2Tee.rating, 72);
 
         // Ensure Player 2 has an ID (use 9999 for Guest if null)
         const player2Id = setup.player2.id || 9999;
@@ -110,8 +140,19 @@ export const MatchplaySetup = () => {
         const match = {
             date: new Date(),
             courseId: course.id,
-            player1: { ...setup.player1, playingHcp: p1Playing },
-            player2: { ...setup.player2, id: player2Id, playingHcp: p2Playing },
+            player1: {
+                ...setup.player1,
+                playingHcp: p1Playing,
+                teeId: p1Tee.id,
+                teeInfo: p1Tee
+            },
+            player2: {
+                ...setup.player2,
+                id: player2Id,
+                playingHcp: p2Playing,
+                teeId: p2Tee.id,
+                teeInfo: p2Tee
+            },
             scores: {},
             status: 'AS',
             completed: false,
@@ -128,6 +169,37 @@ export const MatchplaySetup = () => {
         navigate(`/matchplay/${id}`);
     };
 
+    // Helper to render Tee Select
+    const renderTeeSelect = (playerId, currentTeeId) => {
+        if (!setup.courseId) return null;
+        const course = courses.find(c => c.id.toString() === setup.courseId || c.serverId?.toString() === setup.courseId);
+        if (!course) return null;
+
+        const tees = course.tees && course.tees.length > 0 ? course.tees : [{
+            id: 'default', name: 'Standard', color: 'white', slope: course.slope || 113, rating: course.rating || 72.0
+        }];
+
+        return (
+            <div className="mt-2">
+                <label className="text-xs font-bold text-gray-500 uppercase">Tee</label>
+                <select
+                    className="w-full p-2 border rounded-lg text-sm bg-white"
+                    value={currentTeeId}
+                    onChange={(e) => {
+                        const newTeeId = e.target.value;
+                        setSetup(prev => ({
+                            ...prev,
+                            [playerId]: { ...prev[playerId], teeId: newTeeId }
+                        }));
+                    }}
+                >
+                    {tees.map(tee => (
+                        <option key={tee.id} value={tee.id}>{tee.name} ({tee.rating}/{tee.slope})</option>
+                    ))}
+                </select>
+            </div>
+        );
+    };
 
 
     return (
@@ -333,10 +405,13 @@ export const MatchplaySetup = () => {
                             value={setup.player1.name}
                             readOnly
                         />
+                        {/* Tee Select Player 1 */}
+                        {renderTeeSelect('player1', setup.player1.teeId)}
+
                         {setup.matchType === 'NET' && (
                             <input
                                 type="number" placeholder="HCP"
-                                className="w-full p-3 border rounded-xl font-medium"
+                                className="w-full p-3 border rounded-xl font-medium mt-2"
                                 value={setup.player1.hcp}
                                 onChange={e => setSetup({ ...setup, player1: { ...setup.player1, hcp: parseFloat(e.target.value) } })}
                             />
@@ -399,10 +474,14 @@ export const MatchplaySetup = () => {
                             value={setup.player2.name}
                             readOnly
                         />
+
+                        {/* Tee Select Player 2 */}
+                        {renderTeeSelect('player2', setup.player2.teeId)}
+
                         {setup.matchType === 'NET' && (
                             <input
                                 type="number" placeholder="HCP"
-                                className="w-full p-3 border rounded-xl font-medium"
+                                className="w-full p-3 border rounded-xl font-medium mt-2"
                                 value={setup.player2.hcp}
                                 onChange={e => setSetup({ ...setup, player2: { ...setup.player2, hcp: parseFloat(e.target.value) } })}
                             />

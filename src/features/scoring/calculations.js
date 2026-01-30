@@ -21,11 +21,20 @@ export const calculateStrokesReceived = (playingHcp, holeHcp) => {
             strokes += 1;
         }
     } else if (playingHcp < 0) {
-        // Plus handicap logic (simplified)
-        // Usually +1 means you give back a stroke on the hardest hole (HCP 18? No, easiest usually, but let's stick to standard)
-        // For simplicity in this MVP, we handle positive handicaps primarily.
-        // If negative, we might need to adjust.
-        // Let's assume standard positive handicap logic for now.
+        // For plus handicap: give back strokes on easiest holes (HCP 18, 17...)
+        // This is a simplified implementation. 
+        // WHS rule: +1 gives back on HCP 18, +2 on 18 & 17, etc.
+        const absHcp = Math.abs(playingHcp);
+        const strokesToGiveBack = Math.floor(absHcp / 18);
+        const remainder = absHcp % 18;
+
+        let giveBack = strokesToGiveBack;
+        // Easiest holes are 18, 17, 16...
+        // If holeHcp is >= (19 - remainder), adds a stroke to give back
+        if (holeHcp >= (19 - remainder)) {
+            giveBack += 1;
+        }
+        strokes = -giveBack;
     }
     return strokes;
 };
@@ -71,7 +80,8 @@ export const calculateAdjustedScore = (par, strokes, strokesReceived) => {
  */
 export const calculateDifferential = (score, slope, rating) => {
     if (!score || !slope || !rating) return 0;
-    return (113 / slope) * (score - rating);
+    const diff = (113 / slope) * (score - rating);
+    return Math.round(diff * 10) / 10; // Standard WHS rounding to tenth
 };
 
 /**

@@ -45,13 +45,29 @@ export const Scorecard = () => {
         load();
     }, [id, db]);
 
+    // Helper to get applicable slope/rating
+    const getTeeData = () => {
+        if (!round || !course) return { slope: 113, rating: 72 };
+        // Priority 1: Snapshot in round
+        if (round.teeInfo) return round.teeInfo;
+        // Priority 2: Look up by ID in course
+        if (round.teeId && course.tees) {
+            const t = course.tees.find(t => t.id === round.teeId);
+            if (t) return t;
+        }
+        // Priority 3: Legacy root fields or defaults
+        return { slope: course.slope || 113, rating: course.rating || 72.0 };
+    };
+
+    const { slope: courseSlope, rating: courseRating } = getTeeData();
+
     const updateScore = async (holeNumber, strokes) => {
         const newScores = { ...round.scores, [holeNumber]: parseInt(strokes) || 0 };
 
         // Recalculate totals
         let tStrokes = 0;
         let tStableford = 0;
-        const playingHcp = calculatePlayingHcp(round.hcpIndex, course.slope, course.rating, 72); // Re-calc here or store
+        const playingHcp = calculatePlayingHcp(round.hcpIndex, courseSlope, courseRating, 72);
 
         course.holes.forEach(h => {
             const s = newScores[h.number] || 0;
@@ -73,7 +89,7 @@ export const Scorecard = () => {
     };
 
     // Calculate totals for display
-    const playingHcp = round && course ? calculatePlayingHcp(round.hcpIndex, course.slope, course.rating, 72) : 0;
+    const playingHcp = round && course ? calculatePlayingHcp(round.hcpIndex, courseSlope, courseRating, 72) : 0;
     let totalStrokes = 0;
     let totalStableford = 0;
     let adjustedGrossScore = 0;
@@ -99,8 +115,8 @@ export const Scorecard = () => {
     let differential = 0;
     if (course && round && totalStrokes > 0) {
         // Adjust Rating for 9-hole rounds
-        const rating = round.holesPlayed === 9 ? (course.rating / 2) : course.rating;
-        const slope = round.holesPlayed === 9 ? (course.slope / 2) : course.slope; // Also adjust slope for 9-hole calculation
+        const rating = round.holesPlayed === 9 ? (courseRating / 2) : courseRating;
+        const slope = round.holesPlayed === 9 ? (courseSlope / 2) : courseSlope; // Also adjust slope for 9-hole calculation
         differential = calculateDifferential(adjustedGrossScore, slope, rating);
     }
 
@@ -128,8 +144,8 @@ export const Scorecard = () => {
         // Calculate Differential
         let finalDifferential = 0;
         if (course && round && finalStrokes > 0) {
-            const rating = round.holesPlayed === 9 ? (course.rating / 2) : course.rating;
-            const slope = round.holesPlayed === 9 ? (course.slope / 2) : course.slope;
+            const rating = round.holesPlayed === 9 ? (courseRating / 2) : courseRating;
+            const slope = round.holesPlayed === 9 ? (courseSlope / 2) : courseSlope;
             finalDifferential = calculateDifferential(finalAdjustedScore, slope, rating);
         }
 

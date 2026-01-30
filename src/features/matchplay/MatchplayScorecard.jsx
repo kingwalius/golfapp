@@ -273,11 +273,21 @@ export const MatchplayScorecard = () => {
                             // Only count if all holes played (MVP simplification)
                             if (holesPlayedCount === targetHoles) {
                                 if (p1Strokes > 0) {
-                                    p1Diff = (113 / course.slope) * (p1Strokes - rating);
+                                    const p1Slope = match.player1.teeInfo?.slope || course.slope || 113;
+                                    const p1Rating = match.player1.teeInfo?.rating || course.rating || 72.0;
+                                    const rating = targetHoles === 9 ? (p1Rating / 2) : p1Rating;
+                                    const slope = targetHoles === 9 ? (p1Slope / 2) : p1Slope;
+
+                                    p1Diff = (113 / slope) * (p1Strokes - rating);
                                     p1Diff = Math.round(p1Diff * 10) / 10;
                                 }
                                 if (p2Strokes > 0) {
-                                    p2Diff = (113 / course.slope) * (p2Strokes - rating);
+                                    const p2Slope = match.player2.teeInfo?.slope || course.slope || 113;
+                                    const p2Rating = match.player2.teeInfo?.rating || course.rating || 72.0;
+                                    const rating = targetHoles === 9 ? (p2Rating / 2) : p2Rating;
+                                    const slope = targetHoles === 9 ? (p2Slope / 2) : p2Slope;
+
+                                    p2Diff = (113 / slope) * (p2Strokes - rating);
                                     p2Diff = Math.round(p2Diff * 10) / 10;
                                 }
                             }
