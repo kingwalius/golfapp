@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useDB } from '../../lib/store';
+import { ChevronLeft } from 'lucide-react';
 
 const initialHoles = Array.from({ length: 18 }, (_, i) => ({
     number: i + 1,
@@ -63,13 +64,54 @@ export const CourseEditor = () => {
         }));
     };
 
-    // ... handleSubmit needs update to save tees ...
+    const updateHole = (index, field, value) => {
+        const newHoles = [...course.holes];
+        newHoles[index] = { ...newHoles[index], [field]: parseInt(value) || 0 };
+        setCourse({ ...course, holes: newHoles });
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const courseData = {
+                ...course,
+                id: id && id !== 'new' ? parseInt(id) : Date.now(),
+                updatedAt: new Date().toISOString()
+            };
+
+            await db.put('courses', courseData);
+            navigate('/courses');
+        } catch (error) {
+            console.error("Failed to save course:", error);
+            alert("Failed to save course. Please try again.");
+        }
+    };
 
     return (
         <div className="p-4 max-w-lg mx-auto">
-            {/* ... header ... */}
+            <div className="flex items-center gap-4 mb-6">
+                <button
+                    onClick={() => navigate('/courses')}
+                    className="p-2 hover:bg-gray-100 rounded-full transition"
+                >
+                    <ChevronLeft size={24} />
+                </button>
+                <h1 className="text-2xl font-bold">
+                    {id === 'new' ? 'New Course' : 'Edit Course'}
+                </h1>
+            </div>
             <form onSubmit={handleSubmit} className="space-y-4">
-                {/* ... name input ... */}
+                <div>
+                    <label className="block text-sm font-bold text-gray-700">Course Name</label>
+                    <input
+                        type="text"
+                        required
+                        className="w-full p-3 border rounded-xl bg-gray-50 focus:bg-white transition"
+                        placeholder="e.g. Pebble Beach"
+                        value={course.name}
+                        onChange={e => setCourse({ ...course, name: e.target.value })}
+                    />
+                </div>
 
                 <div className="space-y-3">
                     <div className="flex justify-between items-center">
