@@ -11,6 +11,8 @@ import { MatchplaySetup } from './features/matchplay/MatchplaySetup';
 import { MatchplayScorecard } from './features/matchplay/MatchplayScorecard';
 import Profile from './features/profile/Profile';
 import { LeagueDashboard } from './features/league/LeagueDashboard';
+import { SkinsSetup } from './features/skins/SkinsSetup';
+import { SkinsScorecard } from './features/skins/SkinsScorecard';
 
 import { CreateLeague } from './features/league/CreateLeague';
 import { LeagueDetails } from './features/league/LeagueDetails';
@@ -42,6 +44,9 @@ function App() {
               <Route path="league" element={<LeagueDashboard />} />
               <Route path="league/create" element={<CreateLeague />} />
               <Route path="league/:id" element={<LeagueDetails />} />
+
+              <Route path="skins" element={<SkinsSetup />} />
+              <Route path="skins/:id" element={<SkinsScorecard />} />
             </Route>
           </Routes>
         </BrowserRouter>

@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'golf-app-db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 export const initDB = async () => {
     return openDB(DB_NAME, DB_VERSION, {
@@ -27,6 +27,11 @@ export const initDB = async () => {
             // League store
             if (!db.objectStoreNames.contains('leagues')) {
                 db.createObjectStore('leagues', { keyPath: 'id', autoIncrement: true });
+            }
+
+            // Skins Game store
+            if (!db.objectStoreNames.contains('skins_games')) {
+                db.createObjectStore('skins_games', { keyPath: 'id', autoIncrement: true });
             }
         },
     });

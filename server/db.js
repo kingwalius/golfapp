@@ -113,6 +113,19 @@ export const initDB = async () => {
     `);
 
     await db.execute(`
+      CREATE TABLE IF NOT EXISTS skins_games (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        courseId INTEGER NOT NULL,
+        date TEXT NOT NULL,
+        skinValue TEXT,
+        players TEXT,
+        scores TEXT,
+        status TEXT,
+        winnerId INTEGER
+      )
+    `);
+
+    await db.execute(`
       CREATE TABLE IF NOT EXISTS courses (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
