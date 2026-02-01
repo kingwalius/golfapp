@@ -709,6 +709,16 @@ const ensureSkinsTable = async () => {
                 startingHole INTEGER DEFAULT 1
             )
         `);
+
+        // Ensure new columns exist (Migrations)
+        try {
+            await db.execute("ALTER TABLE skins_games ADD COLUMN holesPlayed INTEGER DEFAULT 18");
+        } catch (e) { /* Column likely exists */ }
+
+        try {
+            await db.execute("ALTER TABLE skins_games ADD COLUMN startingHole INTEGER DEFAULT 1");
+        } catch (e) { /* Column likely exists */ }
+
     } catch (e) {
         console.error("Failed to ensure skins_games table:", e);
     }
