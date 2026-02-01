@@ -414,6 +414,15 @@ export const UserProvider = ({ children }) => {
                         let localMatch = allCourses.find(c => c.serverId === sId);
 
                         if (localMatch) {
+                            // SAFETY CHECK: Verify sync status from DB. 
+                            // If Up-Sync failed, local course is still synced: false. 
+                            // We MUST NOT overwrite it with stale server data.
+                            const fresh = await tx.objectStore('courses').get(localMatch.id);
+                            if (fresh && !fresh.synced) {
+                                console.log(`Skipping down-sync for course "${fresh.name}" (ID ${fresh.id}) - pending local changes.`);
+                                continue;
+                            }
+
                             // Update existing course with server data (tees, slopes, etc)
                             // We merge to preserve local ID but take server data
                             await tx.store.put({
