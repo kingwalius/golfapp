@@ -401,6 +401,67 @@ export const UserProvider = ({ children }) => {
             const allSkinsGames = await db.getAll('skins_games');
             const unsyncedSkins = allSkinsGames.filter(g => !g.synced && g.status === 'COMPLETED');
 
+            // --- DOWN-SYNC COURSES: Fetch latest courses from server ---
+            try {
+                const courseRes = await authFetch('/courses');
+                if (courseRes.ok) {
+                    const serverCourses = await courseRes.json();
+                    const tx = db.transaction('courses', 'readwrite');
+
+                    for (const sCourse of serverCourses) {
+                        const sId = parseInt(sCourse.id);
+                        // Find local match by serverId
+                        let localMatch = allCourses.find(c => c.serverId === sId);
+
+                        if (localMatch) {
+                            // Update existing course with server data (tees, slopes, etc)
+                            // We merge to preserve local ID but take server data
+                            await tx.store.put({
+                                ...localMatch,
+                                ...sCourse,
+                                holes: typeof sCourse.holes === 'string' ? JSON.parse(sCourse.holes) : sCourse.holes,
+                                tees: typeof sCourse.tees === 'string' ? JSON.parse(sCourse.tees) : (sCourse.tees || []),
+                                id: localMatch.id, // Keep local ID
+                                serverId: sId,
+                                synced: true
+                            });
+                        } else {
+                            // Check for likely duplicate by name if no serverId
+                            const nameMatch = allCourses.find(c => c.name.trim().toLowerCase() === sCourse.name.trim().toLowerCase() && !c.serverId);
+
+                            if (nameMatch) {
+                                // Merge unsynced local into this server course
+                                await tx.store.put({
+                                    ...nameMatch,
+                                    ...sCourse,
+                                    holes: typeof sCourse.holes === 'string' ? JSON.parse(sCourse.holes) : sCourse.holes,
+                                    tees: typeof sCourse.tees === 'string' ? JSON.parse(sCourse.tees) : (sCourse.tees || []),
+                                    id: nameMatch.id,
+                                    serverId: sId,
+                                    synced: true
+                                });
+                            } else {
+                                // Completely new course from server
+                                // Use server ID as local ID if possible? Or Date.now()?
+                                // Our local IDs are usually timestamps. Server IDs are small ints.
+                                // We can use server ID as local ID for downloaded courses to avoid clashes with future timestamps.
+                                await tx.store.put({
+                                    ...sCourse,
+                                    holes: typeof sCourse.holes === 'string' ? JSON.parse(sCourse.holes) : sCourse.holes,
+                                    tees: typeof sCourse.tees === 'string' ? JSON.parse(sCourse.tees) : (sCourse.tees || []),
+                                    id: sId, // Use server ID as local ID for downloaded content
+                                    serverId: sId,
+                                    synced: true
+                                });
+                            }
+                        }
+                    }
+                    await tx.done;
+                }
+            } catch (e) {
+                console.error("Failed to down-sync courses", e);
+            }
+
             // --- DOWN-SYNC: Fetch latest activity from server ---
             try {
                 const activityRes = await authFetch(`/api/user/${user.id}/activity`);
