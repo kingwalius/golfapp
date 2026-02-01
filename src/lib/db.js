@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 
 const DB_NAME = 'golf-app-db';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 export const initDB = async () => {
     return openDB(DB_NAME, DB_VERSION, {
