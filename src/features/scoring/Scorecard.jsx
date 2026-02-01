@@ -124,6 +124,8 @@ export const Scorecard = () => {
     }
 
     const handleFinish = async () => {
+        if (!confirm('Are you sure you want to finish this round?')) return;
+
         // Calculate final stats
         let finalStrokes = 0;
         let finalStableford = 0;
