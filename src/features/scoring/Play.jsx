@@ -183,6 +183,14 @@ export const Play = () => {
                         <span className="text-lg">Start Matchplay</span>
                     </Link>
 
+                    <Link
+                        to="/skins"
+                        className="w-full bg-emerald-700 text-white py-6 rounded-2xl font-bold shadow-lg shadow-emerald-700/20 flex items-center justify-center space-x-3 hover:bg-emerald-800 transition active:scale-95 block"
+                    >
+                        <Trophy size={28} />
+                        <span className="text-lg">Start Skins Game</span>
+                    </Link>
+
                     <div>
                         <h2 className="font-bold text-xl mb-4 text-dark">Recent Activity</h2>
                         <div className="space-y-1">
