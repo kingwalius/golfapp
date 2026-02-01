@@ -183,6 +183,28 @@ export const Home = () => {
         }
     };
 
+    const handleDeleteActiveGame = async (e) => {
+        e.stopPropagation(); // Prevent navigation
+        if (!activeGame) return;
+
+        if (!confirm(`Are you sure you want to delete this ${activeGame.title}?`)) return;
+
+        try {
+            if (activeGame.type === 'skins') {
+                await db.delete('skins_games', activeGame.id);
+            } else if (activeGame.type === 'match') {
+                await db.delete('matches', activeGame.id);
+            } else {
+                await db.delete('rounds', activeGame.id);
+            }
+            // Reload to update UI
+            loadData();
+        } catch (err) {
+            console.error("Failed to delete active game", err);
+            alert("Failed to delete game");
+        }
+    };
+
     return (
         <div className="p-6 space-y-8">
             {/* Premium Header */}
@@ -218,7 +240,7 @@ export const Home = () => {
                 </Link>
             </header>
 
-
+            {/* Resume Active Game Card */}
             {activeGame && (
                 <div
                     onClick={() => navigate(activeGame.link)}
@@ -236,10 +258,21 @@ export const Home = () => {
                         <p className="text-emerald-100 text-xs mt-0.5">{activeGame.subtext}</p>
                     </div>
 
-                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white relative z-10 group-hover:bg-white group-hover:text-emerald-700 transition">
-                        <Swords size={20} className={activeGame.icon === 'swords' ? '' : 'hidden'} />
-                        <Trophy size={20} className={activeGame.icon === 'trophy' ? '' : 'hidden'} />
-                        <Flag size={20} className={activeGame.icon === 'flag' ? '' : 'hidden'} />
+                    <div className="flex items-center gap-3 relative z-10">
+                        <button
+                            onClick={handleDeleteActiveGame}
+                            className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:bg-red-500 hover:text-white transition"
+                            title="Delete Game"
+                        >
+                            <User size={0} className="hidden" /> {/* Hack to keep import if needed, but we used Trash2 in LeagueDashboard, need to import it here */}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
+                        </button>
+
+                        <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white group-hover:bg-white group-hover:text-emerald-700 transition">
+                            <Swords size={20} className={activeGame.icon === 'swords' ? '' : 'hidden'} />
+                            <Trophy size={20} className={activeGame.icon === 'trophy' ? '' : 'hidden'} />
+                            <Flag size={20} className={activeGame.icon === 'flag' ? '' : 'hidden'} />
+                        </div>
                     </div>
                 </div>
             )}
