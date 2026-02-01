@@ -128,8 +128,9 @@ export const MatchplaySetup = () => {
             id: 'default', name: 'Standard', color: 'white', slope: course.slope || 113, rating: course.rating || 72.0
         }];
 
-        const p1Tee = tees.find(t => t.id === setup.player1.teeId) || tees[0];
-        const p2Tee = tees.find(t => t.id === setup.player2.teeId) || tees[0];
+        const safeTees = (tees && Array.isArray(tees) && tees.length > 0) ? tees : [{ name: 'Default', rating: 72, slope: 113 }];
+        const p1Tee = safeTees.find(t => t.id === setup.player1.teeId) || safeTees[0];
+        const p2Tee = safeTees.find(t => t.id === setup.player2.teeId) || safeTees[0];
 
         const p1Playing = calculatePlayingHcp(setup.player1.hcp, p1Tee.slope, p1Tee.rating, 72);
         const p2Playing = calculatePlayingHcp(setup.player2.hcp, p2Tee.slope, p2Tee.rating, 72);

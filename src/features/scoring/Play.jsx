@@ -109,7 +109,8 @@ export const Play = () => {
         const tees = course.tees && course.tees.length > 0 ? course.tees : [{
             id: 'default', name: 'Standard', color: 'white', slope: course.slope || 113, rating: course.rating || 72.0
         }];
-        const selectedTee = tees.find(t => t.id === selectedTeeId) || tees[0];
+        const safeTees = (tees && Array.isArray(tees) && tees.length > 0) ? tees : [{ name: 'Default', rating: 72, slope: 113 }];
+        const selectedTee = safeTees.find(t => t.id === selectedTeeId) || safeTees[0];
 
         const newRound = {
             date: new Date(),

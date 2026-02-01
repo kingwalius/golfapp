@@ -51,8 +51,11 @@ export const Scorecard = () => {
         // Priority 1: Snapshot in round
         if (round.teeInfo) return round.teeInfo;
         // Priority 2: Look up by ID in course
-        if (round.teeId && course.tees) {
-            const t = course.tees.find(t => t.id === round.teeId);
+        if (round.teeId && course && course.tees && course.tees.length > 0) {
+            const t = course.tees.find(t => t.id === round.teeId) || course.tees[0];
+            // The original function returns tee data, not calculates differential.
+            // The instruction's `const diff = calculateDifferential(...)` seems out of place here.
+            // Assuming the intent was to safely find and return the tee, or the first tee.
             if (t) return t;
         }
         // Priority 3: Legacy root fields or defaults

@@ -597,26 +597,35 @@ app.get('/api/league/feed', async (req, res) => {
             ORDER BY s.date DESC LIMIT 50
         `);
 
+        const safeParse = (str, fallback) => {
+            try {
+                if (!str) return fallback;
+                return JSON.parse(str);
+            } catch (e) {
+                return fallback;
+            }
+        };
+
         const rounds = roundsResult.rows.map(r => ({
             ...r,
             type: 'round',
-            scores: r.scores ? JSON.parse(r.scores) : {},
-            courseHoles: JSON.parse(r.courseHoles || '[]')
+            scores: safeParse(r.scores, {}),
+            courseHoles: safeParse(r.courseHoles, [])
         }));
 
         const matches = matchesResult.rows.map(m => ({
             ...m,
             type: 'match',
-            scores: m.scores ? JSON.parse(m.scores) : {},
-            courseHoles: JSON.parse(m.courseHoles || '[]')
+            scores: safeParse(m.scores, {}),
+            courseHoles: safeParse(m.courseHoles, [])
         }));
 
         const skins = skinsResult.rows.map(s => ({
             ...s,
             type: 'skins',
-            scores: s.scores ? JSON.parse(s.scores) : {},
-            players: s.players ? JSON.parse(s.players) : [],
-            courseHoles: JSON.parse(s.courseHoles || '[]')
+            scores: safeParse(s.scores, {}),
+            players: safeParse(s.players, []),
+            courseHoles: safeParse(s.courseHoles, [])
         }));
 
         // Combine and sort by date
