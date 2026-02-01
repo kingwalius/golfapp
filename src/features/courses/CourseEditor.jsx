@@ -78,11 +78,24 @@ export const CourseEditor = () => {
                 id: id && id !== 'new' ? parseInt(id) : Date.now(),
                 updatedAt: new Date().toISOString(),
                 synced: false,
-                tees: course.tees.map(t => ({
-                    ...t,
-                    slope: parseInt(t.slope) || 113,
-                    rating: parseFloat(t.rating.toString().replace(',', '.')) || 72.0
-                }))
+                tees: course.tees.map(t => {
+                    const safeRating = (val) => {
+                        if (val === null || val === undefined) return 72.0;
+                        if (typeof val === 'number') return val;
+                        return parseFloat(val.toString().replace(',', '.')) || 72.0;
+                    };
+                    const safeSlope = (val) => {
+                        if (val === null || val === undefined) return 113;
+                        if (typeof val === 'number') return parseInt(val) || 113;
+                        return parseInt(val) || 113;
+                    };
+
+                    return {
+                        ...t,
+                        slope: safeSlope(t.slope),
+                        rating: safeRating(t.rating)
+                    };
+                })
             };
 
             await db.put('courses', courseData);
