@@ -27,7 +27,7 @@ export const CourseEditor = () => {
             db.get('courses', parseInt(id)).then(c => {
                 if (c) {
                     // Migration: If no tees, create default from slope/rating
-                    if (!c.tees || c.tees.length === 0) {
+                    if (!c.tees || !Array.isArray(c.tees) || c.tees.length === 0) {
                         c.tees = [{
                             id: 'default',
                             name: 'Standard',
@@ -36,6 +36,7 @@ export const CourseEditor = () => {
                             rating: c.rating || 72.0
                         }];
                     }
+                    if (!Array.isArray(c.tees)) c.tees = []; // Fallback safety
                     setCourse(c);
                 }
             });
@@ -171,17 +172,22 @@ export const CourseEditor = () => {
                                 <div>
                                     <label className="text-xs text-gray-500">Slope</label>
                                     <input
-                                        type="number"
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
                                         className="w-full p-1 border rounded text-sm"
                                         value={tee.slope} onChange={e => updateTee(tee.id, 'slope', e.target.value)}
+                                        placeholder="113"
                                     />
                                 </div>
                                 <div>
                                     <label className="text-xs text-gray-500">Rating</label>
                                     <input
-                                        type="number" inputMode="decimal" step="0.1"
+                                        type="text"
+                                        inputMode="decimal"
                                         className="w-full p-1 border rounded text-sm"
                                         value={tee.rating} onChange={e => updateTee(tee.id, 'rating', e.target.value)}
+                                        placeholder="72.0"
                                     />
                                 </div>
                             </div>
