@@ -568,6 +568,8 @@ app.post('/api/matches/delete', async (req, res) => {
 // --- League Feed Route ---
 app.get('/api/league/feed', async (req, res) => {
     try {
+        await ensureSkinsTable(); // Ensure table exists or this crashes
+
         // Fetch all rounds with user info
         const roundsResult = await db.execute(`
             SELECT r.*, u.username, c.name as courseName, c.holes as courseHoles
@@ -692,6 +694,26 @@ const ensureGuestUser = async () => {
     }
 };
 
+const ensureSkinsTable = async () => {
+    try {
+        await db.execute(`
+            CREATE TABLE IF NOT EXISTS skins_games (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                courseId INTEGER NOT NULL,
+                date DATETIME NOT NULL,
+                skinValue TEXT,
+                status TEXT,
+                players TEXT,
+                scores TEXT,
+                holesPlayed INTEGER DEFAULT 18,
+                startingHole INTEGER DEFAULT 1
+            )
+        `);
+    } catch (e) {
+        console.error("Failed to ensure skins_games table:", e);
+    }
+};
+
 // --- Sync Routes ---
 app.post('/sync', authenticateToken, async (req, res) => {
     const { userId, rounds, matches, skinsGames } = req.body;
@@ -705,6 +727,7 @@ app.post('/sync', authenticateToken, async (req, res) => {
         await ensureScoresColumn('matches');
         await ensureLeagueMatchIdColumn();
         await ensureLeagueRoundsTable();
+        await ensureSkinsTable();
 
         // Ensure differential columns for matches
         try {
