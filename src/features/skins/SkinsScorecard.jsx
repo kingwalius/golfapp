@@ -262,16 +262,24 @@ export const SkinsScorecard = () => {
     // --- ACTIVE GAME VIEW ---
 
     const currentHoleData = course.holes[currentHole - 1] || { par: 4, hcp: 18, distance: 0 };
-    const holesPlayed = Object.keys(game.scores).filter(h => Object.keys(game.scores[h]).length === game.players.length).length;
-    const totalHoles = game.holesPlayed || 18;
-    const skinsLeft = totalHoles - holesPlayed;
+    const holesCompleted = Object.keys(game.scores).filter(h => Object.keys(game.scores[h]).length === game.players.length).length;
+
+    // Determine the actual last hole number (e.g., Start 10 + 9 holes = End 18)
+    const countHoles = game.holesPlayed || 18;
+    const startHole = game.startingHole || 1;
+    const lastHole = startHole + countHoles - 1;
+
+    const skinsLeft = countHoles - holesCompleted;
 
     // Determine current Pot for THIS hole
     let potForHole = 1 * (parseInt(game.skinValue) || 1);
     let carryoverCount = 0;
 
     // Scan previous holes for continuous carryovers leading up to this one
-    for (let h = currentHole - 1; h >= 1; h--) {
+    // Note: We need to handle wrap-around or just linear scanning based on played holes?
+    // For now purely linear based on hole number might be tricky if not contiguous? 
+    // Assuming contiguous holes.
+    for (let h = currentHole - 1; h >= startHole; h--) {
         const log = gameState.skinLog[h];
         if (log && log.carryover) {
             carryoverCount++;
@@ -336,7 +344,7 @@ export const SkinsScorecard = () => {
 
                     {/* Hole Navigation */}
                     <div className="flex justify-between items-center mb-8">
-                        <button onClick={prevHole} disabled={currentHole === 1} className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-stone-400 disabled:opacity-30 hover:bg-stone-100">
+                        <button onClick={prevHole} disabled={currentHole === startHole} className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-stone-400 disabled:opacity-30 hover:bg-stone-100">
                             <ChevronLeft size={20} />
                         </button>
                         <div className="flex flex-col items-center">
@@ -350,7 +358,7 @@ export const SkinsScorecard = () => {
                             </div>
                         </div>
 
-                        {currentHole === totalHoles ? (
+                        {currentHole === lastHole ? (
                             <button
                                 onClick={finishGame}
                                 className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg hover:bg-emerald-700 animate-pulse"
