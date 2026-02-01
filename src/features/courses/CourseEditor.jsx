@@ -89,7 +89,7 @@ export const CourseEditor = () => {
             navigate('/courses');
         } catch (error) {
             console.error("Failed to save course:", error);
-            alert("Failed to save course. Please try again.");
+            alert(`Failed to save course: ${error.message}`);
         }
     };
 
