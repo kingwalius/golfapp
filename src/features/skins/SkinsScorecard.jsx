@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDB } from '../../lib/store';
-import { ChevronLeft, ChevronRight, Menu, Trophy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Menu, Trophy, X } from 'lucide-react';
 import { calculateSkinsStrokes, calculateSkinsState } from './skinsLogic';
 
 // Note: If Numpad doesn't exist as a reusable component, I'll inline a simple one for now.
@@ -10,8 +10,8 @@ const SimpleNumpad = ({ isOpen, onClose, onInput, title }) => {
     if (!isOpen) return null;
     const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9];
     return (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center animate-fade-in">
-            <div className="bg-white w-full sm:w-96 p-6 rounded-t-3xl sm:rounded-3xl shadow-2xl">
+        <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center animate-fade-in">
+            <div className="bg-white w-full sm:w-96 p-6 rounded-t-3xl sm:rounded-3xl shadow-2xl safe-area-pb">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="font-bold text-xl">{title}</h3>
                     <button onClick={onClose} className="p-2 bg-stone-100 rounded-full">✕</button>
@@ -44,6 +44,9 @@ export const SkinsScorecard = () => {
     // Numpad State
     const [numpadOpen, setNumpadOpen] = useState(false);
     const [activeInput, setActiveInput] = useState(null); // { playerId }
+
+    // Card State
+    const [scorecardOpen, setScorecardOpen] = useState(false);
 
     useEffect(() => {
         if (!db || !id) return;
@@ -150,13 +153,13 @@ export const SkinsScorecard = () => {
             {/* Top Bar - Status */}
             <div className="bg-dark text-white p-6 rounded-b-[32px] shadow-lg z-10 relative">
                 <div className="flex justify-between items-start mb-6">
-                    <button onClick={() => navigate('/league')} className="p-2 -ml-2 text-white/50 hover:text-white">
+                    <button onClick={() => navigate('/play')} className="p-2 -ml-2 text-white/50 hover:text-white">
                         <ChevronLeft />
                     </button>
                     <div className="flex gap-4 items-center">
                         <div className="flex flex-col items-center">
                             <div className="w-16 h-16 rounded-full border-4 border-emerald-400 flex items-center justify-center text-2xl font-bold bg-white/10 backdrop-blur-md mb-1">
-                                {18 - (currentHole - 1)}
+                                {skinsLeft}
                             </div>
                             <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">Left</span>
                         </div>
@@ -167,7 +170,9 @@ export const SkinsScorecard = () => {
                             <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">Pot</span>
                         </div>
                     </div>
-                    <div className="w-8"></div>
+                    <button onClick={() => setScorecardOpen(true)} className="p-2 -mr-2 text-white/50 hover:text-white">
+                        <Menu />
+                    </button>
                 </div>
 
                 {/* Players Bank */}
@@ -299,6 +304,64 @@ export const SkinsScorecard = () => {
                 onInput={handleScoreInput}
                 title={`Score for Hole ${currentHole}`}
             />
+
+            {/* Full Scorecard Modal */}
+            {scorecardOpen && (
+                <div className="fixed inset-0 z-[150] bg-white flex flex-col animate-fade-in">
+                    <div className="bg-dark text-white p-6 pb-4 flex justify-between items-center safe-area-pt">
+                        <h2 className="text-xl font-bold">Scorecard</h2>
+                        <button onClick={() => setScorecardOpen(false)} className="p-2 bg-white/10 rounded-full hover:bg-white/20">
+                            <X size={20} />
+                        </button>
+                    </div>
+                    <div className="flex-1 overflow-auto p-4 safe-area-pb">
+                        <div className="overflow-x-auto rounded-xl border border-stone-200">
+                            <table className="w-full text-xs text-center border-collapse">
+                                <thead>
+                                    <tr className="bg-stone-100 text-stone-500 font-bold uppercase tracking-wider">
+                                        <th className="p-2 border-b border-r border-stone-200 sticky left-0 bg-stone-100 z-10 w-20 text-left pl-3">Hole</th>
+                                        {course.holes.map(h => (
+                                            <th key={h.number} className="p-2 border-b border-stone-200 min-w-[30px]">{h.number}</th>
+                                        ))}
+                                        <th className="p-2 border-b border-l border-stone-200 font-black text-dark">Tot</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {/* Par Row */}
+                                    <tr className="bg-stone-50 text-stone-400 font-bold">
+                                        <td className="p-2 border-b border-r border-stone-200 sticky left-0 bg-stone-50 z-10 text-left pl-3">Par</td>
+                                        {course.holes.map(h => (
+                                            <td key={h.number} className="p-2 border-b border-stone-200">{h.par}</td>
+                                        ))}
+                                        <td className="p-2 border-b border-l border-stone-200">{course.holes.reduce((a, b) => a + b.par, 0)}</td>
+                                    </tr>
+                                    {/* Player Rows */}
+                                    {game.players.map(p => (
+                                        <tr key={p.id} className="text-dark font-medium border-b border-stone-100 last:border-0">
+                                            <td className="p-2 border-r border-stone-100 sticky left-0 bg-white z-10 text-left pl-3 font-bold truncate max-w-[80px]">
+                                                {p.name}
+                                            </td>
+                                            {course.holes.map(h => {
+                                                const s = game.scores[h.number]?.[p.id];
+                                                // Check if they won this skin
+                                                const won = gameState.skinLog[h.number]?.winnerId === p.id;
+                                                return (
+                                                    <td key={h.number} className={`p-2 ${won ? 'bg-emerald-100 text-emerald-800 font-bold' : ''}`}>
+                                                        {s || '-'}
+                                                    </td>
+                                                );
+                                            })}
+                                            <td className="p-2 border-l border-stone-100 font-bold">
+                                                {Object.values(game.scores).reduce((sum, hScores) => sum + (hScores[p.id] || 0), 0)}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
