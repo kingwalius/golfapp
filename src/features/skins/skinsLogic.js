@@ -13,7 +13,7 @@ export const calculateSkinsStrokes = (players, course) => {
     const playersWithPlayingHcp = players.map(p => {
         if (!course.tees || !Array.isArray(course.tees) || course.tees.length === 0) return { ...p, strokesReceived: 0 };
         const tee = course.tees.find(t => t.id === p.teeId) || course.tees[0];
-        const playingHcp = calculatePlayingHcp(p.hcp, tee.slope, tee.rating, 72); // Assuming Par 72 for base calculation if not specific
+        const playingHcp = calculatePlayingHcp(p.hcp, tee.slope, tee.rating, course.par || 72);
         return { ...p, playingHcp, tee };
     });
 

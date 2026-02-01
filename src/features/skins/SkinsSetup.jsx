@@ -235,7 +235,7 @@ export const SkinsSetup = () => {
                     <label className="block text-sm font-bold text-muted mb-3 uppercase tracking-wide">Course Settings</label>
                     <div className="flex gap-4 mb-4">
                         <button
-                            onClick={() => setSetup({ ...setup, holesToPlay: 18 })}
+                            onClick={() => setSetup({ ...setup, holesToPlay: 18, startingHole: 1 })}
                             className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${setup.holesToPlay === 18
                                 ? 'bg-dark text-white shadow-md'
                                 : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
