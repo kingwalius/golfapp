@@ -327,7 +327,7 @@ export const UserProvider = ({ children }) => {
         try {
             // --- PHASE 0: Sync Courses (Fix FK Errors) ---
             const allCourses = await db.getAll('courses');
-            const unsyncedCourses = allCourses.filter(c => !c.synced && !c.serverId);
+            const unsyncedCourses = allCourses.filter(c => !c.synced);
             const courseIdMap = new Map(); // Map localId -> serverId
 
             // Build map from existing synced courses
@@ -336,38 +336,18 @@ export const UserProvider = ({ children }) => {
             });
 
             if (unsyncedCourses.length > 0) {
-                console.log(`Syncing ${unsyncedCourses.length} custom courses...`);
+                console.log(`Syncing ${unsyncedCourses.length} courses...`);
 
                 for (const course of unsyncedCourses) {
                     try {
-                        // Check if we already have a serverId mapped
-                        if (course.serverId) {
-                            courseIdMap.set(course.id, course.serverId);
-                            continue;
-                        }
+                        const isUpdate = !!course.serverId;
+                        const endpoint = isUpdate ? `/courses/${course.serverId}` : '/courses';
+                        const method = isUpdate ? 'PUT' : 'POST';
 
-                        // Check if we found a duplicate locally that HAS a serverId (merge strategy)
-                        // This handles cases where user has "Course A" (synced) and "Course A" (unsynced)
-                        const duplicateSynced = allCourses.find(c =>
-                            c.id !== course.id &&
-                            c.serverId &&
-                            c.name.trim().toLowerCase() === course.name.trim().toLowerCase()
-                        );
+                        console.log(`${isUpdate ? 'Updating' : 'Uploading'} course:`, course.name);
 
-                        if (duplicateSynced) {
-                            console.log(`Merging duplicate course "${course.name}" (${course.id}) into ${duplicateSynced.id}`);
-                            const tx = db.transaction('courses', 'readwrite');
-                            // Mark local as synced but technically it should be deleted/aliased?
-                            // For safety, we upgrade it to point to the serverID of the duplicate.
-                            await tx.store.put({ ...course, serverId: duplicateSynced.serverId, synced: true });
-                            await tx.done;
-                            courseIdMap.set(course.id, duplicateSynced.serverId);
-                            continue;
-                        }
-
-                        console.log("Uploading course:", course.name);
-                        const res = await authFetch('/courses', {
-                            method: 'POST',
+                        const res = await authFetch(endpoint, {
+                            method: method,
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 name: course.name,
@@ -381,7 +361,8 @@ export const UserProvider = ({ children }) => {
 
                         if (res.ok) {
                             const data = await res.json();
-                            const serverId = parseInt(data.id);
+                            // For PUT (update), server doesn't return ID, so keep existing. For POST, use new ID.
+                            const serverId = isUpdate ? course.serverId : parseInt(data.id);
 
                             // Open a NEW transaction for the write operation
                             const tx = db.transaction('courses', 'readwrite');

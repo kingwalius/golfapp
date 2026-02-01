@@ -190,13 +190,41 @@ export const Home = () => {
         if (!confirm(`Are you sure you want to delete this ${activeGame.title}?`)) return;
 
         try {
-            if (activeGame.type === 'skins') {
-                await db.delete('skins_games', activeGame.id);
-            } else if (activeGame.type === 'match') {
-                await db.delete('matches', activeGame.id);
-            } else {
-                await db.delete('rounds', activeGame.id);
+            // Send delete to server if possible
+            if (activeGame.id && user) {
+                // Try to find the full item to check for serverId, or guess based on logic
+                // If the item came from 'activeGame' state derived in loadData, it has limited fields.
+                // We should fetch the full object from DB to check for serverId.
+                let storeName = 'rounds';
+                let deleteEndpoint = '/api/rounds/delete';
+
+                if (activeGame.type === 'skins') { storeName = 'skins_games'; deleteEndpoint = '/api/skins/delete'; }
+                else if (activeGame.type === 'match') { storeName = 'matches'; deleteEndpoint = '/api/matches/delete'; }
+
+                const item = await db.get(storeName, activeGame.id);
+                if (item) {
+                    // If item has serverId or we are deleting based on composite key (userId, courseId, date) for rounds/matches
+                    // For skins: endpoint expects gameId. If serverId exists, use it. If not, maybe use local ID?
+                    // Server side delete for Rounds/Matches uses composite keys mostly.
+                    // IMPORTANT: 'item' might have serverId.
+
+                    const payload = {
+                        userId: user.id,
+                        courseId: item.courseId,
+                        date: item.date,
+                        gameId: item.serverId || item.id // For Skins
+                    };
+
+                    await fetch(deleteEndpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    }).catch(err => console.warn("Background server delete failed", err));
+                }
+
+                await db.delete(storeName, activeGame.id);
             }
+
             // Reload to update UI
             loadData();
         } catch (err) {

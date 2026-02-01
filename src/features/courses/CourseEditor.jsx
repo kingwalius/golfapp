@@ -77,6 +77,7 @@ export const CourseEditor = () => {
                 ...course,
                 id: id && id !== 'new' ? parseInt(id) : Date.now(),
                 updatedAt: new Date().toISOString(),
+                synced: false,
                 tees: course.tees.map(t => ({
                     ...t,
                     slope: parseInt(t.slope) || 113,
