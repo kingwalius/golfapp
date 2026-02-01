@@ -853,6 +853,13 @@ export const UserProvider = ({ children }) => {
             mCursor = await mCursor.continue();
         }
 
+        let sCursor = await tx.objectStore('skins_games').openCursor();
+        while (sCursor) {
+            const update = { ...sCursor.value, synced: false };
+            sCursor.update(update);
+            sCursor = await sCursor.continue();
+        }
+
         await tx.done;
         console.log("All items marked unsynced. Triggering sync.");
         await sync();

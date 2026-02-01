@@ -70,7 +70,7 @@ export default function Profile() {
             username,
             avatar,
             handicapMode,
-            manualHandicap: handicapMode === 'MANUAL' ? parseFloat(manualHandicap) : null
+            manualHandicap: handicapMode === 'MANUAL' ? parseFloat(manualHandicap.toString().replace(',', '.')) : null
         });
         setIsSaving(false);
         navigate('/');
