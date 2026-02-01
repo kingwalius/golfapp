@@ -185,7 +185,7 @@ export const Play = () => {
 
                     <Link
                         to="/skins"
-                        className="w-full bg-emerald-700 text-white py-6 rounded-2xl font-bold shadow-lg shadow-emerald-700/20 flex items-center justify-center space-x-3 hover:bg-emerald-800 transition active:scale-95 block"
+                        className="w-full bg-stone-800 text-white py-6 rounded-2xl font-bold shadow-lg shadow-stone-800/20 flex items-center justify-center space-x-3 hover:bg-stone-900 transition active:scale-95 block"
                     >
                         <Trophy size={28} />
                         <span className="text-lg">Start Skins Game</span>
