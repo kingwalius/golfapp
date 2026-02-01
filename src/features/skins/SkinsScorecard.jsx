@@ -76,6 +76,11 @@ export const SkinsScorecard = () => {
                     setGame(prev => ({ ...prev, players: playersWithStrokes }));
                 }
 
+                // Set initial hole based on game setup
+                if (g.startingHole) {
+                    setCurrentHole(g.startingHole);
+                }
+
                 // Check if already finished
                 if (g.status === 'COMPLETED') {
                     setGameOver(true);
@@ -117,14 +122,22 @@ export const SkinsScorecard = () => {
     };
 
     const nextHole = () => {
-        const totalHoles = game.holesPlayed || 18;
-        if (currentHole < totalHoles) {
+        // Calculate total holes based on holesPlayed + startingHole - 1?
+        // Actually, logic for next/prev needs to be smarter for 9 holes.
+        // If starting 10, playing 9, we go 10..18.
+
+        const start = game.startingHole || 1;
+        const count = game.holesPlayed || 18;
+        const end = start + count - 1;
+
+        if (currentHole < end) {
             setCurrentHole(h => h + 1);
         }
     };
 
     const prevHole = () => {
-        if (currentHole > 1) setCurrentHole(h => h - 1);
+        const start = game.startingHole || 1;
+        if (currentHole > start) setCurrentHole(h => h - 1);
     };
 
     const finishGame = async () => {
@@ -155,10 +168,10 @@ export const SkinsScorecard = () => {
             <div className="bg-stone-900 min-h-screen text-white pb-safe">
                 <div className="p-6">
                     <h1 className="text-3xl font-bold text-center mb-2">Game Over</h1>
-                    <p className="text-center text-stone-400 mb-8">{course.name}</p>
+                    <p className="text-center text-stone-400 mb-8 px-4 max-w-sm mx-auto leading-tight">{course.name}</p>
 
                     {/* Podium */}
-                    <div className="flex justify-center items-end gap-2 mb-10 h-48">
+                    <div className="flex justify-center items-end gap-6 mb-10 h-48">
                         {/* 2nd Place */}
                         {second && (
                             <div className="flex flex-col items-center animate-fade-in-up delay-100">

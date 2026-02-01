@@ -415,12 +415,16 @@ export const UserProvider = ({ children }) => {
                 console.warn(`Skipping ${skippedMatches} matches due to missing opponent ID.`);
             }
 
+            // Filter Unsynced Skins Games
+            const allSkinsGames = await db.getAll('skins_games');
+            const unsyncedSkins = allSkinsGames.filter(g => !g.synced && g.status === 'COMPLETED');
+
             // --- DOWN-SYNC: Fetch latest activity from server ---
             try {
                 const activityRes = await authFetch(`/api/user/${user.id}/activity`);
                 if (activityRes.ok) {
                     const activityData = await activityRes.json();
-                    const tx = db.transaction(['rounds', 'matches'], 'readwrite');
+                    const tx = db.transaction(['rounds', 'matches', 'skins_games'], 'readwrite');
 
                     // Process Rounds
                     if (activityData.rounds && Array.isArray(activityData.rounds)) {
@@ -480,6 +484,36 @@ export const UserProvider = ({ children }) => {
                         }
                     }
 
+                    // Process Skins Games
+                    if (activityData.skinsGames && Array.isArray(activityData.skinsGames)) {
+                        for (const serverGame of activityData.skinsGames) {
+                            // Check for existing by Server ID, or fuzzy date/course match
+                            // Ideally skins_games has serverId
+                            let existing = allSkinsGames.find(g => g.serverId === serverGame.id);
+
+                            if (!existing) {
+                                const serverTime = new Date(serverGame.date).getTime();
+                                existing = allSkinsGames.find(g => {
+                                    const localTime = new Date(g.date).getTime();
+                                    return Math.abs(localTime - serverTime) < 60000 && g.courseId === serverGame.courseId;
+                                });
+                            }
+
+                            const { id, ...gameData } = serverGame;
+                            // Ensure date is consistent
+
+                            if (!existing) {
+                                await tx.objectStore('skins_games').add({
+                                    ...gameData,
+                                    serverId: id,
+                                    synced: true
+                                });
+                            } else if (!existing.serverId) {
+                                await tx.objectStore('skins_games').put({ ...existing, serverId: id, synced: true });
+                            }
+                        }
+                    }
+
                     await tx.done;
                 }
             } catch (e) {
@@ -487,17 +521,17 @@ export const UserProvider = ({ children }) => {
             }
 
             // --- UP-SYNC (Existing Logic with ID Mapping) ---
-            if (unsyncedRounds.length === 0 && validMatches.length === 0) {
+            if (unsyncedRounds.length === 0 && validMatches.length === 0 && unsyncedSkins.length === 0) {
                 console.log("Nothing to up-sync.");
                 return;
             }
 
-            console.log(`Up-syncing ${unsyncedRounds.length} rounds and ${validMatches.length} matches...`);
+            console.log(`Up-syncing ${unsyncedRounds.length} rounds, ${validMatches.length} matches, and ${unsyncedSkins.length} skins games...`);
 
             const payload = {
                 userId: user.id,
                 rounds: unsyncedRounds.map(r => ({
-                    courseId: courseIdMap.get(r.courseId) || r.courseId, // Use mapped Server ID if available
+                    courseId: courseIdMap.get(r.courseId) || r.courseId,
                     date: r.date,
                     score: r.totalStrokes || 0,
                     stableford: r.totalStableford || 0,
@@ -508,7 +542,7 @@ export const UserProvider = ({ children }) => {
                 matches: validMatches.map(m => ({
                     player1Id: m.player1?.id || user.id,
                     player2Id: m.player2?.id || null,
-                    courseId: courseIdMap.get(m.courseId) || m.courseId, // Use mapped Server ID if available
+                    courseId: courseIdMap.get(m.courseId) || m.courseId,
                     date: m.date,
                     winnerId: m.winnerId || null,
                     status: m.status || 'AS',
@@ -517,6 +551,16 @@ export const UserProvider = ({ children }) => {
                     player2Differential: m.player2Differential,
                     countForHandicap: m.countForHandicap,
                     leagueMatchId: m.leagueMatchId || null
+                })),
+                skinsGames: unsyncedSkins.map(g => ({
+                    courseId: courseIdMap.get(g.courseId) || g.courseId,
+                    date: g.date,
+                    skinValue: g.skinValue,
+                    status: g.status,
+                    players: g.players,
+                    scores: g.scores,
+                    holesPlayed: g.holesPlayed,
+                    startingHole: g.startingHole
                 }))
             };
 
@@ -532,11 +576,13 @@ export const UserProvider = ({ children }) => {
 
                 const matchFailures = responseData.results?.matches?.failed > 0;
                 const roundFailures = responseData.results?.rounds?.failed > 0;
+                const skinsFailures = responseData.results?.skinsGames?.failed > 0;
 
                 if (matchFailures) console.error("Matches sync errors:", responseData.results.matches.errors);
                 if (roundFailures) console.error("Rounds sync errors:", responseData.results.rounds.errors);
+                if (skinsFailures) console.error("Skins sync errors:", responseData.results.skinsGames.errors);
 
-                const tx = db.transaction(['rounds', 'matches'], 'readwrite');
+                const tx = db.transaction(['rounds', 'matches', 'skins_games'], 'readwrite');
 
                 if (!roundFailures) {
                     for (const r of unsyncedRounds) {
@@ -547,6 +593,12 @@ export const UserProvider = ({ children }) => {
                 if (!matchFailures) {
                     for (const m of validMatches) {
                         await tx.objectStore('matches').put({ ...m, synced: true });
+                    }
+                }
+
+                if (!skinsFailures) {
+                    for (const g of unsyncedSkins) {
+                        await tx.objectStore('skins_games').put({ ...g, synced: true });
                     }
                 }
 

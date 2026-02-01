@@ -6,18 +6,56 @@ import { Plus, Trophy, Activity, Ticket } from 'lucide-react';
 
 const FeedItem = ({ item }) => {
     const isMatch = item.type === 'match';
+    const isSkins = item.type === 'skins';
     const date = new Date(item.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-    // Construct the "Blog Post" text
+    // Construct the Title
     let title = '';
 
     if (isMatch) {
         title = `${item.p1Name || 'Unknown'} vs ${item.p2Name || 'Unknown'}`;
+    } else if (isSkins) {
+        const playerCount = item.players ? item.players.length : 0;
+        title = `Skins Game (${playerCount} Players)`;
     } else {
         title = item.username || 'Unknown';
     }
 
     const scores = item.scores || {};
+
+    // Specific rendering for Skins
+    if (isSkins) {
+        return (
+            <div className="bg-white rounded-3xl p-6 shadow-sm mb-6 border border-stone-100">
+                <div className="mb-4">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h3 className="font-bold text-dark text-lg flex items-center gap-2">
+                                <Trophy size={18} className="text-yellow-500" />
+                                {title}
+                            </h3>
+                            <p className="text-stone-400 text-xs">{date} • {item.courseName}</p>
+                        </div>
+                        <div className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
+                            Pot: {item.skinValue}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Simple Player List */}
+                <div className="grid grid-cols-2 gap-2">
+                    {item.players && item.players.slice(0, 4).map(p => (
+                        <div key={p.id} className="bg-stone-50 p-3 rounded-xl flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-white border border-stone-200 flex items-center justify-center font-bold text-xs text-stone-600">
+                                {p.name ? p.name.substring(0, 2).toUpperCase() : '??'}
+                            </div>
+                            <span className="font-bold text-sm text-dark">{p.name}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-white rounded-3xl p-6 shadow-sm mb-6 border border-stone-100">

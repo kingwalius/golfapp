@@ -91,6 +91,17 @@ app.get('/api/fix-db', async (req, res) => {
     date DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(leagueId) REFERENCES leagues(id) ON DELETE CASCADE,
     FOREIGN KEY(roundId) REFERENCES rounds(id) ON DELETE CASCADE
+)`,
+                `CREATE TABLE IF NOT EXISTS skins_games(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    courseId INTEGER NOT NULL,
+    date DATETIME NOT NULL,
+    skinValue TEXT,
+    status TEXT,
+    players TEXT,
+    scores TEXT,
+    holesPlayed INTEGER DEFAULT 18,
+    startingHole INTEGER DEFAULT 1
 )`
             ];
 
@@ -133,13 +144,14 @@ app.get('/api/nuke-db', async (req, res) => {
         console.log('Nuking database...');
         await db.execute('DELETE FROM rounds');
         await db.execute('DELETE FROM matches');
+        await db.execute('DELETE FROM skins_games'); // Add this
         await db.execute('DELETE FROM users');
         await db.execute('DELETE FROM courses');
 
         console.log('Database cleared. Re-initializing...');
-        await initDB();
+        // await initDB(); // Let's avoid re-init logic here to keep it simple or call the DB init
 
-        res.json({ success: true, message: 'Database completely erased and re-initialized.' });
+        res.json({ success: true, message: 'Database completely erased.' });
     } catch (error) {
         console.error('Nuke failed:', error);
         res.status(500).json({ error: error.message });
@@ -464,6 +476,21 @@ app.get('/api/user/:id/activity', authenticateToken, async (req, res) => {
             args: [userId, userId]
         });
 
+        // Fetch Skins Games (Check players JSON for userId - simpler: fetch all and filter in JS if JSON)
+        // Ideally we would normalize players into a join table, but for now we scan.
+        // Or since we don't have a reliable way to query JSON in SQL here easily without an extension:
+        // We can select all skins games for now or relies on client to filter?
+        // Better: Select where players LIKE '%userId%'? Risky.
+        // Let's select all recent skins games from the table and filter in memory.
+        const skinsResult = await db.execute('SELECT * FROM skins_games ORDER BY date DESC LIMIT 100');
+
+        const mySkinsGames = skinsResult.rows.filter(g => {
+            try {
+                const players = JSON.parse(g.players || '[]');
+                return players.some(p => p.id.toString() === userId.toString());
+            } catch (e) { return false; }
+        });
+
         // Parse scores from JSON string
         const matches = matchesResult.rows.map(m => ({
             ...m,
@@ -475,9 +502,16 @@ app.get('/api/user/:id/activity', authenticateToken, async (req, res) => {
             scores: r.scores ? JSON.parse(r.scores) : {}
         }));
 
+        const skinsGames = mySkinsGames.map(s => ({
+            ...s,
+            scores: s.scores ? JSON.parse(s.scores) : {},
+            players: s.players ? JSON.parse(s.players) : []
+        }));
+
         res.json({
             rounds: rounds,
-            matches: matches
+            matches: matches,
+            skinsGames: skinsGames
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -553,6 +587,14 @@ app.get('/api/league/feed', async (req, res) => {
             ORDER BY m.date DESC LIMIT 50
         `);
 
+        // Fetch all Skins games
+        const skinsResult = await db.execute(`
+            SELECT s.*, c.name as courseName, c.holes as courseHoles
+            FROM skins_games s
+            JOIN courses c ON s.courseId = c.id
+            ORDER BY s.date DESC LIMIT 50
+        `);
+
         const rounds = roundsResult.rows.map(r => ({
             ...r,
             type: 'round',
@@ -567,8 +609,16 @@ app.get('/api/league/feed', async (req, res) => {
             courseHoles: JSON.parse(m.courseHoles || '[]')
         }));
 
+        const skins = skinsResult.rows.map(s => ({
+            ...s,
+            type: 'skins',
+            scores: s.scores ? JSON.parse(s.scores) : {},
+            players: s.players ? JSON.parse(s.players) : [],
+            courseHoles: JSON.parse(s.courseHoles || '[]')
+        }));
+
         // Combine and sort by date
-        const feed = [...rounds, ...matches].sort((a, b) => new Date(b.date) - new Date(a.date));
+        const feed = [...rounds, ...matches, ...skins].sort((a, b) => new Date(b.date) - new Date(a.date));
 
         res.json(feed);
     } catch (error) {
@@ -644,11 +694,11 @@ const ensureGuestUser = async () => {
 
 // --- Sync Routes ---
 app.post('/sync', authenticateToken, async (req, res) => {
-    const { userId, rounds, matches } = req.body;
+    const { userId, rounds, matches, skinsGames } = req.body;
     if (!userId) return res.status(400).json({ error: 'User ID required' });
 
     try {
-        console.log('Sync Request:', { userId, roundsCount: rounds?.length, matchesCount: matches?.length });
+        console.log('Sync Request:', { userId, roundsCount: rounds?.length, matchesCount: matches?.length, skinsCount: skinsGames?.length });
 
         // 1. Ensure Schema (Self-healing)
         await ensureScoresColumn('rounds');
@@ -737,7 +787,8 @@ app.post('/sync', authenticateToken, async (req, res) => {
 
         const results = {
             rounds: { success: 0, failed: 0, errors: [] },
-            matches: { success: 0, failed: 0, errors: [] }
+            matches: { success: 0, failed: 0, errors: [] },
+            skinsGames: { success: 0, failed: 0, errors: [] }
         };
 
         // 4. Process Rounds
@@ -960,15 +1011,51 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                         }
                     }
                     results.matches.success++;
-                } catch (matchError) {
-                    console.error("Failed to sync match:", match, matchError);
+                } catch (e) {
+                    console.error("Match sync failed:", match, e);
+                    results.matches.errors.push({ id: match.date, error: e.message });
                     results.matches.failed++;
-                    results.matches.errors.push({ match, error: matchError.message });
                 }
             }
         }
 
-        res.json({ success: true, message: 'Synced successfully', results });
+        // 6. Process Skins Games
+        if (skinsGames && skinsGames.length) {
+            for (const game of skinsGames) {
+                try {
+                    const scoresJson = JSON.stringify(game.scores || {});
+                    const playersJson = JSON.stringify(game.players || []);
+
+                    // Check if exists
+                    const existing = await db.execute({
+                        sql: 'SELECT id FROM skins_games WHERE courseId = ? AND date = ?',
+                        args: [game.courseId, game.date]
+                    });
+
+                    if (existing.rows.length > 0) {
+                        // Update
+                        await db.execute({
+                            sql: 'UPDATE skins_games SET skinValue = ?, status = ?, players = ?, scores = ?, holesPlayed = ?, startingHole = ? WHERE id = ?',
+                            args: [game.skinValue, game.status, playersJson, scoresJson, game.holesPlayed, game.startingHole, existing.rows[0].id]
+                        });
+                    } else {
+                        // Insert
+                        const res = await db.execute({
+                            sql: 'INSERT INTO skins_games (courseId, date, skinValue, status, players, scores, holesPlayed, startingHole) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                            args: [game.courseId, game.date, game.skinValue, game.status, playersJson, scoresJson, game.holesPlayed || 18, game.startingHole || 1]
+                        });
+                    }
+                    results.skinsGames.success++;
+
+                } catch (e) {
+                    console.error("Skins sync failed:", game, e);
+                    results.skinsGames.errors.push({ id: game.date, error: e.message });
+                    results.skinsGames.failed++;
+                }
+            }
+        }
+
+        res.json({ success: true, results });
     } catch (error) {
         console.error("Sync Error:", error);
         res.status(500).json({ error: error.message, stack: error.stack });
