@@ -374,7 +374,8 @@ export const UserProvider = ({ children }) => {
                                 holes: typeof course.holes === 'string' ? JSON.parse(course.holes) : course.holes,
                                 rating: course.rating,
                                 slope: course.slope,
-                                par: course.par
+                                par: course.par,
+                                tees: course.tees || []
                             })
                         });
 

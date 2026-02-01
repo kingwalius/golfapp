@@ -76,7 +76,12 @@ export const CourseEditor = () => {
             const courseData = {
                 ...course,
                 id: id && id !== 'new' ? parseInt(id) : Date.now(),
-                updatedAt: new Date().toISOString()
+                updatedAt: new Date().toISOString(),
+                tees: course.tees.map(t => ({
+                    ...t,
+                    slope: parseInt(t.slope) || 113,
+                    rating: parseFloat(t.rating.toString().replace(',', '.')) || 72.0
+                }))
             };
 
             await db.put('courses', courseData);
@@ -154,7 +159,7 @@ export const CourseEditor = () => {
                                     <input
                                         type="number"
                                         className="w-full p-1 border rounded text-sm"
-                                        value={tee.slope} onChange={e => updateTee(tee.id, 'slope', parseInt(e.target.value))}
+                                        value={tee.slope} onChange={e => updateTee(tee.id, 'slope', e.target.value)}
                                     />
                                 </div>
                                 <div>
@@ -162,7 +167,7 @@ export const CourseEditor = () => {
                                     <input
                                         type="number" inputMode="decimal" step="0.1"
                                         className="w-full p-1 border rounded text-sm"
-                                        value={tee.rating} onChange={e => updateTee(tee.id, 'rating', parseFloat(e.target.value))}
+                                        value={tee.rating} onChange={e => updateTee(tee.id, 'rating', e.target.value)}
                                     />
                                 </div>
                             </div>
