@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useDB } from '../../lib/store';
 import { ChevronLeft, ChevronRight, Menu, Trophy } from 'lucide-react';
 import { calculateSkinsStrokes, calculateSkinsState } from './skinsLogic';
-import { Numpad } from '../../components/Numpad'; // Assuming we can reuse or create a similar one. 
+
 // Note: If Numpad doesn't exist as a reusable component, I'll inline a simple one for now.
 
 const SimpleNumpad = ({ isOpen, onClose, onInput, title }) => {
