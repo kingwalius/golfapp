@@ -666,9 +666,14 @@ export const UserProvider = ({ children }) => {
             } else {
                 let errorDetails;
                 try {
-                    errorDetails = await res.json();
+                    const text = await res.text();
+                    try {
+                        errorDetails = JSON.parse(text);
+                    } catch {
+                        errorDetails = text;
+                    }
                 } catch (e) {
-                    errorDetails = await res.text();
+                    errorDetails = "Could not read error details";
                 }
                 console.error("Up-sync failed with status:", res.status, errorDetails);
             }
