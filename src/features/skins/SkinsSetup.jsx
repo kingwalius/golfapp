@@ -232,8 +232,62 @@ export const SkinsSetup = () => {
 
                 {/* Settings */}
                 <div className="p-4 bg-stone-50 rounded-xl border border-stone-100">
-                    <label className="block text-sm font-bold text-muted mb-3 uppercase tracking-wide">Game Settings</label>
-                    <div className="flex items-center justify-between mb-4">
+                    <label className="block text-sm font-bold text-muted mb-3 uppercase tracking-wide">Course Settings</label>
+                    <div className="flex gap-4 mb-4">
+                        <button
+                            onClick={() => setSetup({ ...setup, holesToPlay: 18 })}
+                            className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${setup.holesToPlay === 18
+                                ? 'bg-dark text-white shadow-md'
+                                : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+                                }`}
+                        >
+                            18 Holes
+                        </button>
+                        <button
+                            onClick={() => setSetup({ ...setup, holesToPlay: 9 })}
+                            className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${setup.holesToPlay === 9
+                                ? 'bg-dark text-white shadow-md'
+                                : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+                                }`}
+                        >
+                            9 Holes
+                        </button>
+                    </div>
+
+                    {/* Front 9 / Back 9 Selection */}
+                    {setup.holesToPlay === 9 && (() => {
+                        const course = courses.find(c => c.id.toString() === setup.courseId || c.serverId?.toString() === setup.courseId);
+                        const is18HoleCourse = course?.holes?.length === 18;
+
+                        if (is18HoleCourse) {
+                            return (
+                                <div className="flex gap-4 mb-4 animate-fade-in">
+                                    <button
+                                        onClick={() => setSetup({ ...setup, startingHole: 1 })}
+                                        className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${setup.startingHole === 1
+                                            ? 'bg-stone-600 text-white shadow-md'
+                                            : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        Front 9
+                                    </button>
+                                    <button
+                                        onClick={() => setSetup({ ...setup, startingHole: 10 })}
+                                        className={`flex-1 py-3 px-4 rounded-lg font-bold transition-all ${setup.startingHole === 10
+                                            ? 'bg-stone-600 text-white shadow-md'
+                                            : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        Back 9
+                                    </button>
+                                </div>
+                            );
+                        }
+                        return null;
+                    })()}
+
+                    <label className="block text-sm font-bold text-muted mb-3 uppercase tracking-wide">Game Rules</label>
+                    <div className="flex items-center justify-between mb-2">
                         <span className="font-medium">Skin Value</span>
                         <input
                             type="text"
@@ -243,7 +297,6 @@ export const SkinsSetup = () => {
                             placeholder="e.g. 10"
                         />
                     </div>
-                    {/* Could add Net/Gross toggle here later if requested */}
                 </div>
 
                 <button

@@ -48,6 +48,10 @@ export const SkinsScorecard = () => {
     // Card State
     const [scorecardOpen, setScorecardOpen] = useState(false);
 
+    // Game Over State
+    const [gameOver, setGameOver] = useState(false);
+
+    // Initial Load
     useEffect(() => {
         if (!db || !id) return;
 
@@ -71,6 +75,11 @@ export const SkinsScorecard = () => {
                     const playersWithStrokes = calculateSkinsStrokes(g.players, finalCourse);
                     setGame(prev => ({ ...prev, players: playersWithStrokes }));
                 }
+
+                // Check if already finished
+                if (g.status === 'COMPLETED') {
+                    setGameOver(true);
+                }
             }
         };
         loadGame();
@@ -83,19 +92,14 @@ export const SkinsScorecard = () => {
             const newState = calculateSkinsState(game.scores, game.players, holes);
             setGameState(newState);
         }
-    }, [game?.scores, course]); // Deep check strictly on scores object if possible, but game.scores ref change works
+    }, [game?.scores, course]);
 
     const handleScoreInput = async (value) => {
         if (!activeInput || !game) return;
 
-        // Handle Delete
-        if (value === 'del') {
-            // Logic to remove score? For now just return
-            return;
-        }
+        if (value === 'del') return;
 
         const newScore = value === 0 ? 0 : parseInt(value); // 0 = Pickup
-
         const updatedScores = {
             ...game.scores,
             [currentHole]: {
@@ -113,23 +117,143 @@ export const SkinsScorecard = () => {
     };
 
     const nextHole = () => {
-        if (currentHole < (game.holesPlayed || 18)) setCurrentHole(h => h + 1);
+        const totalHoles = game.holesPlayed || 18;
+        if (currentHole < totalHoles) {
+            setCurrentHole(h => h + 1);
+        }
     };
 
     const prevHole = () => {
         if (currentHole > 1) setCurrentHole(h => h - 1);
     };
 
+    const finishGame = async () => {
+        // Confirm?
+        if (!window.confirm("Finish game and save results?")) return;
+
+        const updatedGame = { ...game, status: 'COMPLETED' };
+        await db.put('skins_games', updatedGame);
+        setGame(updatedGame);
+        setGameOver(true);
+    };
+
     if (!game || !course) return <div className="p-10 text-center">Loading Game...</div>;
+
+    // --- GAME OVER VIEW ---
+    if (gameOver) {
+        // Sort players by total skins won (value)
+        const skinValue = parseInt(game.skinValue) || 1;
+        const rankedPlayers = [...game.players].sort((a, b) => {
+            const valA = (gameState.playerTotals[a.id] || 0);
+            const valB = (gameState.playerTotals[b.id] || 0);
+            return valB - valA; // Descending
+        });
+
+        const [first, second, third, ...rest] = rankedPlayers;
+
+        return (
+            <div className="bg-stone-900 min-h-screen text-white pb-safe">
+                <div className="p-6">
+                    <h1 className="text-3xl font-bold text-center mb-2">Game Over</h1>
+                    <p className="text-center text-stone-400 mb-8">{course.name}</p>
+
+                    {/* Podium */}
+                    <div className="flex justify-center items-end gap-2 mb-10 h-48">
+                        {/* 2nd Place */}
+                        {second && (
+                            <div className="flex flex-col items-center animate-fade-in-up delay-100">
+                                <div className="w-16 h-16 rounded-full border-2 border-slate-300 bg-stone-800 flex items-center justify-center font-bold text-xl mb-2 relative">
+                                    {second.name.substring(0, 2).toUpperCase()}
+                                    <div className="absolute -top-2 -right-2 bg-slate-300 text-black text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">2</div>
+                                </div>
+                                <div className="h-24 w-20 bg-stone-800 rounded-t-lg flex flex-col items-center justify-start pt-2 border-t-4 border-slate-300">
+                                    <span className="font-bold text-xl">{(gameState.playerTotals[second.id] || 0) * skinValue}</span>
+                                    <span className="text-[10px] uppercase text-stone-500">Skins</span>
+                                </div>
+                                <span className="text-sm font-bold mt-2">{second.name}</span>
+                            </div>
+                        )}
+
+                        {/* 1st Place */}
+                        {first && (
+                            <div className="flex flex-col items-center z-10 animate-fade-in-up">
+                                <div className="w-20 h-20 rounded-full border-4 border-yellow-400 bg-stone-800 flex items-center justify-center font-bold text-2xl mb-2 relative shadow-[0_0_20px_rgba(250,204,21,0.3)]">
+                                    <Trophy size={28} className="text-yellow-400" />
+                                    <div className="absolute -top-3 -right-3 bg-yellow-400 text-black text-sm font-bold w-7 h-7 rounded-full flex items-center justify-center">1</div>
+                                </div>
+                                <div className="h-32 w-24 bg-stone-800 rounded-t-lg flex flex-col items-center justify-start pt-4 border-t-4 border-yellow-400 shadow-lg relative">
+                                    <span className="font-black text-3xl text-yellow-400">{(gameState.playerTotals[first.id] || 0) * skinValue}</span>
+                                    <span className="text-xs uppercase text-stone-500 font-bold">Skins Won</span>
+                                </div>
+                                <span className="text-lg font-bold mt-2 text-yellow-400">{first.name}</span>
+                            </div>
+                        )}
+
+                        {/* 3rd Place */}
+                        {third && (
+                            <div className="flex flex-col items-center animate-fade-in-up delay-200">
+                                <div className="w-16 h-16 rounded-full border-2 border-amber-700 bg-stone-800 flex items-center justify-center font-bold text-xl mb-2 relative">
+                                    {third.name.substring(0, 2).toUpperCase()}
+                                    <div className="absolute -top-2 -right-2 bg-amber-700 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">3</div>
+                                </div>
+                                <div className="h-20 w-20 bg-stone-800 rounded-t-lg flex flex-col items-center justify-start pt-2 border-t-4 border-amber-700">
+                                    <span className="font-bold text-xl">{(gameState.playerTotals[third.id] || 0) * skinValue}</span>
+                                    <span className="text-[10px] uppercase text-stone-500">Skins</span>
+                                </div>
+                                <span className="text-sm font-bold mt-2">{third.name}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Rest of players */}
+                    {rest.length > 0 && (
+                        <div className="bg-stone-800 rounded-2xl p-4 mb-6">
+                            {rest.map((p, i) => (
+                                <div key={p.id} className="flex justify-between items-center py-2 border-b border-stone-700 last:border-0">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-stone-500 font-bold w-4">{i + 4}</span>
+                                        <span className="font-bold">{p.name}</span>
+                                    </div>
+                                    <span className="font-bold">{(gameState.playerTotals[p.id] || 0) * skinValue} Skins</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Stats Summary - Total Strokes */}
+                    <div className="bg-stone-800 rounded-2xl p-4 mb-8">
+                        <h3 className="text-stone-400 text-xs font-bold uppercase tracking-widest mb-4">Total Strokes (Gross)</h3>
+                        {game.players.map(p => {
+                            const totalStrokes = Object.values(game.scores).reduce((sum, hScores) => sum + (hScores[p.id] || 0), 0);
+                            return (
+                                <div key={p.id} className="flex justify-between items-center py-2 border-b border-stone-700 last:border-0">
+                                    <span className="font-medium">{p.name}</span>
+                                    <span className="font-bold text-lg">{totalStrokes}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <button
+                        onClick={() => navigate('/')}
+                        className="w-full bg-white text-dark py-4 rounded-xl font-bold text-lg hover:bg-stone-200 transition"
+                    >
+                        Return to Menu
+                    </button>
+
+                </div>
+            </div>
+        );
+    }
+
+    // --- ACTIVE GAME VIEW ---
 
     const currentHoleData = course.holes[currentHole - 1] || { par: 4, hcp: 18, distance: 0 };
     const holesPlayed = Object.keys(game.scores).filter(h => Object.keys(game.scores[h]).length === game.players.length).length;
-    const skinsLeft = (game.holesPlayed || 18) - holesPlayed; // Approximate logic
+    const totalHoles = game.holesPlayed || 18;
+    const skinsLeft = totalHoles - holesPlayed;
 
     // Determine current Pot for THIS hole
-    // If previous hole carried over, add to 1.
-    // The calculateSkinsState logic returns 'currentPot' which is the Pot for the *next* hole to be decided maybe?
-    // Let's rely on the log of the previous hole.
     let potForHole = 1 * (parseInt(game.skinValue) || 1);
     let carryoverCount = 0;
 
@@ -212,9 +336,19 @@ export const SkinsScorecard = () => {
                                 <span>{currentHoleData.distance}m</span>
                             </div>
                         </div>
-                        <button onClick={nextHole} disabled={currentHole === (game.holesPlayed || 18)} className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-stone-600 disabled:opacity-30 hover:bg-stone-100">
-                            <ChevronRight size={20} />
-                        </button>
+
+                        {currentHole === totalHoles ? (
+                            <button
+                                onClick={finishGame}
+                                className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg hover:bg-emerald-700 animate-pulse"
+                            >
+                                <Trophy size={16} />
+                            </button>
+                        ) : (
+                            <button onClick={nextHole} className="w-10 h-10 rounded-full bg-stone-50 flex items-center justify-center text-stone-600 hover:bg-stone-100">
+                                <ChevronRight size={20} />
+                            </button>
+                        )}
                     </div>
 
                     {/* Scores Grid */}
