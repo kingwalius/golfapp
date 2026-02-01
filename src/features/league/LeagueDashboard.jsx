@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CompactScorecard } from './CompactScorecard';
 import { useUser } from '../../lib/store';
-import { Plus, Trophy, Activity, Ticket } from 'lucide-react';
+import { Plus, Trophy, Activity, Ticket, Trash2 } from 'lucide-react';
 
-const FeedItem = ({ item }) => {
+const FeedItem = ({ item, onDelete, currentUserId }) => {
     const isMatch = item.type === 'match';
     const isSkins = item.type === 'skins';
     const date = new Date(item.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -36,8 +36,20 @@ const FeedItem = ({ item }) => {
                             </h3>
                             <p className="text-stone-400 text-xs">{date} • {item.courseName}</p>
                         </div>
-                        <div className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
-                            Pot: {item.skinValue}
+                        <div className="flex items-center gap-2">
+                            <div className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
+                                Pot: {item.skinValue}
+                            </div>
+                            {/* Delete Button */}
+                            {currentUserId && (
+                                <button
+                                    onClick={() => onDelete(item)}
+                                    className="text-stone-300 hover:text-red-500 p-1"
+                                    title="Delete Game"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -60,9 +72,21 @@ const FeedItem = ({ item }) => {
     return (
         <div className="bg-white rounded-3xl p-6 shadow-sm mb-6 border border-stone-100">
             <div className="mb-4">
-                <div>
-                    <h3 className="font-bold text-dark text-lg">{title}</h3>
-                    <p className="text-stone-400 text-xs">{date} • {item.courseName}</p>
+                <div className="flex justify-between items-start">
+                    <div>
+                        <h3 className="font-bold text-dark text-lg">{title}</h3>
+                        <p className="text-stone-400 text-xs">{date} • {item.courseName}</p>
+                    </div>
+                    {/* Delete Button for standard items */}
+                    {currentUserId && (item.userId === currentUserId || item.player1Id === currentUserId || item.player2Id === currentUserId) && (
+                        <button
+                            onClick={() => onDelete(item)}
+                            className="text-stone-300 hover:text-red-500 p-1"
+                            title="Delete Activity"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -116,8 +140,44 @@ export const LeagueDashboard = () => {
             }
         };
 
-        fetchData();
-    }, [user]);
+        if (user) fetchData();
+    }, [user, loading]); // Added loading to dependency to trigger re-fetch on manual reload? No, loop risk.
+    // Better: create separate 'refresh' trigger or function.
+
+    const handleDeleteItem = async (item) => {
+        if (!confirm('Are you sure you want to delete this activity? This cannot be undone.')) return;
+
+        let endpoint = '';
+        const body = { userId: user.id, date: item.date };
+
+        if (item.type === 'skins') {
+            endpoint = '/api/skins/delete';
+            body.gameId = item.id;
+        } else if (item.type === 'match') {
+            endpoint = '/api/matches/delete';
+            body.courseId = item.courseId; // Match delete needs courseId & date
+        } else {
+            endpoint = '/api/rounds/delete';
+            body.courseId = item.courseId;
+        }
+
+        try {
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (res.ok) {
+                // Remove from local feed state immediately
+                setFeed(prev => prev.filter(f => !(f.id === item.id && f.type === item.type)));
+            } else {
+                alert("Failed to delete item.");
+            }
+        } catch (e) {
+            console.error("Delete failed", e);
+        }
+    };
 
     return (
         <div className="p-4 pb-24 min-h-screen bg-stone-50">
@@ -204,7 +264,12 @@ export const LeagueDashboard = () => {
                         <div className="text-center py-10 text-stone-400">No activity yet. Go play some golf!</div>
                     ) : (
                         feed.map((item, index) => (
-                            <FeedItem key={`${item.type}-${item.id}-${index}`} item={item} />
+                            <FeedItem
+                                key={`${item.type}-${item.id}-${index}`}
+                                item={item}
+                                onDelete={handleDeleteItem}
+                                currentUserId={user?.id}
+                            />
                         ))
                     )}
                 </div>

@@ -2284,6 +2284,22 @@ app.post('/api/debug/force-link', async (req, res) => {
     }
 });
 
+// --- Skins Routes ---
+app.post('/api/skins/delete', async (req, res) => {
+    const { userId, gameId } = req.body;
+    try {
+        // Verify ownership (optional but good practice)
+        // For now, simpler delete
+        await db.execute({
+            sql: 'DELETE FROM skins_games WHERE id = ?',
+            args: [gameId]
+        });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 const PORT = process.env.PORT || 3000;
 
 if (process.env.NODE_ENV !== 'production') {

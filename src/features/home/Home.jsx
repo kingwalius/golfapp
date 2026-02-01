@@ -15,12 +15,14 @@ export const Home = () => {
     const [friendsList, setFriendsList] = useState([]);
     const [isFriendSearchOpen, setIsFriendSearchOpen] = useState(false);
     const [isManualSyncing, setIsManualSyncing] = useState(false);
+    const [activeGame, setActiveGame] = useState(null);
 
     const loadData = async () => {
         if (!db || !user) return;
 
         const r = await db.getAll('rounds');
         const m = await db.getAll('matches');
+        const s = await db.getAll('skins_games');
         let c = await db.getAll('courses');
 
         // If no courses found locally, try to fetch from server
@@ -52,6 +54,63 @@ export const Home = () => {
 
         setCountingRounds(includedRounds);
         setCourses(c);
+
+        // Find Active Game (Priority: Active Skins -> Active Match -> Incomplete Round)
+        let foundActive = null;
+
+        // 1. Skins
+        const activeSkin = s.find(g => g.status === 'ACTIVE');
+        if (activeSkin) {
+            const course = c.find(co => co.id == activeSkin.courseId || co.serverId == activeSkin.courseId);
+            foundActive = {
+                type: 'skins',
+                id: activeSkin.id,
+                title: 'Skins Game',
+                subtext: `${course?.name || 'Unknown Course'} • Hole ${activeSkin.startingHole + (Object.keys(activeSkin.scores).length)}`,
+                link: `/skins/${activeSkin.id}`,
+                icon: 'trophy'
+            };
+        }
+
+        // 2. Matchplay (if no skins)
+        if (!foundActive) {
+            const activeMatch = m.find(match => match.status === 'ACTIVE');
+            if (activeMatch) {
+                const course = c.find(co => co.id == activeMatch.courseId || co.serverId == activeMatch.courseId);
+                const p1 = activeMatch.player1?.name || 'Player 1';
+                const p2 = activeMatch.player2?.name || 'Player 2';
+                foundActive = {
+                    type: 'match',
+                    id: activeMatch.id,
+                    title: `${p1} vs ${p2}`,
+                    subtext: `${course?.name || 'Unknown Course'} • Matchplay`,
+                    link: `/matchplay/${activeMatch.id}`,
+                    icon: 'swords'
+                };
+            }
+        }
+
+        // 3. Round (if nothing else)
+        if (!foundActive) {
+            // Find most recent incomplete round
+            const incompleteRound = r
+                .filter(round => !round.completed)
+                .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+
+            if (incompleteRound) {
+                const course = c.find(co => co.id == incompleteRound.courseId || co.serverId == incompleteRound.courseId);
+                foundActive = {
+                    type: 'round',
+                    id: incompleteRound.id,
+                    title: course?.name || 'Stroke Play',
+                    subtext: `${incompleteRound.holesPlayed === 9 ? '9 Holes' : '18 Holes'} • Stroke Play`,
+                    link: `/play/${incompleteRound.id}`,
+                    icon: 'flag'
+                };
+            }
+        }
+
+        setActiveGame(foundActive);
 
         // Load Friends
         if (user.friends) {
@@ -158,6 +217,32 @@ export const Home = () => {
                     </div>
                 </Link>
             </header>
+
+
+            {activeGame && (
+                <div
+                    onClick={() => navigate(activeGame.link)}
+                    className="bg-gradient-to-r from-emerald-600 to-emerald-800 p-4 rounded-2xl shadow-lg border border-emerald-500/30 flex items-center justify-between cursor-pointer active:scale-95 transition relative overflow-hidden group"
+                >
+                    {/* Background Pattern */}
+                    <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] pointer-events-none"></div>
+
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span className="text-[10px] font-bold text-emerald-100 uppercase tracking-widest">In Progress</span>
+                        </div>
+                        <h3 className="text-xl font-bold text-white leading-tight">{activeGame.title}</h3>
+                        <p className="text-emerald-100 text-xs mt-0.5">{activeGame.subtext}</p>
+                    </div>
+
+                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white relative z-10 group-hover:bg-white group-hover:text-emerald-700 transition">
+                        <Swords size={20} className={activeGame.icon === 'swords' ? '' : 'hidden'} />
+                        <Trophy size={20} className={activeGame.icon === 'trophy' ? '' : 'hidden'} />
+                        <Flag size={20} className={activeGame.icon === 'flag' ? '' : 'hidden'} />
+                    </div>
+                </div>
+            )}
 
             {/* Handicap & Stats Row */}
             <div className="bg-dark text-white p-6 rounded-3xl shadow-xl relative overflow-hidden group">
