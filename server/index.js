@@ -119,16 +119,29 @@ app.get('/api/fix-db', async (req, res) => {
         if (step === 'all' || step === 'columns') {
             // Ensure rounds.leagueId exists
             try {
-                // Check if column exists by selecting it
                 await db.execute("SELECT leagueId FROM rounds LIMIT 1");
                 log('✅ rounds.leagueId exists.');
             } catch (e) {
-                log('⚠️ rounds.leagueId missing or table missing. Attempting to add...');
+                log('⚠️ rounds.leagueId missing. Attempting to add...');
                 try {
                     await db.execute("ALTER TABLE rounds ADD COLUMN leagueId INTEGER");
                     log('✅ Added leagueId to rounds.');
                 } catch (e2) {
                     log(`❌ Failed to add leagueId: ${e2.message} `);
+                }
+            }
+
+            // Ensure courses.tees exists
+            try {
+                await db.execute("SELECT tees FROM courses LIMIT 1");
+                log('✅ courses.tees exists.');
+            } catch (e) {
+                log('⚠️ courses.tees missing. Attempting to add...');
+                try {
+                    await db.execute("ALTER TABLE courses ADD COLUMN tees TEXT");
+                    log('✅ Added tees to courses.');
+                } catch (e2) {
+                    log(`❌ Failed to add tees: ${e2.message} `);
                 }
             }
         }
@@ -686,6 +699,20 @@ const ensureLeagueMatchIdColumn = async () => {
             }
         }
     }
+
+    // Ensure courses.tees exists
+    try {
+        await db.execute("SELECT tees FROM courses LIMIT 1");
+    } catch (e) {
+        if (e.message && (e.message.includes('no such column') || e.message.includes('column not found'))) {
+            console.log("Adding missing 'tees' column to courses...");
+            try {
+                await db.execute("ALTER TABLE courses ADD COLUMN tees TEXT");
+            } catch (alterError) {
+                console.error("Failed to add tees column to courses:", alterError);
+            }
+        }
+    }
 };
 
 const ensureGuestUser = async () => {
@@ -1141,11 +1168,12 @@ app.post('/courses', async (req, res) => {
             return res.json({ id: existing.rows[0].id.toString(), success: true, message: 'Course already exists' });
         }
 
-        const result = await db.execute({
-            sql: 'INSERT INTO courses (name, holes, rating, slope, par) VALUES (?, ?, ?, ?, ?)',
-            args: [name, JSON.stringify(holes), rating, slope, par]
+        const info = await db.execute({
+            sql: 'INSERT INTO courses (name, holes, rating, slope, par, tees) VALUES (?, ?, ?, ?, ?, ?)',
+            args: [name, JSON.stringify(holes), rating, slope, par, JSON.stringify(req.body.tees || [])]
         });
-        res.json({ id: result.lastInsertRowid.toString(), success: true });
+
+        res.json({ id: info.lastInsertRowid.toString(), message: 'Course created' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -1165,15 +1193,15 @@ app.put('/courses/:id', async (req, res) => {
 
     try {
         const result = await db.execute({
-            sql: 'UPDATE courses SET name = ?, holes = ?, rating = ?, slope = ?, par = ? WHERE id = ?',
-            args: [name, JSON.stringify(holes), rating, slope, par, id]
+            sql: 'UPDATE courses SET name = ?, holes = ?, rating = ?, slope = ?, par = ?, tees = ? WHERE id = ?',
+            args: [name, JSON.stringify(holes), rating, slope, par, JSON.stringify(req.body.tees || []), id]
         });
 
         if (result.rowsAffected === 0) {
             // Course didn't exist (e.g. wiped DB), so insert it with the specific ID
             await db.execute({
-                sql: 'INSERT INTO courses (id, name, holes, rating, slope, par) VALUES (?, ?, ?, ?, ?, ?)',
-                args: [id, name, JSON.stringify(holes), rating, slope, par]
+                sql: 'INSERT INTO courses (id, name, holes, rating, slope, par, tees) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                args: [id, name, JSON.stringify(holes), rating, slope, par, JSON.stringify(req.body.tees || [])]
             });
         }
 
@@ -2302,11 +2330,19 @@ app.post('/api/skins/delete', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 
+// Execute migrations unconditionally (but simply log errors instead of crashing)
+(async () => {
+    try {
+        await ensureLeagueMatchIdColumn();
+        await ensureGuestUser();
+    } catch (e) {
+        console.error("Migration checks failed:", e);
+    }
+})();
+
 if (process.env.NODE_ENV !== 'production') {
     (async () => {
         try {
-            await ensureLeagueMatchIdColumn();
-            await ensureGuestUser();
             app.listen(PORT, () => {
                 console.log(`Server running on port ${PORT} `);
             });
