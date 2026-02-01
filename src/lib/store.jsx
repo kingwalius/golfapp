@@ -75,6 +75,12 @@ export const useCourses = () => {
                     }
 
                     if (existing) {
+                        // SAFETY CHECK: If local course is NOT synced, do NOT overwrite it!
+                        if (!existing.synced) {
+                            console.log(`Skipping refresh for course "${existing.name}" (ID ${existing.id}) - pending local changes.`);
+                            continue;
+                        }
+
                         // Update existing local course with Server ID and latest data
                         // Preserve local ID to avoid breaking FKs
                         await store.put({
@@ -82,7 +88,8 @@ export const useCourses = () => {
                             id: existing.id, // KEEP LOCAL ID
                             serverId: sCourse.id,
                             synced: true,
-                            holes: JSON.parse(sCourse.holes || '[]') // Ensure parsing
+                            holes: JSON.parse(sCourse.holes || '[]'),
+                            tees: typeof sCourse.tees === 'string' ? JSON.parse(sCourse.tees) : (sCourse.tees || [])
                         });
                     } else {
                         // Insert new course from server
@@ -91,7 +98,8 @@ export const useCourses = () => {
                             id: undefined, // Let DB assign new local ID
                             serverId: sCourse.id,
                             synced: true,
-                            holes: JSON.parse(sCourse.holes || '[]')
+                            holes: JSON.parse(sCourse.holes || '[]'),
+                            tees: typeof sCourse.tees === 'string' ? JSON.parse(sCourse.tees) : (sCourse.tees || [])
                         });
                     }
                 }
