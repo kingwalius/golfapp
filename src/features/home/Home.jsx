@@ -165,7 +165,10 @@ export const Home = () => {
                     const endpoint = type === 'round' ? '/api/rounds/delete' : '/api/matches/delete';
                     await fetch(endpoint, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${user.token}`
+                        },
                         body: JSON.stringify({
                             userId: user.id,
                             courseId: item.courseId,
@@ -217,7 +220,10 @@ export const Home = () => {
 
                     await fetch(deleteEndpoint, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${user.token}`
+                        },
                         body: JSON.stringify(payload)
                     }).catch(err => console.warn("Background server delete failed", err));
                 }
