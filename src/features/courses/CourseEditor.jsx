@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { useDB } from '../../lib/store';
+import { useDB, useUser } from '../../lib/store';
 import { ChevronLeft } from 'lucide-react';
 
 const initialHoles = Array.from({ length: 18 }, (_, i) => ({
@@ -12,6 +12,7 @@ const initialHoles = Array.from({ length: 18 }, (_, i) => ({
 
 export const CourseEditor = () => {
     const db = useDB();
+    const { sync } = useUser();
     const navigate = useNavigate();
     const { id } = useParams();
     const location = useLocation();
@@ -71,8 +72,13 @@ export const CourseEditor = () => {
         setCourse({ ...course, holes: newHoles });
     };
 
+    const [isSaving, setIsSaving] = useState(false);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (isSaving) return;
+        setIsSaving(true);
+
         try {
             const courseData = {
                 ...course,
@@ -100,10 +106,18 @@ export const CourseEditor = () => {
             };
 
             await db.put('courses', courseData);
+
+            // Force immediate sync to server to prevent data loss
+            if (sync) {
+                console.log("Forcing immediate sync after save...");
+                await sync();
+            }
+
             navigate('/courses');
         } catch (error) {
             console.error("Failed to save course:", error);
             alert(`Failed to save course: ${error.message}`);
+            setIsSaving(false);
         }
     };
 
