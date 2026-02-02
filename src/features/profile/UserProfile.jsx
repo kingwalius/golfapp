@@ -33,13 +33,40 @@ export const UserProfile = () => {
                     });
                     if (activityRes.ok) {
                         const activity = await activityRes.json();
-                        // Find last result (round or match)
+
+                        // Calculate lowest round from completed rounds
+                        const completedRounds = (activity.rounds || []).filter(r => r.completed && r.score);
+                        if (completedRounds.length > 0) {
+                            const lowest = Math.min(...completedRounds.map(r => r.score));
+                            data.lowestRound = lowest;
+                        }
+
+                        // Calculate actual average score (gross)  
+                        if (completedRounds.length > 0) {
+                            const totalScore = completedRounds.reduce((sum, r) => sum + (r.score || 0), 0);
+                            data.avgScore = totalScore / completedRounds.length;
+                        }
+
+                        // Find last result (round or match) and sort by date
                         const allItems = [
                             ...(activity.rounds || []),
                             ...(activity.matches || [])
                         ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-                        data.lastResult = allItems[0] || null;
+                        const lastItem = allItems[0];
+                        if (lastItem) {
+                            // Fetch course name for the last activity
+                            try {
+                                const courseRes = await fetch(`/courses/${lastItem.courseId}`);
+                                if (courseRes.ok) {
+                                    const course = await courseRes.json();
+                                    lastItem.courseName = course.name;
+                                }
+                            } catch (e) {
+                                console.warn("Failed to fetch course name", e);
+                            }
+                            data.lastResult = lastItem;
+                        }
                     }
                 }
 
@@ -109,25 +136,33 @@ export const UserProfile = () => {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-4 mb-8">
+            <div className="grid grid-cols-3 gap-3 mb-8">
                 {/* WHS Index */}
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 flex flex-col items-center justify-center text-center">
-                    <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">WHS Index</span>
-                    <span className="text-4xl font-black text-dark tracking-tight">
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100 flex flex-col items-center justify-center text-center">
+                    <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-1">WHS Index</span>
+                    <span className="text-3xl font-black text-dark tracking-tight">
                         {profile.handicap ? profile.handicap.toFixed(1) : '54'}
                     </span>
                     {profile.handicapChange !== 0 && profile.handicapChange && (
-                        <div className={`flex items-center gap-1 text-xs font-bold mt-1 ${profile.handicapChange < 0 ? 'text-emerald-500' : 'text-stone-400'}`}>
-                            {profile.handicapChange < 0 ? <TrendingDown size={12} /> : <TrendingUp size={12} />}
+                        <div className={`flex items-center gap-1 text-[10px] font-bold mt-1 ${profile.handicapChange < 0 ? 'text-emerald-500' : 'text-stone-400'}`}>
+                            {profile.handicapChange < 0 ? <TrendingDown size={10} /> : <TrendingUp size={10} />}
                             {Math.abs(profile.handicapChange).toFixed(1)}
                         </div>
                     )}
                 </div>
 
+                {/* Lowest Round */}
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100 flex flex-col items-center justify-center text-center">
+                    <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Best Round</span>
+                    <span className="text-3xl font-black text-dark tracking-tight">
+                        {profile.lowestRound || '-'}
+                    </span>
+                </div>
+
                 {/* Avg Score */}
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 flex flex-col items-center justify-center text-center">
-                    <span className="text-[10px] font-bold text-secondary uppercase tracking-widest mb-1">Avg Score</span>
-                    <span className="text-4xl font-black text-dark tracking-tight">
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100 flex flex-col items-center justify-center text-center">
+                    <span className="text-[9px] font-bold text-secondary uppercase tracking-widest mb-1">Avg Score</span>
+                    <span className="text-3xl font-black text-dark tracking-tight">
                         {profile.avgScore ? Math.round(profile.avgScore) : '-'}
                     </span>
                 </div>
@@ -139,30 +174,25 @@ export const UserProfile = () => {
 
                 {profile.lastResult ? (
                     <div>
-                        <div className="flex justify-between items-start mb-2">
-                            <div>
-                                <h4 className="font-bold text-dark">{profile.lastResult.scores ? 'Stroke Play' : 'Match'}</h4>
-                                <p className="text-xs text-muted">{new Date(profile.lastResult.date).toLocaleDateString()}</p>
+                        <div className="mb-4">
+                            <h4 className="font-bold text-dark mb-1">{profile.lastResult.courseName || 'Unknown Course'}</h4>
+                            <div className="flex items-center gap-2 text-xs text-muted">
+                                <span>{new Date(profile.lastResult.date).toLocaleDateString()}</span>
+                                <span>•</span>
+                                <span>{profile.lastResult.scores ? 'Stroke Play' : 'Match'}</span>
                             </div>
-                            <span className="text-2xl font-black text-dark">
-                                {profile.lastResult.score || '-'}
-                            </span>
                         </div>
 
-                        <div className="flex gap-4 mt-4">
-                            <div className="flex-1 bg-stone-50 p-2 rounded-xl text-center">
-                                <span className="block text-[10px] text-muted uppercase font-bold">Gross</span>
-                                <span className="block font-bold text-dark">{profile.lastResult.score || '-'}</span>
+                        <div className="flex gap-3">
+                            <div className="flex-1 bg-stone-50 p-3 rounded-xl text-center">
+                                <span className="block text-[10px] text-muted uppercase font-bold mb-1">Gross</span>
+                                <span className="block font-bold text-dark text-xl">{profile.lastResult.score || '-'}</span>
                             </div>
-                            <div className="flex-1 bg-stone-50 p-2 rounded-xl text-center">
-                                <span className="block text-[10px] text-muted uppercase font-bold">Net</span>
-                                <span className="block font-bold text-dark">
+                            <div className="flex-1 bg-stone-50 p-3 rounded-xl text-center">
+                                <span className="block text-[10px] text-muted uppercase font-bold mb-1">Net</span>
+                                <span className="block font-bold text-dark text-xl">
                                     {profile.lastResult.score && profile.handicap ? Math.round(profile.lastResult.score - profile.handicap) : '-'}
                                 </span>
-                            </div>
-                            <div className="flex-1 bg-stone-50 p-2 rounded-xl text-center">
-                                <span className="block text-[10px] text-muted uppercase font-bold">Place</span>
-                                <span className="block font-bold text-dark">-</span>
                             </div>
                         </div>
                     </div>
