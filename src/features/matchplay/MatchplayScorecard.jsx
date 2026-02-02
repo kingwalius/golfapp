@@ -21,8 +21,8 @@ export const MatchplayScorecard = () => {
                 setMatch(m);
                 const c = await db.get('courses', m.courseId);
                 if (c) {
-                    // Filter holes if 9-hole round
-                    if (m.holesPlayed === 9) {
+                    // Handle 9-hole rounds: filter to front9 or back9
+                    if (m.holesPlayed === 9 && c.holes && c.holes.length >= 18) {
                         if (m.startingHole === 10) {
                             c.holes = c.holes.slice(9, 18);
                         } else {
@@ -258,14 +258,16 @@ export const MatchplayScorecard = () => {
                             let p2Strokes = 0;
                             let holesPlayedCount = 0;
 
-                            course.holes.forEach(h => {
-                                const s = match.scores[h.number];
-                                if (s) {
-                                    if (s.p1) p1Strokes += s.p1;
-                                    if (s.p2) p2Strokes += s.p2;
-                                    if (s.p1 || s.p2) holesPlayedCount++;
-                                }
-                            });
+                            if (course.holes) {
+                                course.holes.forEach(h => {
+                                    const s = match.scores[h.number];
+                                    if (s) {
+                                        if (s.p1) p1Strokes += s.p1;
+                                        if (s.p2) p2Strokes += s.p2;
+                                        if (s.p1 || s.p2) holesPlayedCount++;
+                                    }
+                                });
+                            }
 
                             const targetHoles = match.holesPlayed || 18;
                             const rating = targetHoles === 9 ? (course.rating / 2) : course.rating;

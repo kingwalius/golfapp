@@ -30,7 +30,7 @@ export const Scorecard = () => {
 
                 if (c) {
                     // Filter holes if 9-hole round
-                    if (r.holesPlayed === 9) {
+                    if (r.holesPlayed === 9 && c.holes && c.holes.length >= 18) {
                         if (r.startingHole === 10) {
                             c.holes = c.holes.slice(9, 18);
                         } else {
@@ -72,13 +72,15 @@ export const Scorecard = () => {
         let tStableford = 0;
         const playingHcp = calculatePlayingHcp(round.hcpIndex, courseSlope, courseRating, 72);
 
-        course.holes.forEach(h => {
-            const s = newScores[h.number] || 0;
-            if (s > 0) {
-                tStrokes += s;
-                tStableford += calculateStableford(h.par, s, calculateStrokesReceived(playingHcp, h.hcp));
-            }
-        });
+        if (course.holes) {
+            course.holes.forEach(h => {
+                const s = newScores[h.number] || 0;
+                if (s > 0) {
+                    tStrokes += s;
+                    tStableford += calculateStableford(h.par, s, calculateStrokesReceived(playingHcp, h.hcp));
+                }
+            });
+        }
 
         const newRound = {
             ...round,
@@ -98,7 +100,7 @@ export const Scorecard = () => {
     let adjustedGrossScore = 0;
     const stablefordScores = {}; // To store stableford points per hole for later use if needed
 
-    if (round && course) {
+    if (round && course && course.holes) {
         course.holes.forEach(hole => {
             const strokes = round.scores[hole.number] || 0;
             if (strokes > 0) {
@@ -131,7 +133,7 @@ export const Scorecard = () => {
         let finalStableford = 0;
         let finalAdjustedScore = 0;
 
-        if (round && course) {
+        if (round && course && course.holes) {
             course.holes.forEach(hole => {
                 const strokes = round.scores[hole.number] || 0;
                 if (strokes > 0) {
@@ -227,7 +229,7 @@ export const Scorecard = () => {
 
             {/* List Layout */}
             <div className="px-4 space-y-3 mt-4">
-                {course.holes.map((hole) => {
+                {course.holes && course.holes.map((hole) => {
                     const strokes = round.scores[hole.number] || 0;
                     const strokesReceived = calculateStrokesReceived(playingHcp, hole.hcp);
                     const points = calculateStableford(hole.par, strokes, strokesReceived);

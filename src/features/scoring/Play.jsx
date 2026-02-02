@@ -247,7 +247,7 @@ export const Play = () => {
                                                                 // Recalculate totals on the fly to ensure accuracy
                                                                 let tStrokes = 0;
                                                                 let tStableford = 0;
-                                                                if (course && item.scores) {
+                                                                if (course && course.holes && item.scores) {
                                                                     // We need to calculate playing HCP to get accurate stableford
                                                                     // If we don't have the original HCP index stored, we might be slightly off, 
                                                                     // but usually item.hcpIndex is stored.
