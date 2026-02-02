@@ -531,6 +531,110 @@ app.get('/api/user/:id/activity', authenticateToken, async (req, res) => {
     }
 });
 
+// Full Sync Endpoint - Returns ALL user data for cache rebuild
+app.get('/api/user/:id/full-sync', authenticateToken, async (req, res) => {
+    const userId = req.params.id;
+
+    try {
+        // Fetch all data in parallel for performance
+        const [roundsResult, matchesResult, coursesResult, leaguesResult, skinsResult] = await Promise.all([
+            // User's rounds
+            db.execute({
+                sql: 'SELECT * FROM rounds WHERE userId = ? ORDER BY date DESC',
+                args: [userId]
+            }),
+
+            // User's matches (as player1 or player2)
+            db.execute({
+                sql: `
+                    SELECT m.*, u1.username as p1Name, u2.username as p2Name 
+                    FROM matches m
+                    LEFT JOIN users u1 ON m.player1Id = u1.id
+                    LEFT JOIN users u2 ON m.player2Id = u2.id
+                    WHERE m.player1Id = ? OR m.player2Id = ?
+                    ORDER BY m.date DESC
+                `,
+                args: [userId, userId]
+            }),
+
+            // All courses (shared resource)
+            db.execute('SELECT * FROM courses ORDER BY name'),
+
+            // User's leagues
+            db.execute({
+                sql: `
+                    SELECT l.* 
+                    FROM leagues l
+                    JOIN league_members lm ON l.id = lm.leagueId
+                    WHERE lm.userId = ?
+                    ORDER BY l.createdAt DESC
+                `,
+                args: [userId]
+            }),
+
+            // User's skins games
+            db.execute('SELECT * FROM skins_games ORDER BY date DESC LIMIT 100')
+        ]);
+
+        // Filter skins games to only include user's games
+        const mySkinsGames = skinsResult.rows.filter(g => {
+            try {
+                const players = JSON.parse(g.players || '[]');
+                return players.some(p => p.id.toString() === userId.toString());
+            } catch (e) {
+                return false;
+            }
+        });
+
+        // Parse JSON fields
+        const rounds = roundsResult.rows.map(r => ({
+            ...r,
+            scores: r.scores ? JSON.parse(r.scores) : {},
+            serverId: r.id // Map server ID for client tracking
+        }));
+
+        const matches = matchesResult.rows.map(m => ({
+            ...m,
+            scores: m.scores ? JSON.parse(m.scores) : {},
+            serverId: m.id
+        }));
+
+        const courses = coursesResult.rows.map(c => ({
+            ...c,
+            holes: c.holes ? JSON.parse(c.holes) : [],
+            tees: c.tees ? JSON.parse(c.tees) : [],
+            serverId: c.id,
+            synced: true
+        }));
+
+        const leagues = leaguesResult.rows.map(l => ({
+            ...l,
+            settings: l.settings ? JSON.parse(l.settings) : {},
+            serverId: l.id
+        }));
+
+        const skinsGames = mySkinsGames.map(s => ({
+            ...s,
+            scores: s.scores ? JSON.parse(s.scores) : {},
+            players: s.players ? JSON.parse(s.players) : [],
+            serverId: s.id
+        }));
+
+        res.json({
+            rounds,
+            matches,
+            courses,
+            leagues,
+            skinsGames,
+            timestamp: Date.now()
+        });
+
+    } catch (error) {
+        console.error('Full sync error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // --- Delete Routes ---
 app.post('/api/rounds/delete', async (req, res) => {
     const { userId, courseId, date } = req.body;
