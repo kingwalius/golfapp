@@ -18,7 +18,9 @@ export const UserProfile = () => {
             setLoading(true);
             try {
                 // Fetch user data from server
-                const res = await fetch(`/api/user/${id}`);
+                const res = await fetch(`/api/user/${id}`, {
+                    headers: { 'Authorization': `Bearer ${user?.token}` }
+                });
                 if (!res.ok) {
                     throw new Error('User not found');
                 }
