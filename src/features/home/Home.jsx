@@ -47,12 +47,10 @@ export const Home = () => {
         const preparedData = prepareHandicapData(r, m, c, user?.id);
         const { rounds } = calculateHandicapDetails(preparedData, c);
 
-        // Filter to show only the rounds that are included in the calculation (top 8)
-        // Or show last 20 and highlight included ones? 
-        // User asked for "8 rounds that are used", so let's filter for included.
-        const includedRounds = rounds.filter(r => r.included);
+        // Show recent rounds (last 5) regardless of whether they count for handicap
+        const recentRounds = rounds.slice(0, 5);
 
-        setCountingRounds(includedRounds);
+        setCountingRounds(recentRounds);
         setCourses(c);
 
         // Find Active Game (Priority: Active Skins -> Active Match -> Incomplete Round)
@@ -411,7 +409,7 @@ export const Home = () => {
             {/* Counting Rounds */}
             < div >
                 <div className="flex justify-between items-end mb-4">
-                    <h3 className="font-bold text-lg text-dark">Counting Rounds</h3>
+                    <h3 className="font-bold text-lg text-dark">Recent Activity</h3>
                     <Link to="/play" className="text-primary text-sm font-medium hover:underline">View All</Link>
                 </div>
                 <div className="space-y-3">
@@ -441,9 +439,16 @@ export const Home = () => {
                                         </div>
                                         <div className="text-right">
                                             <div className="text-xs text-muted font-bold uppercase mb-1">Diff</div>
-                                            <span className="text-lg font-black text-primary">
-                                                {item.differential > 0 ? '+' : ''}{item.differential.toFixed(1)}
-                                            </span>
+                                            <div className="flex flex-col items-end">
+                                                <span className="text-lg font-black text-primary">
+                                                    {item.differential > 0 ? '+' : ''}{item.differential.toFixed(1)}
+                                                </span>
+                                                {item.included && (
+                                                    <span className="text-[10px] font-bold bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full mt-1">
+                                                        Counting
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </SwipeableItem>

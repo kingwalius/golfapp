@@ -5,7 +5,9 @@ export const SwipeableItem = ({ children, onDelete, onCopy, onClick }) => {
     const startX = useRef(0);
     const currentOffset = useRef(0);
     const isSwiping = useRef(false);
+    const [isDragging, setIsDragging] = useState(false); // To track mouse drag state
 
+    // Touch Handlers
     const handleTouchStart = (e) => {
         startX.current = e.touches[0].clientX;
         isSwiping.current = false;
@@ -14,33 +16,58 @@ export const SwipeableItem = ({ children, onDelete, onCopy, onClick }) => {
     const handleTouchMove = (e) => {
         const touchX = e.touches[0].clientX;
         const diff = touchX - startX.current;
+        handleMove(diff);
+    };
 
-        // Allow swiping left (delete) or right (copy) if handlers exist
+    // Mouse Handlers
+    const handleMouseDown = (e) => {
+        startX.current = e.clientX;
+        setIsDragging(true);
+        isSwiping.current = false;
+    };
+
+    const handleMouseMove = (e) => {
+        if (!isDragging) return;
+        const diff = e.clientX - startX.current;
+        handleMove(diff);
+    };
+
+    const handleMouseUp = () => {
+        setIsDragging(false);
+        handleEnd();
+    };
+
+    const handleMouseLeave = () => {
+        if (isDragging) {
+            setIsDragging(false);
+            handleEnd();
+        }
+    };
+
+    // Unified Logic
+    const handleMove = (diff) => {
+        if (Math.abs(diff) > 5) isSwiping.current = true; // Threshold for swipe detection
+
         if (diff < 0 && onDelete) {
-            isSwiping.current = true;
             const newOffset = Math.max(diff, -100);
             setOffset(newOffset);
             currentOffset.current = newOffset;
         } else if (diff > 0 && onCopy) {
-            isSwiping.current = true;
             const newOffset = Math.min(diff, 100);
             setOffset(newOffset);
             currentOffset.current = newOffset;
         }
     };
 
-    const handleTouchEnd = () => {
+    const handleEnd = () => {
         if (currentOffset.current < -50 && onDelete) {
-            // Snap open left (Delete)
             setOffset(-80);
         } else if (currentOffset.current > 50 && onCopy) {
-            // Snap open right (Copy)
             setOffset(80);
         } else {
-            // Snap close
             setOffset(0);
         }
-        currentOffset.current = 0;
+        currentOffset.current = 0; // Reset for next swipe, but offset state holds the position
     };
 
     const handleClick = (e) => {
@@ -54,7 +81,7 @@ export const SwipeableItem = ({ children, onDelete, onCopy, onClick }) => {
     };
 
     return (
-        <div className="relative overflow-hidden mb-4 rounded-2xl">
+        <div className="relative overflow-hidden mb-4 rounded-2xl select-none">
             {/* Background / Actions */}
             <div className="absolute inset-0 flex justify-between items-center rounded-2xl">
                 {/* Copy Action (Left Side) */}
@@ -62,10 +89,11 @@ export const SwipeableItem = ({ children, onDelete, onCopy, onClick }) => {
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
-                            onCopy();
-                            setOffset(0);
+                            setOffset(0); // Close first
+                            // Small timeout to allow UI to update before action (optional, but safer for heavy actions/confirms)
+                            setTimeout(() => onCopy(), 10);
                         }}
-                        className="text-white font-bold flex items-center gap-2"
+                        className="text-white font-bold flex items-center gap-2 pointer-events-auto cursor-pointer"
                     >
                         Copy
                     </button>
@@ -76,9 +104,10 @@ export const SwipeableItem = ({ children, onDelete, onCopy, onClick }) => {
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
-                            onDelete();
+                            setOffset(0); // Close first
+                            setTimeout(() => onDelete(), 10);
                         }}
-                        className="text-white font-bold flex items-center gap-2"
+                        className="text-white font-bold flex items-center gap-2 pointer-events-auto cursor-pointer"
                     >
                         Delete
                     </button>
@@ -91,7 +120,11 @@ export const SwipeableItem = ({ children, onDelete, onCopy, onClick }) => {
                 style={{ transform: `translateX(${offset}px)` }}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
+                onTouchEnd={handleEnd}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseLeave}
                 onClick={handleClick}
             >
                 {children}

@@ -141,8 +141,7 @@ export const LeagueDashboard = () => {
         };
 
         if (user) fetchData();
-    }, [user, loading]); // Added loading to dependency to trigger re-fetch on manual reload? No, loop risk.
-    // Better: create separate 'refresh' trigger or function.
+    }, [user]);
 
     const handleDeleteItem = async (item) => {
         if (!confirm('Are you sure you want to delete this activity? This cannot be undone.')) return;

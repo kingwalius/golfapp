@@ -10,6 +10,7 @@ import { Scorecard } from './features/scoring/Scorecard';
 import { MatchplaySetup } from './features/matchplay/MatchplaySetup';
 import { MatchplayScorecard } from './features/matchplay/MatchplayScorecard';
 import Profile from './features/profile/Profile';
+import { UserProfile } from './features/profile/UserProfile';
 import { LeagueDashboard } from './features/league/LeagueDashboard';
 import { SkinsSetup } from './features/skins/SkinsSetup';
 import { SkinsScorecard } from './features/skins/SkinsScorecard';
@@ -41,6 +42,7 @@ function App() {
               <Route path="matchplay/:id" element={<MatchplayScorecard />} />
 
               <Route path="/profile" element={<Profile />} />
+              <Route path="/user/:id" element={<UserProfile />} />
               <Route path="league" element={<LeagueDashboard />} />
               <Route path="league/create" element={<CreateLeague />} />
               <Route path="league/:id" element={<LeagueDetails />} />
