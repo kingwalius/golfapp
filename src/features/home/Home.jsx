@@ -48,7 +48,7 @@ export const Home = () => {
         const { rounds } = calculateHandicapDetails(preparedData, c);
 
         // Show recent rounds (last 5) regardless of whether they count for handicap
-        const recentRounds = rounds.slice(0, 5);
+        const recentRounds = (rounds || []).slice(0, 5);
 
         setCountingRounds(recentRounds);
         setCourses(c);

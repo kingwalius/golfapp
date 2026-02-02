@@ -157,7 +157,16 @@ export const calculateHandicapDetails = (preparedRounds, courses) => {
         if (differential === undefined || differential === null) {
             const course = courses.find(c => c.id === round.courseId || c.serverId == round.courseId);
             if (course && round.score) {
+                // Warn if course data is incomplete
+                if (!course.slope || !course.rating) {
+                    console.warn(`⚠️ Course "${course.name}" (ID: ${course.id}) missing slope/rating. Using defaults.`, {
+                        slope: course.slope || 'missing',
+                        rating: course.rating || 'missing'
+                    });
+                }
                 differential = calculateDifferential(round.score, course.slope, course.rating);
+            } else if (!course) {
+                console.warn(`⚠️ Course not found for round ${round.id} (courseId: ${round.courseId})`);
             }
         }
 

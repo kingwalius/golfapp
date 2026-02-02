@@ -334,24 +334,26 @@ export const UserProvider = ({ children }) => {
     }, [db]);
 
     const sync = async () => {
+        // Atomic check-and-set to prevent race condition
         if (isSyncing.current) {
             console.log("Sync skipped: Already in progress.");
             return;
         }
+        isSyncing.current = true;
 
         console.log("🔄 Nuclear Sync Started");
 
         if (!user || !db || !navigator.onLine) {
             console.log("Sync aborting: Missing prerequisites.");
+            isSyncing.current = false;
             return;
         }
 
         if (!user.token) {
             console.log("Sync skipped: User has no token.");
+            isSyncing.current = false;
             return;
         }
-
-        isSyncing.current = true;
 
         try {
             // STEP 1: Upload any local-only records (unsynced)
@@ -527,27 +529,35 @@ export const UserProvider = ({ children }) => {
         try {
             // Add courses
             for (const course of (serverData.courses || [])) {
-                await tx.objectStore('courses').add({
-                    id: course.serverId, // Use serverId as local ID to prevent mismatches
-                    serverId: course.serverId,
-                    name: course.name,
-                    holes: course.holes,
-                    rating: course.rating,
-                    slope: course.slope,
-                    par: course.par,
-                    tees: course.tees,
-                    synced: true
-                });
+                try {
+                    await tx.objectStore('courses').add({
+                        id: course.serverId, // Use serverId as local ID to prevent mismatches
+                        serverId: course.serverId,
+                        name: course.name,
+                        holes: course.holes,
+                        rating: course.rating,
+                        slope: course.slope,
+                        par: course.par,
+                        tees: course.tees,
+                        synced: true
+                    });
+                } catch (e) {
+                    console.error(`❌ Failed to add course "${course.name}" (ID: ${course.serverId}):`, e);
+                }
             }
 
             // Add rounds
             for (const round of (serverData.rounds || [])) {
-                await tx.objectStore('rounds').add({
-                    ...round,
-                    id: round.serverId,
-                    serverId: round.serverId,
-                    synced: true
-                });
+                try {
+                    await tx.objectStore('rounds').add({
+                        ...round,
+                        id: round.serverId,
+                        serverId: round.serverId,
+                        synced: true
+                    });
+                } catch (e) {
+                    console.error(`❌ Failed to add round (ID: ${round.serverId}, date: ${round.date}):`, e);
+                }
             }
 
             // Add matches
