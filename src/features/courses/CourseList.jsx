@@ -15,11 +15,22 @@ export const CourseList = () => {
 
     const handleDelete = async (id) => {
         if (confirm('Are you sure you want to delete this course?')) {
-            // Delete from server
-            try {
-                await fetch(`/courses/${id}`, { method: 'DELETE' });
-            } catch (e) {
-                console.error("Failed to delete from server", e);
+            const courseToDelete = courses.find(c => c.id === id);
+
+            // Delete from server if it has a server ID
+            if (courseToDelete?.serverId) {
+                try {
+                    await fetch(`/courses/${courseToDelete.serverId}`, { method: 'DELETE' });
+                } catch (e) {
+                    console.error("Failed to delete from server", e);
+                }
+            } else if (courseToDelete?.synced && !courseToDelete.serverId) {
+                // Edge case: synced but missing serverId? Treat id as serverId if it was downloaded
+                // But usually downloaded courses have id == serverId
+                try {
+                    // Try deleting by ID just in case it aligns
+                    await fetch(`/courses/${id}`, { method: 'DELETE' });
+                } catch (e) { console.warn("Failed speculative delete", e); }
             }
 
             // Delete from local DB
