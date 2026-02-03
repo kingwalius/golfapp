@@ -1169,9 +1169,9 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     } else {
                         // Insert new match
                         const newMatch = await db.execute({
-                            sql: `INSERT INTO matches(player1Id, player2Id, courseId, date, winnerId, status, scores, player1Differential, player2Differential, countForHandicap, leagueMatchId)
-VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                            args: [match.player1Id, p2Id, courseId, matchDate, match.winnerId, match.status, scoresJson, match.player1Differential || null, match.player2Differential || null, match.countForHandicap || 0, match.leagueMatchId || null]
+                            sql: `INSERT INTO matches(player1Id, player2Id, courseId, date, winnerId, status, scores, player1Differential, player2Differential, countForHandicap, leagueMatchId, completed)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                            args: [match.player1Id, p2Id, courseId, matchDate, match.winnerId, match.status, scoresJson, match.player1Differential || null, match.player2Differential || null, match.countForHandicap || 0, match.leagueMatchId || null, match.completed ? 1 : 0]
                         });
 
                         // Tournament Bracket Update Logic (Same for Insert)
