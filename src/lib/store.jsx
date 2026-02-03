@@ -480,7 +480,9 @@ export const UserProvider = ({ children }) => {
                     scores: m.scores || {},
                     player1Differential: m.player1Differential,
                     player2Differential: m.player2Differential,
-                    countForHandicap: m.countForHandicap
+                    countForHandicap: m.countForHandicap,
+                    completed: m.completed || false,
+                    leagueMatchId: m.leagueMatchId || null
                 })),
                 skinsGames: unsyncedSkins.map(g => ({
                     courseId: courseIdMap.get(g.courseId) || g.courseId,
@@ -572,6 +574,7 @@ export const UserProvider = ({ children }) => {
                     serverId: match.serverId,
                     player1: { id: match.player1Id, name: match.p1Name || 'Player 1' },
                     player2: { id: match.player2Id, name: match.p2Name || 'Player 2' },
+                    completed: match.completed !== undefined ? match.completed : false,
                     synced: true
                 });
             }

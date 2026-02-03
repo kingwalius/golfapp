@@ -894,6 +894,20 @@ app.post('/sync', authenticateToken, async (req, res) => {
             }
         }
 
+        // Ensure completed column for matches
+        try {
+            await db.execute("SELECT completed FROM matches LIMIT 1");
+        } catch (e) {
+            if (e.message && (e.message.includes('no such column') || e.message.includes('column not found'))) {
+                console.log('Adding missing completed column to matches...');
+                try {
+                    await db.execute("ALTER TABLE matches ADD COLUMN completed BOOLEAN DEFAULT 0");
+                } catch (alterError) {
+                    console.error("Failed to add completed column:", alterError);
+                }
+            }
+        }
+
         // Ensure countForHandicap column for matches
         try {
             await db.execute("SELECT countForHandicap FROM matches LIMIT 1");
@@ -1111,8 +1125,8 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     if (existing.rows.length > 0) {
                         // Update existing match
                         await db.execute({
-                            sql: 'UPDATE matches SET winnerId = ?, status = ?, scores = ?, player1Differential = ?, player2Differential = ?, countForHandicap = ?, leagueMatchId = ? WHERE id = ?',
-                            args: [match.winnerId, match.status, scoresJson, match.player1Differential || null, match.player2Differential || null, match.countForHandicap || 0, match.leagueMatchId || null, existing.rows[0].id]
+                            sql: 'UPDATE matches SET winnerId = ?, status = ?, scores = ?, player1Differential = ?, player2Differential = ?, countForHandicap = ?, leagueMatchId = ?, completed = ? WHERE id = ?',
+                            args: [match.winnerId, match.status, scoresJson, match.player1Differential || null, match.player2Differential || null, match.countForHandicap || 0, match.leagueMatchId || null, match.completed ? 1 : 0, existing.rows[0].id]
                         });
 
                         // Tournament Bracket Update Logic
