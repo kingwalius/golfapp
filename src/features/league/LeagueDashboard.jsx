@@ -25,6 +25,16 @@ const FeedItem = ({ item, onDelete, currentUserId }) => {
 
     // Specific rendering for Skins
     if (isSkins) {
+        // Calculate skins won per player
+        const skinsWon = item.skinsWon || {};
+        const playerSkinsArray = item.players ? item.players.map(p => ({
+            ...p,
+            skins: skinsWon[p.id] || 0
+        })).sort((a, b) => b.skins - a.skins) : [];
+
+        // Find winner (most skins)
+        const winner = playerSkinsArray.length > 0 ? playerSkinsArray[0] : null;
+
         return (
             <div className="bg-white rounded-3xl p-6 shadow-sm mb-6 border border-stone-100">
                 <div className="mb-4">
@@ -32,7 +42,7 @@ const FeedItem = ({ item, onDelete, currentUserId }) => {
                         <div>
                             <h3 className="font-bold text-dark text-lg flex items-center gap-2">
                                 <Trophy size={18} className="text-yellow-500" />
-                                {title}
+                                Skins Game
                             </h3>
                             <p className="text-stone-400 text-xs">{date} • {item.courseName}</p>
                         </div>
@@ -54,14 +64,35 @@ const FeedItem = ({ item, onDelete, currentUserId }) => {
                     </div>
                 </div>
 
-                {/* Simple Player List */}
-                <div className="grid grid-cols-2 gap-2">
-                    {item.players && item.players.slice(0, 4).map(p => (
-                        <div key={p.id} className="bg-stone-50 p-3 rounded-xl flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-white border border-stone-200 flex items-center justify-center font-bold text-xs text-stone-600">
-                                {p.name ? p.name.substring(0, 2).toUpperCase() : '??'}
+                {/* Player Results - Compact */}
+                <div className="space-y-2">
+                    {playerSkinsArray.map((p, idx) => (
+                        <div
+                            key={p.id}
+                            className={`flex items-center justify-between p-3 rounded-xl ${idx === 0 && p.skins > 0 ? 'bg-yellow-50 border border-yellow-200' : 'bg-stone-50'
+                                }`}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-white border border-stone-200 flex items-center justify-center font-bold text-xs text-stone-600">
+                                    {p.name ? p.name.substring(0, 2).toUpperCase() : '??'}
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-sm text-dark">{p.name}</span>
+                                        {idx === 0 && p.skins > 0 && (
+                                            <Trophy size={14} className="text-yellow-600" />
+                                        )}
+                                    </div>
+                                </div>
                             </div>
-                            <span className="font-bold text-sm text-dark">{p.name}</span>
+                            <div className="text-right">
+                                <div className="font-black text-lg text-dark">
+                                    {p.skins}
+                                </div>
+                                <div className="text-[10px] text-stone-500 font-bold uppercase">
+                                    {p.skins === 1 ? 'Skin' : 'Skins'}
+                                </div>
+                            </div>
                         </div>
                     ))}
                 </div>
