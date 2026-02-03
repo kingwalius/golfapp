@@ -531,10 +531,10 @@ export const UserProvider = ({ children }) => {
         const tx = db.transaction(['rounds', 'matches', 'courses', 'leagues', 'skins_games'], 'readwrite');
 
         try {
-            // Add courses
+            // Add courses (using put to handle duplicates gracefully)
             for (const course of (serverData.courses || [])) {
                 try {
-                    await tx.objectStore('courses').add({
+                    await tx.objectStore('courses').put({
                         id: course.serverId, // Use serverId as local ID to prevent mismatches
                         serverId: course.serverId,
                         name: course.name,
@@ -550,10 +550,10 @@ export const UserProvider = ({ children }) => {
                 }
             }
 
-            // Add rounds
+            // Add rounds (using put to handle duplicates gracefully)
             for (const round of (serverData.rounds || [])) {
                 try {
-                    await tx.objectStore('rounds').add({
+                    await tx.objectStore('rounds').put({
                         ...round,
                         id: round.serverId,
                         serverId: round.serverId,
@@ -566,9 +566,9 @@ export const UserProvider = ({ children }) => {
                 }
             }
 
-            // Add matches
+            // Add matches (using put to handle duplicates gracefully)
             for (const match of (serverData.matches || [])) {
-                await tx.objectStore('matches').add({
+                await tx.objectStore('matches').put({
                     ...match,
                     id: match.serverId,
                     serverId: match.serverId,
@@ -579,9 +579,9 @@ export const UserProvider = ({ children }) => {
                 });
             }
 
-            // Add leagues
+            // Add leagues (using put to handle duplicates gracefully)
             for (const league of (serverData.leagues || [])) {
-                await tx.objectStore('leagues').add({
+                await tx.objectStore('leagues').put({
                     ...league,
                     id: league.serverId,
                     serverId: league.serverId,
@@ -589,9 +589,9 @@ export const UserProvider = ({ children }) => {
                 });
             }
 
-            // Add skins games
+            // Add skins games (using put to handle duplicates gracefully)
             for (const game of (serverData.skinsGames || [])) {
-                await tx.objectStore('skins_games').add({
+                await tx.objectStore('skins_games').put({
                     ...game,
                     id: game.serverId,
                     serverId: game.serverId,
