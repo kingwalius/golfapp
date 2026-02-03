@@ -83,21 +83,12 @@ export default function Profile() {
                 <button onClick={() => navigate(-1)} className="text-stone-400 hover:text-dark transition">
                     Back
                 </button>
-                <div className="flex gap-4">
-                    <button
-                        onClick={forceResync}
-                        className="flex items-center gap-2 text-stone-400 font-bold text-xs uppercase tracking-widest hover:text-primary transition"
-                    >
-                        <RefreshCw size={14} />
-                        Sync
-                    </button>
-                    <button
-                        onClick={logout}
-                        className="flex items-center gap-2 text-red-400 font-bold text-xs uppercase tracking-widest hover:text-red-600 transition"
-                    >
-                        Log out
-                    </button>
-                </div>
+                <button
+                    onClick={logout}
+                    className="flex items-center gap-2 text-red-400 font-bold text-xs uppercase tracking-widest hover:text-red-600 transition"
+                >
+                    Log out
+                </button>
             </div>
 
             <div className="flex flex-col items-center mb-10">
