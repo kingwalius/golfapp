@@ -742,6 +742,7 @@ app.get('/api/league/feed', async (req, res) => {
             type: 'skins',
             scores: safeParse(s.scores, {}),
             players: safeParse(s.players, []),
+            skinsWon: safeParse(s.skinsWon, {}),
             courseHoles: safeParse(s.courseHoles, [])
         }));
 
