@@ -491,6 +491,7 @@ export const UserProvider = ({ children }) => {
                     status: g.status,
                     players: g.players,
                     scores: g.scores,
+                    skinsWon: g.skinsWon || {},
                     holesPlayed: g.holesPlayed,
                     startingHole: g.startingHole
                 }))

@@ -1243,9 +1243,19 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                         });
                     } else {
                         // Insert
-                        const res = await db.execute({
-                            sql: 'INSERT INTO skins_games (courseId, date, skinValue, status, players, scores, holesPlayed, startingHole) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                            args: [game.courseId, game.date, game.skinValue, game.status, playersJson, scoresJson, game.holesPlayed || 18, game.startingHole || 1]
+                        const info = await db.execute({
+                            sql: 'INSERT INTO skins_games (courseId, date, skinValue, status, players, scores, skinsWon, holesPlayed, startingHole) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                            args: [
+                                courseId,
+                                gameDate,
+                                game.skinValue,
+                                game.status,
+                                playersJson,
+                                scoresJson,
+                                JSON.stringify(game.skinsWon || {}),
+                                game.holesPlayed || 18,
+                                game.startingHole || 1
+                            ]
                         });
                     }
                     results.skinsGames.success++;
