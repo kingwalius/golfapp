@@ -618,8 +618,10 @@ export const UserProvider = ({ children }) => {
                             const res = await authFetch(`/api/user/${parsed.id}`);
                             if (res.ok) {
                                 const latest = await res.json();
-                                setUser(latest);
-                                saveToLocalStorage(latest);
+                                // Preserve token from local storage since server doesn't return it
+                                const updatedUser = { ...latest, token: parsed.token };
+                                setUser(updatedUser);
+                                saveToLocalStorage(updatedUser);
                             }
                         } catch (e) {
                             console.warn("Could not verify user with server (offline?)", e);
