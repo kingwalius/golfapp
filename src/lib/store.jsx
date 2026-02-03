@@ -466,7 +466,9 @@ export const UserProvider = ({ children }) => {
                     stableford: r.totalStableford || 0,
                     hcpIndex: r.hcpIndex,
                     scores: r.scores || {},
-                    leagueId: r.leagueId || null
+                    leagueId: r.leagueId || null,
+                    completed: r.completed || false,
+                    differential: r.differential || 0
                 })),
                 matches: unsyncedMatches.map(m => ({
                     player1Id: m.player1?.id || user.id,
@@ -553,6 +555,8 @@ export const UserProvider = ({ children }) => {
                         ...round,
                         id: round.serverId,
                         serverId: round.serverId,
+                        completed: round.completed !== undefined ? round.completed : false,
+                        differential: round.differential || 0,
                         synced: true
                     });
                 } catch (e) {

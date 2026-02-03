@@ -908,6 +908,21 @@ app.post('/sync', authenticateToken, async (req, res) => {
             }
         }
 
+        // Ensure completed and differential columns for rounds
+        try {
+            await db.execute("SELECT completed FROM rounds LIMIT 1");
+        } catch (e) {
+            if (e.message && (e.message.includes('no such column') || e.message.includes('column not found'))) {
+                console.log('Adding missing completed and differential columns to rounds...');
+                try {
+                    await db.execute("ALTER TABLE rounds ADD COLUMN completed BOOLEAN DEFAULT 0");
+                    await db.execute("ALTER TABLE rounds ADD COLUMN differential REAL DEFAULT 0");
+                } catch (alterError) {
+                    console.error("Failed to add completed/differential columns:", alterError);
+                }
+            }
+        }
+
         // Ensure matchNumber column for league_matches (Tournament Bracket)
         try {
             await db.execute("SELECT matchNumber FROM league_matches LIMIT 1");
@@ -979,8 +994,8 @@ app.post('/sync', authenticateToken, async (req, res) => {
                     if (existing.rows.length > 0) {
                         // Update existing round
                         await db.execute({
-                            sql: 'UPDATE rounds SET score = ?, stableford = ?, hcpIndex = ?, scores = ?, leagueId = ? WHERE id = ?',
-                            args: [round.score, round.stableford, round.hcpIndex, scoresJson, round.leagueId || null, existing.rows[0].id]
+                            sql: 'UPDATE rounds SET score = ?, stableford = ?, hcpIndex = ?, scores = ?, leagueId = ?, completed = ?, differential = ? WHERE id = ?',
+                            args: [round.score, round.stableford, round.hcpIndex, scoresJson, round.leagueId || null, round.completed || 0, round.differential || 0, existing.rows[0].id]
                         });
 
                         // If it's a league round, ensure it's in league_rounds table (Upsert logic)
@@ -1010,9 +1025,9 @@ app.post('/sync', authenticateToken, async (req, res) => {
                     } else {
                         // Insert new round
                         const roundRes = await db.execute({
-                            sql: `INSERT INTO rounds(userId, courseId, date, score, stableford, hcpIndex, scores, leagueId)
-VALUES(?, ?, ?, ?, ?, ?, ?, ?)`,
-                            args: [userId, round.courseId, round.date, round.score, round.stableford, round.hcpIndex, scoresJson, round.leagueId || null]
+                            sql: `INSERT INTO rounds(userId, courseId, date, score, stableford, hcpIndex, scores, leagueId, completed, differential)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                            args: [userId, round.courseId, round.date, round.score, round.stableford, round.hcpIndex, scoresJson, round.leagueId || null, round.completed || 0, round.differential || 0]
                         });
 
                         // If it's a league round, ensure it's in league_rounds table
