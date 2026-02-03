@@ -995,7 +995,7 @@ app.post('/sync', authenticateToken, async (req, res) => {
                         // Update existing round
                         await db.execute({
                             sql: 'UPDATE rounds SET score = ?, stableford = ?, hcpIndex = ?, scores = ?, leagueId = ?, completed = ?, differential = ? WHERE id = ?',
-                            args: [round.score, round.stableford, round.hcpIndex, scoresJson, round.leagueId || null, round.completed || 0, round.differential || 0, existing.rows[0].id]
+                            args: [round.score, round.stableford, round.hcpIndex, scoresJson, round.leagueId || null, round.completed ? 1 : 0, round.differential || 0, existing.rows[0].id]
                         });
 
                         // If it's a league round, ensure it's in league_rounds table (Upsert logic)
@@ -1027,7 +1027,7 @@ app.post('/sync', authenticateToken, async (req, res) => {
                         const roundRes = await db.execute({
                             sql: `INSERT INTO rounds(userId, courseId, date, score, stableford, hcpIndex, scores, leagueId, completed, differential)
 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                            args: [userId, round.courseId, round.date, round.score, round.stableford, round.hcpIndex, scoresJson, round.leagueId || null, round.completed || 0, round.differential || 0]
+                            args: [userId, round.courseId, round.date, round.score, round.stableford, round.hcpIndex, scoresJson, round.leagueId || null, round.completed ? 1 : 0, round.differential || 0]
                         });
 
                         // If it's a league round, ensure it's in league_rounds table
