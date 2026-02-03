@@ -168,7 +168,7 @@ export const SkinsScorecard = () => {
             <div className="bg-stone-900 min-h-screen text-white pb-safe">
                 <div className="p-6">
                     <h1 className="text-3xl font-bold text-center mb-2">Game Over</h1>
-                    <p className="text-center text-stone-400 mb-8 px-4 max-w-sm mx-auto leading-tight">{course.name}</p>
+                    <p className="text-center text-stone-400 mb-8 px-4 max-w-sm mx-auto leading-tight break-words">{course.name}</p>
 
                     {/* Podium */}
                     <div className="flex justify-center items-end gap-6 mb-10 h-48">
