@@ -72,7 +72,7 @@ export const Home = () => {
 
         // 2. Matchplay (if no skins)
         if (!foundActive) {
-            const activeMatch = m.find(match => match.status === 'ACTIVE');
+            const activeMatch = m.find(match => !match.completed);
             if (activeMatch) {
                 const course = c.find(co => co.id == activeMatch.courseId || co.serverId == activeMatch.courseId);
                 const p1 = activeMatch.player1?.name || 'Player 1';
