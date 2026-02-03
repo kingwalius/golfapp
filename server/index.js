@@ -1238,8 +1238,8 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     if (existing.rows.length > 0) {
                         // Update
                         await db.execute({
-                            sql: 'UPDATE skins_games SET skinValue = ?, status = ?, players = ?, scores = ?, holesPlayed = ?, startingHole = ? WHERE id = ?',
-                            args: [game.skinValue, game.status, playersJson, scoresJson, game.holesPlayed, game.startingHole, existing.rows[0].id]
+                            sql: 'UPDATE skins_games SET skinValue = ?, status = ?, players = ?, scores = ?, skinsWon = ?, holesPlayed = ?, startingHole = ? WHERE id = ?',
+                            args: [game.skinValue, game.status, playersJson, scoresJson, JSON.stringify(game.skinsWon || {}), game.holesPlayed, game.startingHole, existing.rows[0].id]
                         });
                     } else {
                         // Insert
