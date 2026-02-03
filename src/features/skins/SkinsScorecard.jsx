@@ -144,7 +144,17 @@ export const SkinsScorecard = () => {
         // Confirm?
         if (!window.confirm("Finish game and save results?")) return;
 
-        const updatedGame = { ...game, status: 'COMPLETED' };
+        // Save skinsWon data for activity feed display
+        const skinsWon = {};
+        game.players.forEach(player => {
+            skinsWon[player.id] = gameState.playerTotals[player.id] || 0;
+        });
+
+        const updatedGame = {
+            ...game,
+            status: 'COMPLETED',
+            skinsWon // Add skinsWon data
+        };
         await db.put('skins_games', updatedGame);
         setGame(updatedGame);
         setGameOver(true);
