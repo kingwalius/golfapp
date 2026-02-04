@@ -1251,8 +1251,8 @@ VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                         const info = await db.execute({
                             sql: 'INSERT INTO skins_games (courseId, date, skinValue, status, players, scores, skinsWon, holesPlayed, startingHole) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                             args: [
-                                courseId,
-                                gameDate,
+                                game.courseId,
+                                game.date,
                                 game.skinValue,
                                 game.status,
                                 playersJson,
