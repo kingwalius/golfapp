@@ -846,6 +846,7 @@ const ensureSkinsTable = async () => {
                 status TEXT,
                 players TEXT,
                 scores TEXT,
+                skinsWon TEXT,
                 holesPlayed INTEGER DEFAULT 18,
                 startingHole INTEGER DEFAULT 1
             )
@@ -858,6 +859,10 @@ const ensureSkinsTable = async () => {
 
         try {
             await db.execute("ALTER TABLE skins_games ADD COLUMN startingHole INTEGER DEFAULT 1");
+        } catch (e) { /* Column likely exists */ }
+
+        try {
+            await db.execute("ALTER TABLE skins_games ADD COLUMN skinsWon TEXT");
         } catch (e) { /* Column likely exists */ }
 
     } catch (e) {
