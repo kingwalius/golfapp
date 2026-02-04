@@ -130,40 +130,59 @@ export const CourseList = () => {
             )}
 
             {/* Favorites Section */}
-            {user?.favoriteCourses && (typeof user.favoriteCourses === 'string' ? JSON.parse(user.favoriteCourses) : user.favoriteCourses).length > 0 && (
-                <div className="mb-8">
-                    <h2 className="text-sm font-bold text-muted uppercase tracking-wider mb-4 ml-1">Favorites</h2>
-                    <div className="space-y-4">
-                        {courses
-                            .filter(c => {
-                                const favs = typeof user.favoriteCourses === 'string' ? JSON.parse(user.favoriteCourses) : user.favoriteCourses;
-                                return favs.includes(c.id);
-                            })
-                            .map(course => (
-                                <SwipeableItem
-                                    key={course.id}
-                                    onDelete={() => handleDelete(course.id)}
-                                    onCopy={() => handleCopy(course)}
-                                    onClick={() => navigate(`/courses/${course.id}`)}
-                                >
-                                    <div className="p-5 flex justify-between items-start">
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <Star size={16} className="fill-yellow-400 text-yellow-400" />
-                                                <h3 className="font-bold text-xl text-dark group-hover:text-dark transition">{course.name}</h3>
+            {(() => {
+                // Safe favorites parsing
+                let hasFavorites = false;
+                try {
+                    const favs = typeof user?.favoriteCourses === 'string'
+                        ? JSON.parse(user.favoriteCourses)
+                        : user?.favoriteCourses;
+                    hasFavorites = Array.isArray(favs) && favs.length > 0;
+                } catch (e) {
+                    console.warn("Failed to parse favorites", e);
+                }
+                return hasFavorites;
+            })() && (
+                    <div className="mb-8">
+                        <h2 className="text-sm font-bold text-muted uppercase tracking-wider mb-4 ml-1">Favorites</h2>
+                        <div className="space-y-4">
+                            {courses
+                                .filter(c => {
+                                    try {
+                                        const favs = typeof user.favoriteCourses === 'string' ? JSON.parse(user.favoriteCourses) : user.favoriteCourses;
+                                        return Array.isArray(favs) && favs.includes(c?.id);
+                                    } catch (e) {
+                                        return false;
+                                    }
+                                })
+                                .map(course => (
+                                    <SwipeableItem
+                                        key={course.id}
+                                        onDelete={() => handleDelete(course.id)}
+                                        onCopy={() => handleCopy(course)}
+                                        onClick={() => navigate(`/courses/${course.id}`)}
+                                    >
+                                        <div className="p-5 flex justify-between items-start">
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <Star size={16} className="fill-yellow-400 text-yellow-400" />
+                                                    <h3 className="font-bold text-xl text-dark group-hover:text-dark transition">{course.name || 'Unnamed Course'}</h3>
+                                                </div>
+                                                <div className="flex gap-4 mt-2 text-sm text-muted">
+                                                    <span className="bg-stone-100 px-2 py-1 rounded-md">Par {course.holes?.reduce((sum, hole) => {
+                                                        const par = parseInt(hole?.par);
+                                                        return sum + (isNaN(par) ? 0 : par);
+                                                    }, 0) ?? 0}</span>
+                                                    <span className="bg-stone-100 px-2 py-1 rounded-md">{course.holes?.length || 0} Holes</span>
+                                                </div>
                                             </div>
-                                            <div className="flex gap-4 mt-2 text-sm text-muted">
-                                                <span className="bg-stone-100 px-2 py-1 rounded-md">Par {course.holes?.reduce((a, b) => a + (parseInt(b.par) || 0), 0)}</span>
-                                                <span className="bg-stone-100 px-2 py-1 rounded-md">{course.holes?.length || 0} Holes</span>
-                                            </div>
+                                            <span className="text-stone-300 text-xl group-hover:text-dark transition">✎</span>
                                         </div>
-                                        <span className="text-stone-300 text-xl group-hover:text-dark transition">✎</span>
-                                    </div>
-                                </SwipeableItem>
-                            ))}
+                                    </SwipeableItem>
+                                ))}
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
 
             <h2 className="text-sm font-bold text-muted uppercase tracking-wider mb-4 ml-1">All Courses</h2>
             <div className="space-y-4">
@@ -176,9 +195,12 @@ export const CourseList = () => {
                     >
                         <div className="p-5 flex justify-between items-start">
                             <div>
-                                <h3 className="font-bold text-xl text-dark group-hover:text-dark transition">{course.name}</h3>
+                                <h3 className="font-bold text-xl text-dark group-hover:text-dark transition">{course.name || 'Unnamed Course'}</h3>
                                 <div className="flex gap-4 mt-2 text-sm text-muted">
-                                    <span className="bg-stone-100 px-2 py-1 rounded-md">Par {course.holes?.reduce((a, b) => a + (parseInt(b.par) || 0), 0)}</span>
+                                    <span className="bg-stone-100 px-2 py-1 rounded-md">Par {course.holes?.reduce((sum, hole) => {
+                                        const par = parseInt(hole?.par);
+                                        return sum + (isNaN(par) ? 0 : par);
+                                    }, 0) ?? 0}</span>
                                     <span className="bg-stone-100 px-2 py-1 rounded-md">{course.holes?.length || 0} Holes</span>
                                 </div>
                             </div>

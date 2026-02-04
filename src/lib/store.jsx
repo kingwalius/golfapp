@@ -630,6 +630,26 @@ export const UserProvider = ({ children }) => {
                         } catch (e) {
                             console.warn("Could not verify user with server (offline?)", e);
                         }
+
+                        // Auto-sync data if needed (> 5 minutes since last sync)
+                        try {
+                            const lastSync = localStorage.getItem('golf_lastSync');
+                            const now = Date.now();
+                            const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+                            if (!lastSync || now - parseInt(lastSync) > SYNC_INTERVAL) {
+                                console.log('⏰ Auto-syncing data (last sync:', lastSync ? new Date(parseInt(lastSync)).toLocaleTimeString() : 'never', ')');
+                                await uploadLocalChanges(parsed.id, parsed.token);
+                                localStorage.setItem('golf_lastSync', now.toString());
+                                // Dispatch event to notify UI components
+                                window.dispatchEvent(new CustomEvent('golf-sync-complete'));
+                                console.log('✅ Auto-sync complete');
+                            } else {
+                                console.log('⏭️ Skipping auto-sync (last sync:', new Date(parseInt(lastSync)).toLocaleTimeString(), ')');
+                            }
+                        } catch (e) {
+                            console.warn("Auto-sync failed (continuing anyway):", e);
+                        }
                     }
                 }
             } catch (err) {
@@ -638,7 +658,7 @@ export const UserProvider = ({ children }) => {
             }
         };
         initUser();
-        console.log("Golf App Frontend v1.1 (HTTP Strategy Fix)");
+        console.log("Golf App Frontend v1.2 (Auto-Sync)");
     }, []);
 
     const updateProfile = async (updates) => {

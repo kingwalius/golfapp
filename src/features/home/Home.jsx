@@ -136,6 +136,30 @@ export const Home = () => {
         }
     }, [db, user]);
 
+    // Listen for sync completion to refresh UI
+    useEffect(() => {
+        const handleSyncComplete = () => {
+            console.log('🔄 Sync detected, refreshing Home data...');
+            if (user && db) {
+                loadData();
+            }
+        };
+
+        window.addEventListener('storage', (e) => {
+            // Refresh when lastSync changes (indicates sync completed)
+            if (e.key === 'golf_lastSync' && e.newValue) {
+                handleSyncComplete();
+            }
+        });
+
+        // Also listen for custom sync event (for same-tab syncs)
+        window.addEventListener('golf-sync-complete', handleSyncComplete);
+
+        return () => {
+            window.removeEventListener('golf-sync-complete', handleSyncComplete);
+        };
+    }, [user, db]);
+
     const handleManualSync = async () => {
         if (isManualSyncing) return;
         setIsManualSyncing(true);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { Home, Flag, PlayCircle, Trophy } from 'lucide-react';
@@ -30,8 +30,37 @@ const NavItem = ({ to, label, icon: Icon, activeIcon: ActiveIcon }) => {
 };
 
 export const Layout = () => {
-    const { user } = useUser();
+    const { user, sync } = useUser();
     const location = useLocation();
+
+    // Auto-sync when app regains visibility (if > 5 minutes since last sync)
+    useEffect(() => {
+        if (!user?.token) return;
+
+        const handleVisibilityChange = async () => {
+            if (document.visibilityState === 'visible') {
+                const lastSync = localStorage.getItem('golf_lastSync');
+                const now = Date.now();
+                const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+                if (!lastSync || now - parseInt(lastSync) > SYNC_INTERVAL) {
+                    console.log('👁️ App regained focus, auto-syncing...');
+                    try {
+                        await sync();
+                        localStorage.setItem('golf_lastSync', now.toString());
+                        // Dispatch event to notify UI components
+                        window.dispatchEvent(new CustomEvent('golf-sync-complete'));
+                        console.log('✅ Visibility sync complete');
+                    } catch (e) {
+                        console.warn("Visibility sync failed:", e);
+                    }
+                }
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [user, sync]);
 
     // If no user is logged in, show the Welcome/Registration screen
     if (!user) {
