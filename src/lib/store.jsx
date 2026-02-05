@@ -422,7 +422,8 @@ export const UserProvider = ({ children }) => {
 
         const unsyncedRounds = allRounds.filter(r => !r.synced && !r.serverId);
         const unsyncedMatches = allMatches.filter(m => !m.synced && !m.serverId && m.player2?.id);
-        const unsyncedCourses = allCourses.filter(c => !c.synced && !c.serverId);
+        const unsyncedCourses = allCourses.filter(c => !c.synced && !c.serverId); // NEW courses
+        const editedCourses = allCourses.filter(c => !c.synced && c.serverId); // EDITED courses
         const unsyncedSkins = allSkinsGames.filter(g => !g.synced && !g.serverId && g.status === 'COMPLETED');
 
         // Build course ID map for FK resolution
@@ -431,7 +432,7 @@ export const UserProvider = ({ children }) => {
             if (c.serverId) courseIdMap.set(c.id, c.serverId);
         });
 
-        // Upload courses first (dependency)
+        // Upload NEW courses first (dependency)
         for (const course of unsyncedCourses) {
             try {
                 const res = await authFetch('/courses', {
@@ -449,9 +450,36 @@ export const UserProvider = ({ children }) => {
                 if (res.ok) {
                     const data = await res.json();
                     courseIdMap.set(course.id, parseInt(data.id));
+                    // Mark as synced and store serverId
+                    await db.put('courses', { ...course, serverId: parseInt(data.id), synced: true });
                 }
             } catch (e) {
                 console.error("Failed to upload course:", course.name, e);
+            }
+        }
+
+        // Update EDITED courses (PUT requests)
+        for (const course of editedCourses) {
+            try {
+                const res = await authFetch(`/courses/${course.serverId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: course.name,
+                        holes: course.holes,
+                        rating: course.rating,
+                        slope: course.slope,
+                        par: course.par,
+                        tees: course.tees || []
+                    })
+                });
+                if (res.ok) {
+                    // Mark as synced
+                    await db.put('courses', { ...course, synced: true });
+                    console.log(`✅ Updated course: ${course.name}`);
+                }
+            } catch (e) {
+                console.error("Failed to update course:", course.name, e);
             }
         }
 
