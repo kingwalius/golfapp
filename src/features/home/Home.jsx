@@ -301,17 +301,29 @@ export const Home = () => {
             {/* Premium Header */}
             <header className="pt-2 flex justify-between items-start">
                 <div>
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-3 mb-1">
                         <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">
                             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                         </span>
                         <button
-                            onClick={handleManualSync}
-                            disabled={isManualSyncing}
+                            onClick={handlePullToRefresh}
+                            disabled={isManualSyncing || isPulling}
                             className="text-stone-300 hover:text-primary transition disabled:opacity-50"
                         >
-                            <RefreshCw size={12} className={isManualSyncing ? "animate-spin" : ""} />
+                            <RefreshCw size={12} className={(isManualSyncing || isPulling) ? "animate-spin" : ""} />
                         </button>
+                        {lastSyncTime && (
+                            <span className="text-[10px] text-stone-400">
+                                {(() => {
+                                    const mins = Math.floor((Date.now() - lastSyncTime) / 60000);
+                                    if (mins < 1) return 'Just now';
+                                    if (mins === 1) return '1m';
+                                    if (mins < 60) return `${mins}m`;
+                                    const hours = Math.floor(mins / 60);
+                                    return hours === 1 ? '1h' : `${hours}h`;
+                                })()}
+                            </span>
+                        )}
                     </div>
                     <h1 className="text-4xl font-black text-dark tracking-tight leading-none">
                         Hello, {user ? user.username.split(' ')[0] : 'Golfer'}
