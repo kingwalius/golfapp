@@ -23,6 +23,20 @@ export default {
         'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
         'card': '0 10px 30px -5px rgba(0, 0, 0, 0.08)',
         'floating': '0 20px 40px -10px rgba(0, 0, 0, 0.15)',
+      },
+      keyframes: {
+        'slide-in-right': {
+          '0%': { transform: 'translateX(100%)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' },
+        },
+        'fade-out': {
+          '0%': { opacity: '1' },
+          '100%': { opacity: '0' },
+        }
+      },
+      animation: {
+        'slide-in-right': 'slide-in-right 0.3s ease-out',
+        'fade-out': 'fade-out 0.5s ease-out 3.5s forwards',
       }
     },
   },

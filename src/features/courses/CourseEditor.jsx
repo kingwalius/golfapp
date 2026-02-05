@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useDB, useUser } from '../../lib/store';
+import { useToast } from '../../components/Toast';
 import { ChevronLeft } from 'lucide-react';
 
 const initialHoles = Array.from({ length: 18 }, (_, i) => ({
@@ -13,6 +14,7 @@ const initialHoles = Array.from({ length: 18 }, (_, i) => ({
 export const CourseEditor = () => {
     const db = useDB();
     const { sync } = useUser();
+    const { toast } = useToast();
     const navigate = useNavigate();
     const { id } = useParams();
     const location = useLocation();
@@ -79,10 +81,14 @@ export const CourseEditor = () => {
         if (isSaving) return;
         setIsSaving(true);
 
+        // Store current course for rollback
+        const previousCourse = { ...course };
+        const courseId = id && id !== 'new' ? parseInt(id) : Date.now();
+
         try {
             const courseData = {
                 ...course,
-                id: id && id !== 'new' ? parseInt(id) : Date.now(),
+                id: courseId,
                 updatedAt: new Date().toISOString(),
                 synced: false,
                 tees: course.tees.map(t => {
@@ -105,18 +111,36 @@ export const CourseEditor = () => {
                 })
             };
 
+            // Save to IndexedDB first
             await db.put('courses', courseData);
 
-            // Force immediate sync to server to prevent data loss
+            // Optimistic UI: Navigate immediately
+            navigate('/courses');
+            toast("Course saved successfully!", "success");
+
+            // Background sync (non-blocking)
             if (sync) {
-                console.log("Forcing immediate sync after save...");
-                await sync();
+                try {
+                    console.log("Syncing course in background...");
+                    await sync();
+                } catch (syncError) {
+                    console.error("Background sync failed:", syncError);
+                    toast("Course saved locally, will sync later", "warning");
+                }
             }
 
-            navigate('/courses');
         } catch (error) {
             console.error("Failed to save course:", error);
-            alert(`Failed to save course: ${error.message}`);
+            toast(`Failed to save: ${error.message}`, "error");
+
+            // Rollback: Navigate back to editor
+            if (id && id !== 'new') {
+                navigate(`/courses/${id}`);
+            } else {
+                navigate('/courses/new');
+            }
+            setCourse(previousCourse);
+        } finally {
             setIsSaving(false);
         }
     };

@@ -16,6 +16,9 @@ export const Home = () => {
     const [isFriendSearchOpen, setIsFriendSearchOpen] = useState(false);
     const [isManualSyncing, setIsManualSyncing] = useState(false);
     const [activeGame, setActiveGame] = useState(null);
+    const [lastSyncTime, setLastSyncTime] = useState(null);
+    const [isPulling, setIsPulling] = useState(false);
+    const [pullDistance, setPullDistance] = useState(0);
 
     const loadData = async () => {
         if (!db || !user) return;
@@ -140,10 +143,20 @@ export const Home = () => {
     useEffect(() => {
         const handleSyncComplete = () => {
             console.log('🔄 Sync detected, refreshing Home data...');
+            const syncTime = localStorage.getItem('golf_lastSync');
+            if (syncTime) {
+                setLastSyncTime(parseInt(syncTime));
+            }
             if (user && db) {
                 loadData();
             }
         };
+
+        // Initial load of last sync time
+        const syncTime = localStorage.getItem('golf_lastSync');
+        if (syncTime) {
+            setLastSyncTime(parseInt(syncTime));
+        }
 
         window.addEventListener('storage', (e) => {
             // Refresh when lastSync changes (indicates sync completed)
@@ -161,17 +174,39 @@ export const Home = () => {
     }, [user, db]);
 
     const handleManualSync = async () => {
-        if (isManualSyncing) return;
+        if (isManualSyncing || isPulling) return;
         setIsManualSyncing(true);
         try {
             await recalculateHandicap();
             await sync();
+            const syncTime = Date.now();
+            localStorage.setItem('golf_lastSync', syncTime.toString());
+            setLastSyncTime(syncTime);
             await loadData(); // Reload UI
         } catch (e) {
             console.error("Manual sync failed", e);
             alert("Sync failed. Please try again.");
         } finally {
             setIsManualSyncing(false);
+        }
+    };
+
+    // Pull-to-refresh handler
+    const handlePullToRefresh = async () => {
+        if (isPulling || isManualSyncing) return;
+        setIsPulling(true);
+        try {
+            await recalculateHandicap();
+            await sync();
+            const syncTime = Date.now();
+            localStorage.setItem('golf_lastSync', syncTime.toString());
+            setLastSyncTime(syncTime);
+            await loadData();
+        } catch (e) {
+            console.error("Pull refresh failed", e);
+        } finally {
+            setIsPulling(false);
+            setPullDistance(0);
         }
     };
 
