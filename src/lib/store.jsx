@@ -30,8 +30,9 @@ export const useDB = () => {
     return context;
 };
 
-// Helper for authenticated requests
-const authFetch = async (url, options = {}) => {
+// Helper for authenticated requests. Exported so feature components can hit
+// mutating endpoints without re-implementing the bearer-token plumbing.
+export const authFetch = async (url, options = {}) => {
     let token = null;
     try {
         const storedUser = localStorage.getItem('golf_user');

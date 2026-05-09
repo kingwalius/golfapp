@@ -83,15 +83,6 @@ export const Welcome = () => {
                             {loading ? 'Processing...' : (isRegistering ? 'Create Account' : 'Log In')}
                         </button>
 
-                        <div className="text-center pt-2">
-                            <button
-                                type="button"
-                                onClick={() => navigate('/reset-password')}
-                                className="text-stone-500 text-sm font-medium hover:text-dark transition-colors"
-                            >
-                                Forgot Password?
-                            </button>
-                        </div>
                     </form>
                 </div>
 

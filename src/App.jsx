@@ -22,8 +22,6 @@ import { LeagueDetails } from './features/league/LeagueDetails';
 // Placeholder components
 // Home component moved to features/home/Home.jsx
 
-import { ResetPassword } from './features/auth/ResetPassword';
-
 function App() {
   return (
     <DBProvider>
@@ -31,7 +29,6 @@ function App() {
         <ToastProvider>
           <BrowserRouter>
             <Routes>
-              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/" element={<Layout />}>
                 <Route index element={<Home />} />
                 <Route path="courses" element={<CourseList />} />

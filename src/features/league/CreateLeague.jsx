@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '../../lib/store';
+import { useUser, authFetch } from '../../lib/store';
 import { ArrowLeft, Trophy, Calendar, Users } from 'lucide-react';
 
 export const CreateLeague = () => {
@@ -21,7 +21,7 @@ export const CreateLeague = () => {
         setLoading(true);
 
         try {
-            const res = await fetch('/api/leagues', {
+            const res = await authFetch('/api/leagues', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

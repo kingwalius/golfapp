@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CompactScorecard } from './CompactScorecard';
-import { useUser } from '../../lib/store';
+import { useUser, authFetch } from '../../lib/store';
 import { Plus, Trophy, Activity, Ticket, Trash2 } from 'lucide-react';
 
 const FeedItem = ({ item, onDelete, currentUserId }) => {
@@ -159,7 +159,7 @@ export const LeagueDashboard = () => {
 
                 // Fetch User's Leagues
                 if (user) {
-                    const leaguesRes = await fetch(`/api/leagues?userId=${user.id}`);
+                    const leaguesRes = await authFetch(`/api/leagues?userId=${user.id}`);
                     if (leaguesRes.ok) {
                         setLeagues(await leaguesRes.json());
                     }
@@ -192,7 +192,7 @@ export const LeagueDashboard = () => {
         }
 
         try {
-            const res = await fetch(endpoint, {
+            const res = await authFetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
@@ -218,7 +218,7 @@ export const LeagueDashboard = () => {
                         onClick={() => {
                             const id = prompt("Enter League Invite Code:");
                             if (id) {
-                                fetch(`/api/leagues/${id}/join`, {
+                                authFetch(`/api/leagues/${id}/join`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ userId: user.id })

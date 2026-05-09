@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, Calendar, Trophy, Share2, Trash2, LogOut, Swords, RefreshCw } from 'lucide-react';
-import { useUser } from '../../lib/store';
+import { useUser, authFetch } from '../../lib/store';
 import { BracketView } from './BracketView';
 import { TeamLeagueDashboard } from './TeamLeagueDashboard';
 
@@ -18,7 +18,7 @@ export const LeagueDetails = () => {
     useEffect(() => {
         const fetchDetails = async () => {
             try {
-                const res = await fetch(`/api/leagues/${id}/standings`);
+                const res = await authFetch(`/api/leagues/${id}/standings`);
                 if (res.ok) {
                     const data = await res.json();
                     setLeague(data.league);
@@ -49,7 +49,7 @@ export const LeagueDetails = () => {
         if (!confirm("Are you sure you want to DELETE this league? This cannot be undone.")) return;
 
         try {
-            const res = await fetch(`/api/leagues/${id}`, {
+            const res = await authFetch(`/api/leagues/${id}`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: user.id })
@@ -68,7 +68,7 @@ export const LeagueDetails = () => {
         if (!confirm("Are you sure you want to LEAVE this league? Your scores will be removed.")) return;
 
         try {
-            const res = await fetch(`/api/leagues/${id}/leave`, {
+            const res = await authFetch(`/api/leagues/${id}/leave`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: user.id })
@@ -86,7 +86,7 @@ export const LeagueDetails = () => {
     const handleStartTournament = async () => {
         if (!confirm("Start Tournament? This will generate the bracket.")) return;
         try {
-            const res = await fetch(`/api/leagues/${id}/start-tournament`, {
+            const res = await authFetch(`/api/leagues/${id}/start-tournament`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: user.id })
@@ -107,7 +107,7 @@ export const LeagueDetails = () => {
         if (!confirm("RESET TOURNAMENT? This will DELETE all matches and bracket progress! Only do this if it's broken.")) return;
 
         try {
-            const res = await fetch(`/api/leagues/${id}/tournament`, {
+            const res = await authFetch(`/api/leagues/${id}/tournament`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: user.id })
@@ -194,7 +194,7 @@ export const LeagueDetails = () => {
                     league={league}
                     members={standings} // reusing standing state which contains members
                     matches={events} // reusing events state which contains matches/events
-                    onStartTournament={() => fetch(`/api/leagues/${id}/start-team-tournament`, {
+                    onStartTournament={() => authFetch(`/api/leagues/${id}/start-team-tournament`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ userId: user.id })

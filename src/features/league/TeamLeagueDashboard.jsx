@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, Trophy, Shield, Swords, Play } from 'lucide-react';
-import { useUser } from '../../lib/store';
+import { useUser, authFetch } from '../../lib/store';
 import { TeamCaptainDashboard } from './TeamCaptainDashboard';
 
 export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
@@ -30,7 +30,7 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
     // Fetch matches if Playing
     useEffect(() => {
         if (settings.tournamentStatus === 'PLAYING' || settings.tournamentStatus === 'COMPLETED' || settings.tournamentStatus === 'PLAYING_SD') {
-            fetch(`/api/leagues/${league.id}/matches`)
+            authFetch(`/api/leagues/${league.id}/matches`)
                 .then(res => res.json())
                 .then(data => {
                     if (Array.isArray(data)) setLeagueMatches(data);
@@ -69,7 +69,7 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
 
     const handleSaveLineup = async (lineup) => {
         try {
-            const res = await fetch(`/api/leagues/${league.id}/submit-lineup`, {
+            const res = await authFetch(`/api/leagues/${league.id}/submit-lineup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: user.id, team: myTeam, lineup })
@@ -90,7 +90,7 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
 
     const handleSuddenDeathPick = async (playerId) => {
         try {
-            await fetch(`/api/leagues/${league.id}/submit-sudden-death`, {
+            await authFetch(`/api/leagues/${league.id}/submit-sudden-death`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: user.id, team: myTeam, playerId })
@@ -157,7 +157,7 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
                                 <button
                                     onClick={async () => {
                                         if (!window.confirm("Start Sudden Death Tie-Breaker? Captains will pick 1 player each.")) return;
-                                        await fetch(`/api/leagues/${league.id}/start-sudden-death`, {
+                                        await authFetch(`/api/leagues/${league.id}/start-sudden-death`, {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify({ userId: user.id })
@@ -171,7 +171,7 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
                                 <button
                                     onClick={async () => {
                                         if (!window.confirm("End as Draw?")) return;
-                                        await fetch(`/api/leagues/${league.id}/complete-tournament`, {
+                                        await authFetch(`/api/leagues/${league.id}/complete-tournament`, {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify({ userId: user.id, winner: 'DRAW' })
@@ -188,7 +188,7 @@ export const TeamLeagueDashboard = ({ league, members, onStartTournament }) => {
                                 onClick={async () => {
                                     const winner = greenScore > goldScore ? 'GREEN' : greenScore < goldScore ? 'GOLD' : 'DRAW';
                                     if (!window.confirm(`Finalize Tournament? Winner: ${winner}`)) return;
-                                    await fetch(`/api/leagues/${league.id}/complete-tournament`, {
+                                    await authFetch(`/api/leagues/${league.id}/complete-tournament`, {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({ userId: user.id, winner })

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '../../lib/store';
+import { useUser, authFetch } from '../../lib/store';
 import { Trophy, Swords, RefreshCw } from 'lucide-react';
 
 export const BracketView = ({ leagueId, isAdmin, onStartTournament, onResetTournament }) => {
@@ -17,7 +17,7 @@ export const BracketView = ({ leagueId, isAdmin, onStartTournament, onResetTourn
                 // Let's assume we add a GET /api/leagues/:id/matches endpoint or similar.
                 // For now, let's use the existing standings endpoint if it returns matches? No.
                 // Let's create a specific fetch.
-                const res = await fetch(`/api/leagues/${leagueId}/matches`);
+                const res = await authFetch(`/api/leagues/${leagueId}/matches`);
                 if (res.ok) {
                     setMatches(await res.json());
                 }
@@ -159,7 +159,7 @@ const MatchCard = ({ match, currentUserId, navigate, isAdmin }) => {
                                 onClick={async () => {
                                     if (!confirm(`Force advance ${match.p1Name} as winner?`)) return;
                                     try {
-                                        const res = await fetch(`/api/leagues/${match.leagueId}/advance-match`, {
+                                        const res = await authFetch(`/api/leagues/${match.leagueId}/advance-match`, {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify({ userId: currentUserId, leagueMatchId: match.id, winnerId: match.player1Id })
@@ -182,7 +182,7 @@ const MatchCard = ({ match, currentUserId, navigate, isAdmin }) => {
                                 onClick={async () => {
                                     if (!confirm(`Force advance ${match.p2Name} as winner?`)) return;
                                     try {
-                                        const res = await fetch(`/api/leagues/${match.leagueId}/advance-match`, {
+                                        const res = await authFetch(`/api/leagues/${match.leagueId}/advance-match`, {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify({ userId: currentUserId, leagueMatchId: match.id, winnerId: match.player2Id })

@@ -8,7 +8,25 @@ import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'golf-app-super-secret-key-change-in-prod';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    console.error('FATAL: JWT_SECRET env var is not set — all auth operations will fail until configured.');
+}
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
+
+// Gate destructive admin endpoints behind a server-side secret token. Without
+// ADMIN_TOKEN configured the endpoint is permanently disabled (403). With it,
+// callers must send the token in the `x-admin-token` header.
+const requireAdmin = (req, res, next) => {
+    if (!ADMIN_TOKEN) {
+        return res.status(403).json({ error: 'Endpoint disabled (ADMIN_TOKEN not configured)' });
+    }
+    const provided = req.headers['x-admin-token'] || req.body?.adminToken;
+    if (provided !== ADMIN_TOKEN) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    next();
+};
 
 const app = express();
 
@@ -74,7 +92,7 @@ app.get('/api/debug', (req, res) => {
     });
 });
 
-app.get('/api/init', async (req, res) => {
+app.get('/api/init', requireAdmin, async (req, res) => {
     try {
         await initDB();
         res.json({ status: 'Database initialized successfully' });
@@ -83,7 +101,7 @@ app.get('/api/init', async (req, res) => {
     }
 });
 
-app.get('/api/fix-db', async (req, res) => {
+app.get('/api/fix-db', requireAdmin, async (req, res) => {
     const step = req.query.step || 'all';
     const report = [];
     const log = (msg) => report.push(msg);
@@ -196,18 +214,7 @@ app.get('/api/fix-db', async (req, res) => {
     }
 });
 
-app.post('/api/nuke-db', async (req, res) => {
-    // Destructive admin endpoint: gate behind a server-side secret.
-    // Set ADMIN_TOKEN in Vercel env to enable; without it, the endpoint is permanently disabled.
-    const adminToken = process.env.ADMIN_TOKEN;
-    if (!adminToken) {
-        return res.status(403).json({ error: 'Endpoint disabled (ADMIN_TOKEN not configured)' });
-    }
-    const provided = req.headers['x-admin-token'] || req.body?.adminToken;
-    if (provided !== adminToken) {
-        return res.status(401).json({ error: 'Unauthorized' });
-    }
-
+app.post('/api/nuke-db', requireAdmin, async (req, res) => {
     try {
         console.log('Nuking database...');
         await db.execute('DELETE FROM rounds');
@@ -223,7 +230,7 @@ app.post('/api/nuke-db', async (req, res) => {
     }
 });
 
-app.get('/api/debug-sql', async (req, res) => {
+app.get('/api/debug-sql', requireAdmin, async (req, res) => {
     try {
         const leagueId = 1;
 
@@ -401,8 +408,9 @@ const authenticateToken = (req, res, next) => {
 
 // --- Secure Routes ---
 
-// Reset Password (Unsecured for MVP)
-app.post('/auth/reset-password', async (req, res) => {
+// Reset Password — gated behind ADMIN_TOKEN. The previous unauthenticated
+// endpoint allowed account takeover by anyone who knew a username.
+app.post('/auth/reset-password', requireAdmin, async (req, res) => {
     const { username, newPassword } = req.body;
     if (!username || !newPassword) return res.status(400).json({ error: 'Username and new password required' });
 
@@ -688,16 +696,16 @@ app.get('/api/user/:id/full-sync', authenticateToken, async (req, res) => {
 });
 
 // --- Delete Routes ---
-app.post('/api/rounds/delete', async (req, res) => {
+app.post('/api/rounds/delete', authenticateToken, async (req, res) => {
     const { userId, courseId, date } = req.body;
     if (!userId || !courseId || !date) return res.status(400).json({ error: 'Missing required fields' });
 
-    try {
-        // Find and delete the round
-        // Note: Using date string comparison might be tricky if formats differ.
-        // Ideally we pass the ID if we have it, but local ID != server ID.
-        // Let's rely on the composite key (userId, courseId, date) which we use for sync.
+    // Owner check: can only delete your own rounds. JWT.id is canonical.
+    if (String(req.user.id) !== String(userId)) {
+        return res.status(403).json({ error: 'Cannot delete another user\'s round' });
+    }
 
+    try {
         const result = await db.execute({
             sql: 'DELETE FROM rounds WHERE userId = ? AND courseId = ? AND date = ?',
             args: [userId, courseId, date]
@@ -713,12 +721,16 @@ app.post('/api/rounds/delete', async (req, res) => {
     }
 });
 
-app.post('/api/matches/delete', async (req, res) => {
+app.post('/api/matches/delete', authenticateToken, async (req, res) => {
     const { userId, courseId, date } = req.body;
     if (!userId || !courseId || !date) return res.status(400).json({ error: 'Missing required fields' });
 
+    // Owner check: only allow deleting matches you participated in.
+    if (String(req.user.id) !== String(userId)) {
+        return res.status(403).json({ error: 'Cannot delete another user\'s match' });
+    }
+
     try {
-        // Delete match where user is either player 1 or player 2
         const result = await db.execute({
             sql: 'DELETE FROM matches WHERE (player1Id = ? OR player2Id = ?) AND courseId = ? AND date = ?',
             args: [userId, userId, courseId, date]
@@ -1270,7 +1282,7 @@ app.get('/courses', async (req, res) => {
     }
 });
 
-app.post('/courses', async (req, res) => {
+app.post('/courses', authenticateToken, async (req, res) => {
     let { name, holes, rating, slope, par } = req.body;
     if (!name) return res.status(400).json({ error: 'Course name required' });
 
@@ -1303,7 +1315,7 @@ app.post('/courses', async (req, res) => {
     }
 });
 
-app.put('/courses/:id', async (req, res) => {
+app.put('/courses/:id', authenticateToken, async (req, res) => {
     let { name, holes, rating, slope, par } = req.body;
     const id = req.params.id;
 
@@ -1335,7 +1347,8 @@ app.put('/courses/:id', async (req, res) => {
     }
 });
 
-app.delete('/courses', async (req, res) => {
+// Bulk delete is destructive — admin-only
+app.delete('/courses', requireAdmin, async (req, res) => {
     try {
         await db.execute('DELETE FROM courses');
         res.json({ success: true, message: 'All courses deleted' });
@@ -1344,7 +1357,7 @@ app.delete('/courses', async (req, res) => {
     }
 });
 
-app.delete('/courses/:id', async (req, res) => {
+app.delete('/courses/:id', authenticateToken, async (req, res) => {
     const id = req.params.id;
     try {
         const result = await db.execute({
@@ -1376,7 +1389,7 @@ app.get('/leaderboard/solo', async (req, res) => {
 // --- League Routes ---
 
 // Create League
-app.post('/api/leagues', async (req, res) => {
+app.post('/api/leagues', authenticateToken, async (req, res) => {
     const { name, type, adminId, startDate, endDate, settings, roundFrequency } = req.body;
     if (!name || !type || !adminId) return res.status(400).json({ error: 'Missing required fields' });
 
@@ -1443,7 +1456,7 @@ app.get('/api/leagues', async (req, res) => {
 });
 
 // Join League
-app.post('/api/leagues/:id/join', async (req, res) => {
+app.post('/api/leagues/:id/join', authenticateToken, async (req, res) => {
     const leagueId = req.params.id;
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: 'User ID required' });
@@ -1471,7 +1484,7 @@ app.post('/api/leagues/:id/join', async (req, res) => {
 });
 
 // Delete League (Admin Only)
-app.delete('/api/leagues/:id', async (req, res) => {
+app.delete('/api/leagues/:id', authenticateToken, async (req, res) => {
     const leagueId = req.params.id;
     const { userId } = req.body; // Pass userId in body to verify admin
 
@@ -1504,7 +1517,7 @@ app.delete('/api/leagues/:id', async (req, res) => {
 });
 
 // Leave League
-app.post('/api/leagues/:id/leave', async (req, res) => {
+app.post('/api/leagues/:id/leave', authenticateToken, async (req, res) => {
     const leagueId = req.params.id;
     const { userId } = req.body;
 
@@ -1532,7 +1545,7 @@ app.post('/api/leagues/:id/leave', async (req, res) => {
 });
 
 // Start Tournament (Matchplay)
-app.post('/api/leagues/:id/start-tournament', async (req, res) => {
+app.post('/api/leagues/:id/start-tournament', authenticateToken, async (req, res) => {
     const leagueId = req.params.id;
     const { userId } = req.body;
 
@@ -1722,7 +1735,7 @@ VALUES(?, ?, ?, ?, ?, ?)`,
 
 
 // Start Team Tournament (Ryder Cup Style)
-app.post('/api/leagues/:id/start-team-tournament', async (req, res) => {
+app.post('/api/leagues/:id/start-team-tournament', authenticateToken, async (req, res) => {
     const leagueId = req.params.id;
     const { userId } = req.body;
 
@@ -1845,7 +1858,7 @@ app.post('/api/leagues/:id/start-team-tournament', async (req, res) => {
 
 
 // Submit Team Lineup (Captain Only)
-app.post('/api/leagues/:id/submit-lineup', async (req, res) => {
+app.post('/api/leagues/:id/submit-lineup', authenticateToken, async (req, res) => {
     const leagueId = req.params.id;
     const { userId, lineup, team } = req.body; // team = 'GREEN' or 'GOLD', lineup = [userId1, userId2...]
 
@@ -2080,7 +2093,7 @@ app.get('/api/leagues/:id/standings', async (req, res) => {
 });
 
 // Complete Tournament
-app.post('/api/leagues/:id/complete-tournament', async (req, res) => {
+app.post('/api/leagues/:id/complete-tournament', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { userId, winner } = req.body;
 
@@ -2112,7 +2125,7 @@ app.post('/api/leagues/:id/complete-tournament', async (req, res) => {
 });
 
 // Start Sudden Death
-app.post('/api/leagues/:id/start-sudden-death', async (req, res) => {
+app.post('/api/leagues/:id/start-sudden-death', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { userId } = req.body;
 
@@ -2146,7 +2159,7 @@ app.post('/api/leagues/:id/start-sudden-death', async (req, res) => {
 });
 
 // Submit Sudden Death Pick
-app.post('/api/leagues/:id/submit-sudden-death', async (req, res) => {
+app.post('/api/leagues/:id/submit-sudden-death', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { userId, playerId, team } = req.body; // userId is captain
 
@@ -2231,7 +2244,7 @@ app.get('/api/leagues/:id/matches', async (req, res) => {
 });
 
 // Reset Tournament (Admin Only) - Panic Button
-app.delete('/api/leagues/:id/tournament', async (req, res) => {
+app.delete('/api/leagues/:id/tournament', authenticateToken, async (req, res) => {
     const leagueId = req.params.id;
     const { userId } = req.body;
 
@@ -2254,7 +2267,7 @@ app.delete('/api/leagues/:id/tournament', async (req, res) => {
 });
 
 // Manual Match Advance (Admin Only)
-app.post('/api/leagues/:id/advance-match', async (req, res) => {
+app.post('/api/leagues/:id/advance-match', authenticateToken, async (req, res) => {
     const leagueId = req.params.id;
     const { leagueMatchId, winnerId, userId } = req.body;
 
@@ -2304,12 +2317,12 @@ app.post('/api/leagues/:id/advance-match', async (req, res) => {
 });
 
 // --- Debug Endpoints ---
-app.get('/api/debug/users', async (req, res) => {
+app.get('/api/debug/users', requireAdmin, async (req, res) => {
     const users = await db.execute('SELECT id, username FROM users ORDER BY id');
     res.json(users.rows);
 });
 
-app.get('/api/debug/matches', async (req, res) => {
+app.get('/api/debug/matches', requireAdmin, async (req, res) => {
     try {
         const matches = await db.execute('SELECT * FROM matches ORDER BY id DESC LIMIT 10');
         const leagueMatches = await db.execute('SELECT * FROM league_matches WHERE matchId IS NOT NULL OR winnerId IS NOT NULL');
@@ -2319,7 +2332,7 @@ app.get('/api/debug/matches', async (req, res) => {
     }
 });
 
-app.post('/api/debug/resolve-bracket', async (req, res) => {
+app.post('/api/debug/resolve-bracket', requireAdmin, async (req, res) => {
     const { matchId } = req.body;
     try {
         const matchRes = await db.execute({
@@ -2375,7 +2388,7 @@ app.post('/api/debug/resolve-bracket', async (req, res) => {
     }
 });
 
-app.post('/api/debug/force-link', async (req, res) => {
+app.post('/api/debug/force-link', requireAdmin, async (req, res) => {
     const { matchId, leagueMatchId } = req.body;
     try {
         console.log(`Force Link: Linking Match ${matchId} to LeagueMatch ${leagueMatchId} `);
@@ -2437,11 +2450,26 @@ app.post('/api/debug/force-link', async (req, res) => {
 });
 
 // --- Skins Routes ---
-app.post('/api/skins/delete', async (req, res) => {
-    const { userId, gameId } = req.body;
+app.post('/api/skins/delete', authenticateToken, async (req, res) => {
+    const { gameId } = req.body;
+    if (!gameId) return res.status(400).json({ error: 'gameId required' });
+
     try {
-        // Verify ownership (optional but good practice)
-        // For now, simpler delete
+        // Verify the requester is one of the players in the skins game
+        const gameRes = await db.execute({
+            sql: 'SELECT players FROM skins_games WHERE id = ?',
+            args: [gameId]
+        });
+        if (gameRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Skins game not found' });
+        }
+        let players = [];
+        try { players = JSON.parse(gameRes.rows[0].players || '[]'); } catch {}
+        const isParticipant = players.some(p => String(p?.id ?? p) === String(req.user.id));
+        if (!isParticipant) {
+            return res.status(403).json({ error: 'Cannot delete a skins game you did not play in' });
+        }
+
         await db.execute({
             sql: 'DELETE FROM skins_games WHERE id = ?',
             args: [gameId]

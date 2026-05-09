@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useUser, useDB } from '../../lib/store';
+import { useUser, useDB, authFetch } from '../../lib/store';
 import { SwipeableItem } from '../../components/SwipeableItem';
 import { calculatePlayingHcp, calculateStableford, calculateStrokesReceived, prepareHandicapData, calculateHandicapDetails } from '../scoring/calculations';
 import { User, Trophy, Calendar, Swords, Flag, Plus, Star, Search, RefreshCw, TrendingUp, TrendingDown } from 'lucide-react';
@@ -220,7 +220,7 @@ export const Home = () => {
             if (item && user) {
                 try {
                     const endpoint = type === 'round' ? '/api/rounds/delete' : '/api/matches/delete';
-                    await fetch(endpoint, {
+                    await authFetch(endpoint, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -275,7 +275,7 @@ export const Home = () => {
                         gameId: item.serverId || item.id // For Skins
                     };
 
-                    await fetch(deleteEndpoint, {
+                    await authFetch(deleteEndpoint, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

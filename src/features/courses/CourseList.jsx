@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useCourses, useDB, useUser } from '../../lib/store';
+import { useCourses, useDB, useUser, authFetch } from '../../lib/store';
 import { SwipeableItem } from '../../components/SwipeableItem';
 import { Search, Star, X } from 'lucide-react';
 import { useState } from 'react';
@@ -20,7 +20,7 @@ export const CourseList = () => {
             // Delete from server if it has a server ID
             if (courseToDelete?.serverId) {
                 try {
-                    await fetch(`/courses/${courseToDelete.serverId}`, { method: 'DELETE' });
+                    await authFetch(`/courses/${courseToDelete.serverId}`, { method: 'DELETE' });
                 } catch (e) {
                     console.error("Failed to delete from server", e);
                 }
@@ -29,7 +29,7 @@ export const CourseList = () => {
                 // But usually downloaded courses have id == serverId
                 try {
                     // Try deleting by ID just in case it aligns
-                    await fetch(`/courses/${id}`, { method: 'DELETE' });
+                    await authFetch(`/courses/${id}`, { method: 'DELETE' });
                 } catch (e) { console.warn("Failed speculative delete", e); }
             }
 
