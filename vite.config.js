@@ -26,7 +26,55 @@ export default defineConfig({
             type: 'image/png'
           }
         ]
-      }
+      },
+      workbox: {
+        // SPA: route navigations to index.html when offline so /scores, /league etc. don't 404
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [
+          /^\/api\//,
+          /^\/auth\//,
+          /^\/sync$/,
+          /^\/courses(\/|$)/,
+          /^\/leaderboard\//,
+          /^\/users(\/|$)/,
+        ],
+        // Don't precache full course/leaderboard payloads — runtimeCaching handles them on demand
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        runtimeCaching: [
+          {
+            // Read-only API endpoints: NetworkFirst with cache fallback for offline
+            urlPattern: ({ request, url, sameOrigin }) => {
+              if (!sameOrigin || request.method !== 'GET') return false;
+              return (
+                url.pathname === '/courses' ||
+                url.pathname.startsWith('/leaderboard/') ||
+                /^\/api\/user\/\d+\/(activity|full-sync)$/.test(url.pathname) ||
+                /^\/api\/league\//.test(url.pathname)
+              );
+            },
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'golf-api-cache-v1',
+              networkTimeoutSeconds: 5,
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Static images / icons fetched at runtime
+            urlPattern: ({ request }) => request.destination === 'image',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'golf-image-cache-v1',
+              expiration: { maxEntries: 100, maxAgeSeconds: 90 * 24 * 60 * 60 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+      },
     })
   ],
   server: {
