@@ -7,7 +7,8 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
-dotenv.config();
+// Vercel injects env vars directly, so skip the .env file read in production.
+if (process.env.NODE_ENV !== 'production') dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -33,7 +34,9 @@ const app = express();
 
 
 app.use(cors());
-app.use(bodyParser.json({ limit: '50mb' }));
+// 5mb is plenty: avatars are ~100kb base64, /sync payloads with 100s of
+// rounds stay well under 1mb. The previous 50mb invited memory abuse.
+app.use(bodyParser.json({ limit: '5mb' }));
 
 // In Vercel Serverless every cold-start spins up a fresh container. We run
 // the full schema migration exactly once per container lifetime, cached as a
@@ -365,22 +368,20 @@ app.post('/auth/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid username or password' });
         }
 
-        // Verify against whatever format the DB has (bcrypt or legacy SHA-256).
-        // Users with no password fall through to the existing legacy-adoption
-        // branch below — preserves prior behavior; tightening that is a
-        // separate concern.
-        const { ok, needsRehash } = user.password
-            ? await verifyPassword(password, user.password)
-            : { ok: true, needsRehash: false };
+        // Users with no password (Guest, Restored_User_*) cannot log in.
+        // Previously a NULL stored password let any input succeed.
+        if (!user.password) {
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
 
+        const { ok, needsRehash } = await verifyPassword(password, user.password);
         if (!ok) {
             return res.status(401).json({ error: 'Invalid username or password' });
         }
 
-        // Lazy migration: if the stored hash is legacy SHA-256 OR the user had
-        // no password yet (legacy adoption), persist a fresh bcrypt hash.
-        // Failure here is non-fatal — login still succeeds.
-        if (needsRehash || !user.password) {
+        // Lazy migration: legacy SHA-256 → bcrypt on successful login.
+        // Failure here is non-fatal; login still succeeds.
+        if (needsRehash) {
             try {
                 const newHash = await hashPasswordBcrypt(password);
                 await db.execute({
@@ -2505,6 +2506,13 @@ app.post('/api/skins/delete', authenticateToken, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// Eager schema init: kick off as soon as the module is fully loaded, so the
+// Turso roundtrips race with V8 cold-start instead of blocking the first
+// request. The ensureSchema() promise is cached, so the middleware on the
+// first request will await whatever progress this kickoff has made.
+// On failure schemaInitPromise resets itself; the middleware retries.
+ensureSchema().catch(err => console.error('Eager schema init failed (will retry on first request):', err));
 
 // Local dev server only. On Vercel, the function runtime imports `app` directly.
 if (process.env.NODE_ENV !== 'production') {

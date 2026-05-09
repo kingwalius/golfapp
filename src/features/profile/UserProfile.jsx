@@ -55,12 +55,14 @@ export const UserProfile = () => {
 
                         const lastItem = allItems[0];
                         if (lastItem) {
-                            // Fetch course name for the last activity
+                            // No GET /courses/:id endpoint exists; pull the
+                            // full list (cached by SW) and resolve locally.
                             try {
-                                const courseRes = await fetch(`/courses/${lastItem.courseId}`);
+                                const courseRes = await fetch('/courses');
                                 if (courseRes.ok) {
-                                    const course = await courseRes.json();
-                                    lastItem.courseName = course.name;
+                                    const all = await courseRes.json();
+                                    const course = all.find(c => String(c.id) === String(lastItem.courseId));
+                                    if (course) lastItem.courseName = course.name;
                                 }
                             } catch (e) {
                                 console.warn("Failed to fetch course name", e);

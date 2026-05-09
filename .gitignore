@@ -27,4 +27,11 @@ dist-ssr
 .netlify
 .vercel
 .env
-golf.db
+.env.local
+.env.*.local
+
+# Local SQLite files (we use Turso/libSQL in production)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
