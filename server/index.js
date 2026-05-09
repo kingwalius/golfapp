@@ -2349,6 +2349,32 @@ app.get('/api/debug/users', requireAdmin, async (req, res) => {
     res.json(users.rows);
 });
 
+// Admin-only: delete a user and all their data. No equivalent existed and
+// stale test users had to be cleaned up by hand in Turso. Cascades through
+// the dependent tables manually because the schema wasn't created with
+// FK ON DELETE CASCADE on every relation.
+app.post('/api/debug/delete-user', requireAdmin, async (req, res) => {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    if (Number(userId) === 9999) return res.status(400).json({ error: 'Cannot delete the Guest user' });
+
+    try {
+        const before = await db.execute({ sql: 'SELECT id, username FROM users WHERE id = ?', args: [userId] });
+        if (before.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        await db.execute({ sql: 'DELETE FROM rounds WHERE userId = ?', args: [userId] });
+        await db.execute({ sql: 'DELETE FROM matches WHERE player1Id = ? OR player2Id = ?', args: [userId, userId] });
+        await db.execute({ sql: 'DELETE FROM league_members WHERE userId = ?', args: [userId] });
+        await db.execute({ sql: 'DELETE FROM users WHERE id = ?', args: [userId] });
+
+        res.json({ success: true, deleted: before.rows[0] });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/api/debug/matches', requireAdmin, async (req, res) => {
     try {
         const matches = await db.execute('SELECT * FROM matches ORDER BY id DESC LIMIT 10');
