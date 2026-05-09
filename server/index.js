@@ -16,8 +16,52 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 
-// Initialize DB (Lazy or Manual)
-// initDB().catch(err => console.error("Failed to initialize DB:", err));
+// In Vercel Serverless every cold-start spins up a fresh container. We run
+// the full schema migration exactly once per container lifetime, cached as a
+// promise so concurrent first-requests share the same init.
+let schemaInitPromise = null;
+const ensureSchema = () => {
+    if (schemaInitPromise) return schemaInitPromise;
+    schemaInitPromise = (async () => {
+        await initDB();
+        await ensureScoresColumn('rounds');
+        await ensureScoresColumn('matches');
+        await ensureLeagueMatchIdColumn();
+        await ensureLeagueRoundsTable();
+        await ensureSkinsTable();
+        await ensureGuestUser();
+
+        // Previously inlined per-request inside /sync (see fix: 2026-05-09)
+        const inlineMigrations = [
+            "ALTER TABLE matches ADD COLUMN player1Differential REAL",
+            "ALTER TABLE matches ADD COLUMN player2Differential REAL",
+            "ALTER TABLE matches ADD COLUMN completed BOOLEAN DEFAULT 0",
+            "ALTER TABLE matches ADD COLUMN countForHandicap BOOLEAN",
+            "ALTER TABLE rounds ADD COLUMN completed BOOLEAN DEFAULT 0",
+            "ALTER TABLE rounds ADD COLUMN differential REAL DEFAULT 0",
+            "ALTER TABLE league_matches ADD COLUMN matchNumber INTEGER",
+        ];
+        for (const sql of inlineMigrations) {
+            try { await db.execute(sql); } catch (e) { /* column likely exists */ }
+        }
+        console.log('Schema initialized successfully.');
+    })().catch(err => {
+        // Reset so the next request retries instead of failing forever
+        schemaInitPromise = null;
+        throw err;
+    });
+    return schemaInitPromise;
+};
+
+app.use(async (req, res, next) => {
+    try {
+        await ensureSchema();
+        next();
+    } catch (e) {
+        console.error('Schema init middleware failed:', e);
+        res.status(503).json({ error: 'Database initialization failed', message: e.message });
+    }
+});
 
 app.get('/api/debug', (req, res) => {
     res.json({
@@ -152,17 +196,25 @@ app.get('/api/fix-db', async (req, res) => {
     }
 });
 
-app.get('/api/nuke-db', async (req, res) => {
+app.post('/api/nuke-db', async (req, res) => {
+    // Destructive admin endpoint: gate behind a server-side secret.
+    // Set ADMIN_TOKEN in Vercel env to enable; without it, the endpoint is permanently disabled.
+    const adminToken = process.env.ADMIN_TOKEN;
+    if (!adminToken) {
+        return res.status(403).json({ error: 'Endpoint disabled (ADMIN_TOKEN not configured)' });
+    }
+    const provided = req.headers['x-admin-token'] || req.body?.adminToken;
+    if (provided !== adminToken) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     try {
         console.log('Nuking database...');
         await db.execute('DELETE FROM rounds');
         await db.execute('DELETE FROM matches');
-        await db.execute('DELETE FROM skins_games'); // Add this
+        await db.execute('DELETE FROM skins_games');
         await db.execute('DELETE FROM users');
         await db.execute('DELETE FROM courses');
-
-        console.log('Database cleared. Re-initializing...');
-        // await initDB(); // Let's avoid re-init logic here to keep it simple or call the DB init
 
         res.json({ success: true, message: 'Database completely erased.' });
     } catch (error) {
@@ -878,86 +930,9 @@ app.post('/sync', authenticateToken, async (req, res) => {
     try {
         console.log('Sync Request:', { userId, roundsCount: rounds?.length, matchesCount: matches?.length, skinsCount: skinsGames?.length });
 
-        // 1. Ensure Schema (Self-healing)
-        await ensureScoresColumn('rounds');
-        await ensureScoresColumn('matches');
-        await ensureLeagueMatchIdColumn();
-        await ensureLeagueRoundsTable();
-        await ensureSkinsTable();
+        // Schema migrations now run once per container in ensureSchema() middleware.
 
-        // Ensure differential columns for matches
-        try {
-            await db.execute("SELECT player1Differential FROM matches LIMIT 1");
-        } catch (e) {
-            if (e.message && (e.message.includes('no such column') || e.message.includes('column not found'))) {
-                console.log('Adding missing differential columns to matches...');
-                try {
-                    await db.execute("ALTER TABLE matches ADD COLUMN player1Differential REAL");
-                    await db.execute("ALTER TABLE matches ADD COLUMN player2Differential REAL");
-                } catch (alterError) {
-                    console.error("Failed to add differential columns:", alterError);
-                }
-            }
-        }
-
-        // Ensure completed column for matches
-        try {
-            await db.execute("SELECT completed FROM matches LIMIT 1");
-        } catch (e) {
-            if (e.message && (e.message.includes('no such column') || e.message.includes('column not found'))) {
-                console.log('Adding missing completed column to matches...');
-                try {
-                    await db.execute("ALTER TABLE matches ADD COLUMN completed BOOLEAN DEFAULT 0");
-                } catch (alterError) {
-                    console.error("Failed to add completed column:", alterError);
-                }
-            }
-        }
-
-        // Ensure countForHandicap column for matches
-        try {
-            await db.execute("SELECT countForHandicap FROM matches LIMIT 1");
-        } catch (e) {
-            if (e.message && (e.message.includes('no such column') || e.message.includes('column not found'))) {
-                console.log('Adding missing countForHandicap column to matches...');
-                try {
-                    await db.execute("ALTER TABLE matches ADD COLUMN countForHandicap BOOLEAN");
-                } catch (alterError) {
-                    console.error("Failed to add countForHandicap column:", alterError);
-                }
-            }
-        }
-
-        // Ensure completed and differential columns for rounds
-        try {
-            await db.execute("SELECT completed FROM rounds LIMIT 1");
-        } catch (e) {
-            if (e.message && (e.message.includes('no such column') || e.message.includes('column not found'))) {
-                console.log('Adding missing completed and differential columns to rounds...');
-                try {
-                    await db.execute("ALTER TABLE rounds ADD COLUMN completed BOOLEAN DEFAULT 0");
-                    await db.execute("ALTER TABLE rounds ADD COLUMN differential REAL DEFAULT 0");
-                } catch (alterError) {
-                    console.error("Failed to add completed/differential columns:", alterError);
-                }
-            }
-        }
-
-        // Ensure matchNumber column for league_matches (Tournament Bracket)
-        try {
-            await db.execute("SELECT matchNumber FROM league_matches LIMIT 1");
-        } catch (e) {
-            if (e.message && (e.message.includes('no such column') || e.message.includes('column not found'))) {
-                console.log('Adding missing matchNumber column to league_matches...');
-                try {
-                    await db.execute("ALTER TABLE league_matches ADD COLUMN matchNumber INTEGER");
-                } catch (alterError) {
-                    console.error("Failed to add matchNumber column:", alterError);
-                }
-            }
-        }
-
-        // 2. Ensure User Exists (Self-healing for FK constraints)
+        // Ensure User Exists (Self-healing for FK constraints)
         // If the DB was wiped, the client might still have a user ID that doesn't exist on server.
         const userCheck = await db.execute({
             sql: 'SELECT id FROM users WHERE id = ?',
@@ -2477,32 +2452,12 @@ app.post('/api/skins/delete', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 3000;
-
-// Execute migrations unconditionally (but simply log errors instead of crashing)
-(async () => {
-    try {
-        await ensureLeagueMatchIdColumn();
-        await ensureGuestUser();
-    } catch (e) {
-        console.error("Migration checks failed:", e);
-    }
-})();
-
+// Local dev server only. On Vercel, the function runtime imports `app` directly.
 if (process.env.NODE_ENV !== 'production') {
-    (async () => {
-        try {
-            app.listen(PORT, () => {
-                console.log(`Server running on port ${PORT} `);
-            });
-        } catch (e) {
-            console.error("Startup failed:", e);
-        }
-    })();
-}
-if (process.env.NODE_ENV !== 'production') {
-    // The original console.log was here, but the new app.listen handles it.
-    // Keeping the if block structure as per user's snippet, though it's now empty.
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
 }
 
 export default app;

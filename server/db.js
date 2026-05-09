@@ -22,11 +22,13 @@ const getClient = async () => {
     // Dynamic import to prevent load-time crashes
     const { createClient } = await import('@libsql/client');
 
+    // Vercel Serverless can't keep WebSocket connections alive across invocations,
+    // so force the libSQL HTTP transport by rewriting the scheme.
+    const httpUrl = url.replace(/^libsql:\/\//, 'https://');
+
     client = createClient({
-      url,
+      url: httpUrl,
       authToken,
-      strategy: 'http',
-      url: url.replace('libsql://', 'https://')
     });
 
     return client;
