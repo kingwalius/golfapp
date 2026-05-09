@@ -5,6 +5,7 @@ import bodyParser from 'body-parser';
 import db, { initDB } from './db.js';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -270,11 +271,33 @@ app.get('/api/debug-sql', requireAdmin, async (req, res) => {
 
 // --- Auth Routes ---
 
-// Helper to hash passwords
+const BCRYPT_COST = 10;
 
-// Helper to hash passwords
-const hashPassword = (password) => {
-    return crypto.createHash('sha256').update(password).digest('hex');
+// Hash a new password with bcrypt for storage. Used by register + reset.
+const hashPasswordBcrypt = (password) => bcrypt.hash(password, BCRYPT_COST);
+
+// Legacy SHA-256 hasher, kept ONLY to verify pre-bcrypt hashes during the
+// lazy migration window. Never call this for new password storage.
+const hashPasswordLegacySha256 = (password) =>
+    crypto.createHash('sha256').update(password).digest('hex');
+
+// Verify a plaintext password against whatever hash format is in the DB.
+// Returns { ok, needsRehash }. needsRehash = true means the stored hash is
+// the legacy SHA-256 format and the caller should re-hash with bcrypt
+// (lazy migration on successful login).
+const verifyPassword = async (plain, stored) => {
+    if (!stored) return { ok: false, needsRehash: false };
+    // bcrypt hashes start with $2a$, $2b$, or $2y$
+    if (/^\$2[aby]\$/.test(stored)) {
+        const ok = await bcrypt.compare(plain, stored);
+        return { ok, needsRehash: false };
+    }
+    // Legacy SHA-256: 64 hex chars, constant-time compare
+    const expected = hashPasswordLegacySha256(plain);
+    const a = Buffer.from(expected, 'utf8');
+    const b = Buffer.from(stored, 'utf8');
+    const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
+    return { ok, needsRehash: ok };
 };
 
 // --- Auth Routes ---
@@ -294,7 +317,7 @@ app.post('/auth/register', async (req, res) => {
             return res.status(409).json({ error: 'Username already exists' });
         }
 
-        const hashedPassword = hashPassword(password);
+        const hashedPassword = await hashPasswordBcrypt(password);
         const info = await db.execute({
             sql: 'INSERT INTO users (username, password, handicap, avatar, handicapMode, manualHandicap) VALUES (?, ?, ?, ?, ?, ?)',
             args: [username, hashedPassword, 28.0, null, 'auto', null]
@@ -342,28 +365,31 @@ app.post('/auth/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid username or password' });
         }
 
-        const hashedPassword = hashPassword(password);
-        // LibSQL returns rows as objects if configured, or arrays. 
-        // @libsql/client default is objects with column names.
-        if (user.password && user.password !== hashedPassword) {
+        // Verify against whatever format the DB has (bcrypt or legacy SHA-256).
+        // Users with no password fall through to the existing legacy-adoption
+        // branch below — preserves prior behavior; tightening that is a
+        // separate concern.
+        const { ok, needsRehash } = user.password
+            ? await verifyPassword(password, user.password)
+            : { ok: true, needsRehash: false };
+
+        if (!ok) {
             return res.status(401).json({ error: 'Invalid username or password' });
         }
 
-        // If user has no password (legacy), update it? 
-        // For now, we assume if they are logging in via this route, they provided a password.
-        // If the DB has NULL password, we might want to allow it or force reset.
-        // Decision: If DB password is NULL, allow login and set password? 
-        // Better: If DB password is NULL, fail and tell them to register/reset?
-        // Let's stick to strict check: if user.password exists, it must match.
-        // If user.password is NULL (legacy user), we could allow login if they provide ANY password and then set it?
-        // Let's keep it simple: strict check. Legacy users might need manual migration or re-register.
-
-        if (!user.password) {
-            // Legacy user adoption: Set the password to what they provided
-            await db.execute({
-                sql: 'UPDATE users SET password = ? WHERE id = ?',
-                args: [hashedPassword, user.id]
-            });
+        // Lazy migration: if the stored hash is legacy SHA-256 OR the user had
+        // no password yet (legacy adoption), persist a fresh bcrypt hash.
+        // Failure here is non-fatal — login still succeeds.
+        if (needsRehash || !user.password) {
+            try {
+                const newHash = await hashPasswordBcrypt(password);
+                await db.execute({
+                    sql: 'UPDATE users SET password = ? WHERE id = ?',
+                    args: [newHash, user.id]
+                });
+            } catch (e) {
+                console.error('Lazy bcrypt rehash failed (non-fatal):', e);
+            }
         }
 
         // Generate Token
@@ -415,7 +441,7 @@ app.post('/auth/reset-password', requireAdmin, async (req, res) => {
     if (!username || !newPassword) return res.status(400).json({ error: 'Username and new password required' });
 
     try {
-        const hashedPassword = hashPassword(newPassword);
+        const hashedPassword = await hashPasswordBcrypt(newPassword);
         const result = await db.execute({
             sql: 'UPDATE users SET password = ? WHERE username = ?',
             args: [hashedPassword, username]
